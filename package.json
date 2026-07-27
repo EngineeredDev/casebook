@@ -1,20 +1,25 @@
 {
   "name": "school-clinician-tracker",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Local-first time tracking for school-based clinicians",
+  "type": "module",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "bun --hot src/server.ts",
+    "start": "NODE_ENV=production bun src/server.ts",
+    "build:mac-arm": "bun build --compile --minify --target=bun-darwin-arm64 src/server.ts --outfile dist/mac-arm/ClinicianTracker",
+    "build:mac-intel": "bun build --compile --minify --target=bun-darwin-x64 src/server.ts --outfile dist/mac-intel/ClinicianTracker",
+    "build:windows": "bun build --compile --minify --target=bun-windows-x64 src/server.ts --outfile dist/windows/ClinicianTracker",
+    "build:all": "bun run build:mac-arm && bun run build:mac-intel && bun run build:windows"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^11.5.0",
-      "onFail": "download"
-    }
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.15.0"
   },
-  "type": "module"
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "bun-types": "latest"
+  }
 }
