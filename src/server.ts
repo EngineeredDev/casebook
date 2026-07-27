@@ -1,9 +1,19 @@
 import index from "./index.html";
 import { loadDoc, saveDoc, backupIfNeeded, isCompiled, dataDir } from "./storage.ts";
-import type { DataDoc } from "./types.ts";
+import { DATA_VERSION, type DataDoc } from "./types.ts";
 
 const APP_NAME = "school-clinician-tracker";
 const BASE_PORT = 4321;
+/**
+ * Loopback only. Bun.serve defaults to 0.0.0.0, which put the whole document —
+ * student names, entries, notes — on every interface, readable by anything on
+ * the same school network with no authentication.
+ *
+ * The literal IP is used rather than "localhost" everywhere a connection is
+ * made, because "localhost" resolves to ::1 first on some Windows setups and
+ * would then miss an IPv4-only listener.
+ */
+const HOST = "127.0.0.1";
 /** Distinguishes this process in health checks — macOS lets two sockets "bind" the same port. */
 const INSTANCE = crypto.randomUUID();
 
@@ -20,7 +30,7 @@ function validateDoc(candidate: unknown): candidate is DataDoc {
   if (typeof candidate !== "object" || candidate === null) return false;
   const d = candidate as DataDoc;
   return (
-    d.version === 1 &&
+    d.version === DATA_VERSION &&
     typeof d.rev === "number" &&
     Array.isArray(d.categories) &&
     Array.isArray(d.students) &&
@@ -32,6 +42,7 @@ function validateDoc(candidate: unknown): candidate is DataDoc {
 function startServer(port: number) {
   return Bun.serve({
     port,
+    hostname: HOST,
     development: !isCompiled() && process.env.NODE_ENV !== "production",
     routes: {
       "/": index,
@@ -57,7 +68,7 @@ function startServer(port: number) {
 
 async function healthOf(port: number): Promise<{ app?: string; instance?: string } | null> {
   try {
-    const res = await fetch(`http://localhost:${port}/api/health`, {
+    const res = await fetch(`http://${HOST}:${port}/api/health`, {
       signal: AbortSignal.timeout(1000),
     });
     return (await res.json()) as { app?: string; instance?: string };
@@ -87,8 +98,8 @@ for (; port < BASE_PORT + 10; port++) {
   const existing = await healthOf(port);
   if (existing?.app === APP_NAME) {
     // A previous double-click left an instance up — just focus it.
-    console.log(`Already running at http://localhost:${port}`);
-    openBrowser(`http://localhost:${port}`);
+    console.log(`Already running at http://${HOST}:${port}`);
+    openBrowser(`http://${HOST}:${port}`);
     process.exit(0);
   }
   if (existing) continue; // some other HTTP app owns this port
@@ -108,7 +119,7 @@ if (!server) {
   process.exit(1);
 }
 
-const url = `http://localhost:${port}`;
+const url = `http://${HOST}:${port}`;
 console.log(`Clinician Tracker running at ${url}`);
 console.log(`Data file: ${dataDir()}/data.json`);
 if (isCompiled()) openBrowser(url);

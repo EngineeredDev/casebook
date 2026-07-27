@@ -40,6 +40,14 @@ swap only — not built yet).
 
 - **Entry**: date + minutes + category + one or more students, with optional
   start time and note. Entries with multiple students are **group sessions**.
+- **Notes** are formatted clinical notes (bold, italic, underline, lists,
+  headings). The ⤢ button opens a full-height editor alongside that student's
+  earlier notes. ⌘/Ctrl+Enter saves.
+  - Notes **never leave the app**: not in either CSV, not on the printed report.
+    The only export that carries them is the full JSON backup, which has to —
+    otherwise restoring it would lose every note — and it says so in the menu.
+  - They are stored as HTML in `data.json`, in plain text on disk. Anyone with
+    the computer can read them.
 - **Attribution** (toggle on Dashboard/Reports):
   - *Workload share* — group time is split evenly among attendees. True cost
     view; per-student numbers sum to real clock time.
@@ -54,11 +62,14 @@ swap only — not built yet).
 
 ## Reports & exports
 
-The Reports tab renders a print-ready sheet (Print / Save PDF button), plus:
+The Reports tab renders a print-ready sheet. The Print / Save PDF button
+temporarily switches the app to light mode so charts print legibly on paper,
+then switches back. Also available:
 
 - **CSV · weekly** — one row per student per week (pivot-table friendly)
-- **CSV · raw** — every entry as a row
-- **Backup JSON** — the whole data file, timestamped
+- **CSV · raw** — every entry as a row, notes excluded
+- **Backup JSON** — the whole data file, timestamped. Contains notes; it's for
+  restoring, not for handing to anyone.
 
 ## Development
 
@@ -84,7 +95,23 @@ beside itself.
 
 - `src/server.ts` — Bun.serve: static frontend via HTML imports + a 3-route API
   (`GET/PUT /api/data`, `GET /api/health`). Whole-document saves with a
-  revision counter; concurrent-window conflicts return 409.
-- `src/storage.ts` — atomic writes (temp file + rename), daily rotating backups.
-- `src/frontend/` — React 19 + Recharts. `lib/aggregate.ts` holds all rollup
-  math; `lib/palette.ts` is the validated chart palette (light + dark).
+  revision counter; concurrent-window conflicts return 409. Bound to
+  `127.0.0.1` — the API is unauthenticated, so it must not answer the network.
+- `src/storage.ts` — atomic writes (temp file + rename), daily rotating backups,
+  and the data-version migration (v1 → v2 turned plain-text notes into HTML,
+  snapshotting the old file to `backups/data-pre-v2-<date>.json`).
+- `src/frontend/` — React 19 + [Mantine](https://mantine.dev) (UI + charts).
+  `lib/aggregate.ts` holds all rollup math; `lib/palette.ts` is the validated
+  chart palette (light + dark), and `theme.tsx` ties Mantine's primary color to
+  the same blue the charts use. `app.css` carries only what Mantine doesn't:
+  the two series colors, number formatting, and the print rules.
+
+Mantine needs no PostCSS here — its prebuilt stylesheets are imported in
+`index.tsx` and Bun bundles them directly.
+
+Notes use [Tiptap](https://tiptap.dev) via `@mantine/tiptap`. Everything used is
+MIT and runs entirely offline; Tiptap's paid tiers only cover their cloud
+services (collaboration, comments, AI), none of which are here. Note HTML is
+never injected with `dangerouslySetInnerHTML` — read-only views re-parse it
+through the same editor schema, so nothing outside that schema can render. See
+`docs/rich-notes-spec.md`.

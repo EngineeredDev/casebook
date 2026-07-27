@@ -13,9 +13,21 @@
     "build:all": "bun run build:mac-arm && bun run build:mac-intel && bun run build:windows"
   },
   "dependencies": {
+    "@mantine/charts": "^9.5.0",
+    "@mantine/core": "^9.5.0",
+    "@mantine/dates": "^9.5.0",
+    "@mantine/hooks": "^9.5.0",
+    "@mantine/notifications": "^9.5.0",
+    "@mantine/tiptap": "^9.5.0",
+    "@tabler/icons-react": "^3.45.0",
+    "@tiptap/extension-link": "^3.29.1",
+    "@tiptap/pm": "^3.29.1",
+    "@tiptap/react": "^3.29.1",
+    "@tiptap/starter-kit": "^3.29.1",
+    "dayjs": "^1.11.21",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "recharts": "^2.15.0"
+    "recharts": "^3"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

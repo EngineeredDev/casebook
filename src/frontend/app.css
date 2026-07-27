@@ -1,0 +1,111 @@
+/*
+ * Everything Mantine already handles lives in its theme (see theme.tsx).
+ * What remains here: the two semantic series colors shared between chart marks
+ * and inline UI dots, number formatting, the printed report sheet, and print rules.
+ */
+
+:root {
+  --direct: #2a78d6;
+  --indirect: #eb6834;
+}
+[data-mantine-color-scheme="dark"] {
+  --direct: #3987e5;
+  --indirect: #d95926;
+}
+
+/* Right-aligned, tabular figures so columns of numbers line up. */
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Direct/indirect marker used beside category names. */
+.cat-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.cat-dot.direct {
+  background: var(--direct);
+}
+.cat-dot.indirect {
+  background: var(--indirect);
+}
+
+/* Legend key shapes: a bar swatch for fills, a short rule for line series. */
+.legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.legend-line {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+/* ---------- Printed report ---------- */
+
+.report-sheet {
+  max-width: 900px;
+}
+
+/* Without this the editable area is only as tall as its text, so most of an
+   empty note editor is dead space that ignores clicks — you click into the big
+   box and nothing focuses.
+   Mantine renders Content as Typography > EditorContent div > .ProseMirror, so
+   the height has to be handed down every level; styling only the outer wrapper
+   stops one element short of the one that actually takes the caret. Growing but
+   never shrinking (`1 0 auto`) keeps long notes scrolling normally. */
+.note-surface {
+  display: flex;
+  flex-direction: column;
+}
+.note-surface > div {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.note-surface > div > .ProseMirror {
+  flex: 1 0 auto;
+}
+
+@media print {
+  /* Clinical notes never print. The report sheet doesn't render them, so this
+     only matters if a page is printed directly with the browser's own command,
+     but that's exactly the case worth covering. */
+  .note-body {
+    display: none !important;
+  }
+  /* Printing always happens in light mode — the Print button switches the
+     color scheme first so chart text and marks come out legible on paper. */
+  .no-print,
+  .mantine-AppShell-header,
+  .mantine-AppShell-navbar {
+    display: none !important;
+  }
+  .mantine-AppShell-main {
+    padding: 0 !important;
+  }
+  body {
+    background: #fff !important;
+    font-size: 12px;
+  }
+  .report-sheet {
+    max-width: none;
+    border: none !important;
+    padding: 0 !important;
+  }
+  /* Keep a section and its heading on the same page where possible. */
+  .report-section {
+    break-inside: avoid;
+  }
+}

@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { Alert, Button, Center, Loader, Stack } from "@mantine/core";
 import type { Category, DataDoc, Entry, Student } from "../types.ts";
 
 export type SaveState = "saved" | "saving" | "error" | "conflict";
@@ -190,15 +191,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   if (loadError) {
     return (
-      <div className="empty-state">
-        <p>Couldn't load your data: {loadError}</p>
-        <button className="btn primary" onClick={load}>
-          Retry
-        </button>
-      </div>
+      <Center h="100vh" p="md">
+        <Stack align="center" gap="sm">
+          <Alert color="red" title="Couldn't load your data" variant="light">
+            {loadError}
+          </Alert>
+          <Button onClick={load}>Retry</Button>
+        </Stack>
+      </Center>
     );
   }
-  if (!doc) return <div className="empty-state">Loading…</div>;
+  if (!doc) {
+    return (
+      <Center h="100vh">
+        <Loader />
+      </Center>
+    );
+  }
 
   return (
     <StoreContext.Provider

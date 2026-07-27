@@ -4,7 +4,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Clinician Tracker</title>
-    <link rel="stylesheet" href="./frontend/styles.css" />
+    <script>
+      // Stamp the stored color scheme before first paint so dark mode doesn't flash white.
+      (function () {
+        try {
+          var v = localStorage.getItem("mantine-color-scheme-value");
+          if (v !== "light" && v !== "dark") {
+            v = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          }
+          document.documentElement.setAttribute("data-mantine-color-scheme", v);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

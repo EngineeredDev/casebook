@@ -28,6 +28,11 @@ export interface Entry {
   studentIds: string[];
   /** Optional clock time, HH:MM (24h), for future timeline views. */
   startTime?: string | null;
+  /**
+   * Clinical note as HTML, constrained to the editor schema (see
+   * frontend/lib/notes.ts). Absent when empty. Was plain text in doc version 1;
+   * storage.ts migrates those forward. Never exported — see docs/rich-notes-spec.md.
+   */
   note?: string;
   createdAt: string;
 }
@@ -38,8 +43,11 @@ export interface Settings {
   schoolYearStartMonth: number;
 }
 
+/** Bumped to 2 when notes became HTML rather than plain text. */
+export const DATA_VERSION = 2;
+
 export interface DataDoc {
-  version: 1;
+  version: typeof DATA_VERSION;
   /** Optimistic-concurrency revision; server increments on every accepted PUT. */
   rev: number;
   settings: Settings;
@@ -63,7 +71,7 @@ export const SEED_CATEGORIES: Omit<Category, "id">[] = [
 
 export function emptyDoc(): DataDoc {
   return {
-    version: 1,
+    version: DATA_VERSION,
     rev: 0,
     settings: { clinicianName: "", schoolYearStartMonth: 8 },
     categories: SEED_CATEGORIES.map((c) => ({ ...c, id: crypto.randomUUID() })),

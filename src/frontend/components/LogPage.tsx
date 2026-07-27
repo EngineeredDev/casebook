@@ -1,157 +1,199 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActionIcon,
+  Alert,
+  Badge,
+  Box,
+  Button,
+  Card,
+  Chip,
+  Combobox,
+  Grid,
+  Group,
+  NumberInput,
+  Pill,
+  PillsInput,
+  Stack,
+  Text,
+  Tooltip,
+  useCombobox,
+} from "@mantine/core";
+import { DatePickerInput, TimeInput } from "@mantine/dates";
+import { notifications } from "@mantine/notifications";
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconClock,
+  IconPencil,
+  IconTrash,
+  IconUsers,
+} from "@tabler/icons-react";
 import { useStore } from "../store.tsx";
 import type { Entry, Student } from "../../types.ts";
 import { addDaysYmd, fmtDuration, fmtFullDate, todayYmd } from "../lib/time.ts";
-import { IepBadge, useClickOutside } from "./ui.tsx";
+import { IepBadge } from "./ui.tsx";
+import { NoteEditor } from "./NoteEditor.tsx";
+import { isBlankNote, noteExcerpt } from "../lib/notes.ts";
 
 const DURATION_PRESETS = [5, 10, 15, 20, 30, 45, 60, 90];
+
+const CREATE_PLAIN = "$create";
+const CREATE_IEP = "$create-iep";
+
+/**
+ * "Optional" rides inline with the label rather than using `description`, which
+ * renders on its own line and pushes that field's input out of line with its
+ * neighbours in a row.
+ */
+const optionalLabel = (text: string) => (
+  <>
+    {text}{" "}
+    <Text span size="xs" c="dimmed" fw={400}>
+      Optional
+    </Text>
+  </>
+);
 
 function StudentPicker({
   selectedIds,
   onChange,
+  inputRef,
 }: {
   selectedIds: string[];
   onChange: (ids: string[]) => void;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
 }) {
   const { doc, addStudent } = useStore();
-  const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
-  const [hl, setHl] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const ref = useClickOutside(() => setOpen(false));
+  const [search, setSearch] = useState("");
+  const combobox = useCombobox({
+    onDropdownClose: () => combobox.resetSelectedOption(),
+    onDropdownOpen: () => combobox.updateSelectedOptionIndex("active"),
+  });
 
   const selected = selectedIds
     .map((id) => doc.students.find((s) => s.id === id))
     .filter((s): s is Student => !!s);
 
-  const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return doc.students
-      .filter((s) => s.active && !selectedIds.includes(s.id))
-      .filter((s) => !q || s.name.toLowerCase().includes(q))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .slice(0, 8);
-  }, [doc.students, query, selectedIds]);
-
-  const exactMatch = doc.students.some(
-    (s) => s.name.toLowerCase() === query.trim().toLowerCase(),
+  const query = search.trim().toLowerCase();
+  const matches = useMemo(
+    () =>
+      doc.students
+        .filter((s) => s.active && !selectedIds.includes(s.id))
+        .filter((s) => !query || s.name.toLowerCase().includes(query))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .slice(0, 8),
+    [doc.students, query, selectedIds],
   );
 
-  const pick = (id: string) => {
-    onChange([...selectedIds, id]);
-    setQuery("");
-    setHl(0);
-    inputRef.current?.focus();
-  };
+  const exactMatch = doc.students.some((s) => s.name.toLowerCase() === query);
+  const canCreate = query.length > 0 && !exactMatch;
 
-  const create = (iep: boolean) => {
-    const name = query.trim();
-    if (!name) return;
-    const student = addStudent({ name, iep });
-    pick(student.id);
+  const handleSubmit = (value: string) => {
+    if (value === CREATE_PLAIN || value === CREATE_IEP) {
+      const student = addStudent({ name: search.trim(), iep: value === CREATE_IEP });
+      onChange([...selectedIds, student.id]);
+    } else {
+      onChange([...selectedIds, value]);
+    }
+    setSearch("");
+    combobox.updateSelectedOptionIndex("active");
   };
 
   return (
-    <div className="picker" ref={ref}>
-      <div className="picker-chips" onClick={() => inputRef.current?.focus()}>
-        {selected.map((s) => (
-          <span className="student-chip" key={s.id}>
-            {s.name}
-            <IepBadge iep={s.iep} />
-            <button
-              type="button"
-              aria-label={`Remove ${s.name}`}
-              onClick={() => onChange(selectedIds.filter((id) => id !== s.id))}
-            >
-              ×
-            </button>
-          </span>
-        ))}
-        <input
-          ref={inputRef}
-          className="picker-input"
-          placeholder={selected.length ? "Add another student…" : "Type a student's name…"}
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
-            setHl(0);
-          }}
-          onFocus={() => setOpen(true)}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowDown") {
-              e.preventDefault();
-              setHl((h) => Math.min(h + 1, matches.length - 1));
-            } else if (e.key === "ArrowUp") {
-              e.preventDefault();
-              setHl((h) => Math.max(h - 1, 0));
-            } else if (e.key === "Enter") {
-              e.preventDefault();
-              if (matches[hl]) pick(matches[hl].id);
-              else if (query.trim() && !exactMatch) create(false);
-            } else if (e.key === "Backspace" && !query && selectedIds.length) {
-              onChange(selectedIds.slice(0, -1));
-            } else if (e.key === "Escape") {
-              setOpen(false);
-            }
-          }}
-        />
-      </div>
-      {open && (query.trim() || matches.length > 0) && (
-        <div className="picker-menu">
-          {matches.map((s, i) => (
-            <button
-              key={s.id}
-              type="button"
-              className={`picker-item${i === hl ? " hl" : ""}`}
-              onMouseEnter={() => setHl(i)}
-              onClick={() => pick(s.id)}
-            >
-              <span>
-                {s.name} <IepBadge iep={s.iep} />
-              </span>
-            </button>
+    <Combobox store={combobox} onOptionSubmit={handleSubmit} withinPortal={false}>
+      <Combobox.DropdownTarget>
+        <PillsInput onClick={() => combobox.openDropdown()} size="sm">
+          <Pill.Group>
+            {selected.map((s) => (
+              <Pill
+                key={s.id}
+                withRemoveButton
+                onRemove={() => onChange(selectedIds.filter((id) => id !== s.id))}
+              >
+                {s.name}
+                {s.iep ? " · IEP" : ""}
+              </Pill>
+            ))}
+            <Combobox.EventsTarget>
+              <PillsInput.Field
+                ref={inputRef}
+                value={search}
+                placeholder={selected.length ? "Add another student…" : "Type a student's name…"}
+                onFocus={() => combobox.openDropdown()}
+                onBlur={() => combobox.closeDropdown()}
+                onChange={(event) => {
+                  combobox.openDropdown();
+                  combobox.updateSelectedOptionIndex();
+                  setSearch(event.currentTarget.value);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Backspace" && search.length === 0 && selectedIds.length) {
+                    event.preventDefault();
+                    onChange(selectedIds.slice(0, -1));
+                  }
+                }}
+              />
+            </Combobox.EventsTarget>
+          </Pill.Group>
+        </PillsInput>
+      </Combobox.DropdownTarget>
+
+      <Combobox.Dropdown>
+        <Combobox.Options>
+          {matches.map((s) => (
+            <Combobox.Option value={s.id} key={s.id}>
+              <Group gap="xs" wrap="nowrap">
+                <span>{s.name}</span>
+                <IepBadge iep={s.iep} />
+              </Group>
+            </Combobox.Option>
           ))}
-          {query.trim() && !exactMatch && (
-            <div className="picker-create">
-              <span className="who">
-                New student: <strong>{query.trim()}</strong>
-              </span>
-              <button type="button" className="btn small" onClick={() => create(false)}>
-                Add
-              </button>
-              <button type="button" className="btn small" onClick={() => create(true)}>
-                Add as IEP
-              </button>
-            </div>
+          {canCreate && (
+            <>
+              <Combobox.Option value={CREATE_PLAIN}>
+                <Text size="sm">
+                  Add <strong>{search.trim()}</strong>
+                </Text>
+              </Combobox.Option>
+              <Combobox.Option value={CREATE_IEP}>
+                <Text size="sm">
+                  Add <strong>{search.trim()}</strong> as an IEP student
+                </Text>
+              </Combobox.Option>
+            </>
           )}
-          {!query.trim() && matches.length === 0 && (
-            <div className="picker-create">
-              <span className="who">Type a name to add your first student</span>
-            </div>
+          {!canCreate && matches.length === 0 && (
+            <Combobox.Empty>
+              {doc.students.length === 0 ? "Type a name to add your first student" : "No matches"}
+            </Combobox.Empty>
           )}
-        </div>
-      )}
-    </div>
+        </Combobox.Options>
+      </Combobox.Dropdown>
+    </Combobox>
   );
 }
 
-export function LogPage() {
+export function LogPage({ focusSignal = 0 }: { focusSignal?: number }) {
   const { doc, addEntry, updateEntry, deleteEntry } = useStore();
   const [studentIds, setStudentIds] = useState<string[]>([]);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [minutes, setMinutes] = useState<number | null>(30);
-  const [customMinutes, setCustomMinutes] = useState("");
+  const [customMinutes, setCustomMinutes] = useState<number | "">("");
   const [date, setDate] = useState(todayYmd());
   const [startTime, setStartTime] = useState("");
   const [note, setNote] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const studentInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (focusSignal > 0) studentInputRef.current?.focus();
+  }, [focusSignal]);
 
   const categories = doc.categories.filter((c) => !c.archived);
   const directCats = categories.filter((c) => c.group === "direct");
   const indirectCats = categories.filter((c) => c.group === "indirect");
 
-  const effectiveMinutes = customMinutes ? Number(customMinutes) : minutes;
+  const effectiveMinutes = customMinutes === "" ? minutes : Number(customMinutes);
   const valid =
     studentIds.length > 0 &&
     !!categoryId &&
@@ -163,12 +205,16 @@ export function LogPage() {
     () =>
       doc.entries
         .filter((e) => e.date === date)
-        .sort((a, b) => (a.startTime ?? "99").localeCompare(b.startTime ?? "99") || a.createdAt.localeCompare(b.createdAt)),
+        .sort(
+          (a, b) =>
+            (a.startTime ?? "99").localeCompare(b.startTime ?? "99") ||
+            a.createdAt.localeCompare(b.createdAt),
+        ),
     [doc.entries, date],
   );
   const dayTotal = dayEntries.reduce((sum, e) => sum + e.minutes, 0);
 
-  const resetForm = (keepDate = true) => {
+  const resetForm = () => {
     setStudentIds([]);
     setCategoryId(null);
     setMinutes(30);
@@ -176,22 +222,25 @@ export function LogPage() {
     setStartTime("");
     setNote("");
     setEditingId(null);
-    if (!keepDate) setDate(todayYmd());
   };
 
-  const submit = () => {
-    if (!valid) return;
+  /** Returns whether an entry was actually written, so callers can react to it. */
+  const submit = (): boolean => {
+    if (!valid) return false;
     const payload = {
       date,
       minutes: effectiveMinutes!,
       categoryId: categoryId!,
       studentIds,
       startTime: startTime || null,
-      note: note.trim() || undefined,
+      // "<p></p>" is a non-empty string but an empty note.
+      note: isBlankNote(note) ? undefined : note,
     };
     if (editingId) updateEntry(editingId, payload);
     else addEntry(payload);
     resetForm();
+    studentInputRef.current?.focus();
+    return true;
   };
 
   const startEdit = (entry: Entry) => {
@@ -206,184 +255,258 @@ export function LogPage() {
       setCustomMinutes("");
     } else {
       setMinutes(null);
-      setCustomMinutes(String(entry.minutes));
+      setCustomMinutes(entry.minutes);
     }
   };
 
+  const removeEntry = (entry: Entry) => {
+    deleteEntry(entry.id);
+    if (editingId === entry.id) resetForm();
+    notifications.show({
+      message: `Deleted ${fmtDuration(entry.minutes)} entry`,
+      color: "gray",
+    });
+  };
+
+  const catChip = (id: string, name: string, group: "direct" | "indirect") => (
+    <Chip key={id} value={id} size="sm" variant="outline" color={group === "direct" ? "clinical" : "ember"}>
+      <Group gap={6} wrap="nowrap" component="span">
+        <span className={`cat-dot ${group}`} />
+        {name}
+      </Group>
+    </Chip>
+  );
+
   return (
-    <div className="log-layout">
-      <div className="card">
-        <h2 className="card-title">{editingId ? "Edit entry" : "Log time"}</h2>
-        <div className="card-sub">
-          {editingId ? "Editing an existing entry." : "Student → what you did → how long. That's it."}
-        </div>
-        <div className="form-grid">
-          <div className="field">
-            <label>Student(s)</label>
-            <StudentPicker selectedIds={studentIds} onChange={setStudentIds} />
-            {studentIds.length > 1 && (
-              <span className="hint">
-                Group session — time counts once toward your day, and per-student views can show it
-                full or split.
-              </span>
-            )}
-          </div>
+    <Grid>
+      <Grid.Col span={{ base: 12, lg: 7 }}>
+        <Card>
+          <Text fw={600} mb="md">
+            {editingId ? "Edit entry" : "Log time"}
+          </Text>
 
-          <div className="field">
-            <label>Category</label>
-            <div className="group-label">Direct time</div>
-            <div className="cat-grid">
-              {directCats.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={`cat-btn${categoryId === c.id ? " selected" : ""}`}
-                  onClick={() => setCategoryId(c.id)}
-                >
-                  <span className="cat-dot" style={{ background: "var(--direct)" }} />
-                  {c.name}
-                </button>
-              ))}
-            </div>
-            <div className="group-label">Indirect time</div>
-            <div className="cat-grid">
-              {indirectCats.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={`cat-btn${categoryId === c.id ? " selected" : ""}`}
-                  onClick={() => setCategoryId(c.id)}
-                >
-                  <span className="cat-dot" style={{ background: "var(--indirect)" }} />
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          </div>
+          <Stack gap="md">
+            <Group grow align="flex-start">
+              <DatePickerInput
+                label="Date"
+                value={date}
+                onChange={(v) => setDate(v ?? todayYmd())}
+                leftSection={
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    size="sm"
+                    aria-label="Previous day"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDate(addDaysYmd(date, -1));
+                    }}
+                  >
+                    <IconChevronLeft size={16} />
+                  </ActionIcon>
+                }
+                rightSection={
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    size="sm"
+                    aria-label="Next day"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDate(addDaysYmd(date, 1));
+                    }}
+                  >
+                    <IconChevronRight size={16} />
+                  </ActionIcon>
+                }
+              />
+              <TimeInput
+                label={optionalLabel("Start time")}
+                leftSection={<IconClock size={16} />}
+                value={startTime}
+                onChange={(e) => setStartTime(e.currentTarget.value)}
+              />
+            </Group>
 
-          <div className="field">
-            <label>Duration</label>
-            <div className="chip-row">
-              {DURATION_PRESETS.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  className={`chip${minutes === m && !customMinutes ? " selected" : ""}`}
-                  onClick={() => {
-                    setMinutes(m);
+            <Box>
+              <Text component="label" size="sm" fw={500} display="block" mb={6}>
+                Duration
+              </Text>
+              <Group gap={6} align="center">
+                <Chip.Group
+                  multiple={false}
+                  value={customMinutes === "" && minutes ? String(minutes) : ""}
+                  onChange={(v) => {
+                    setMinutes(Number(v));
                     setCustomMinutes("");
                   }}
                 >
-                  {m}m
-                </button>
-              ))}
-              <input
-                className="input"
-                style={{ width: 110 }}
-                type="number"
-                min={1}
-                placeholder="Custom (min)"
-                value={customMinutes}
-                onChange={(e) => setCustomMinutes(e.target.value)}
-              />
-            </div>
-          </div>
+                  <Group gap={6}>
+                    {DURATION_PRESETS.map((m) => (
+                      <Chip key={m} value={String(m)} size="sm" variant="outline">
+                        {m}m
+                      </Chip>
+                    ))}
+                  </Group>
+                </Chip.Group>
+                <NumberInput
+                  size="xs"
+                  w={110}
+                  min={1}
+                  placeholder="Custom"
+                  suffix=" min"
+                  value={customMinutes}
+                  onChange={(v) => {
+                    setCustomMinutes(v === "" ? "" : Number(v));
+                    if (v !== "") setMinutes(null);
+                  }}
+                />
+              </Group>
+            </Box>
 
-          <div className="form-cols">
-            <div className="field">
-              <label>Date</label>
-              <div className="date-stepper">
-                <button className="btn icon" type="button" onClick={() => setDate(addDaysYmd(date, -1))}>
-                  ◀
-                </button>
-                <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-                <button className="btn icon" type="button" onClick={() => setDate(addDaysYmd(date, 1))}>
-                  ▶
-                </button>
-              </div>
-            </div>
-            <div className="field">
-              <label>
-                Start time <span className="muted">(optional)</span>
-              </label>
-              <input className="input" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-            </div>
-            <div className="field">
-              <label>
-                Note <span className="muted">(optional)</span>
-              </label>
-              <input
-                className="input"
-                placeholder="e.g. re-eval meeting"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") submit();
-                }}
+            <Box>
+              <Text component="label" size="sm" fw={500} display="block" mb={4}>
+                Student(s)
+              </Text>
+              <StudentPicker
+                selectedIds={studentIds}
+                onChange={setStudentIds}
+                inputRef={studentInputRef}
               />
-            </div>
-          </div>
+              {studentIds.length > 1 && (
+                <Alert
+                  variant="light"
+                  color="gray"
+                  mt="xs"
+                  p="xs"
+                  icon={<IconUsers size={16} />}
+                >
+                  <Text size="xs">
+                    Group session — the time counts once toward your day, and per-student views can
+                    show it in full or split.
+                  </Text>
+                </Alert>
+              )}
+            </Box>
 
-          <div className="flex-between">
-            <button className="btn primary" type="button" disabled={!valid} onClick={submit}>
-              {editingId ? "Save changes" : "Log entry"}
-            </button>
-            {editingId && (
-              <button className="btn" type="button" onClick={() => resetForm()}>
-                Cancel edit
-              </button>
+            <Box>
+              <Text component="label" size="sm" fw={500} display="block" mb={6}>
+                Category
+              </Text>
+              <Chip.Group multiple={false} value={categoryId ?? ""} onChange={setCategoryId}>
+                <Text size="xs" c="dimmed" mb={4}>
+                  Direct time
+                </Text>
+                <Group gap={6} mb="xs">
+                  {directCats.map((c) => catChip(c.id, c.name, "direct"))}
+                </Group>
+                <Text size="xs" c="dimmed" mb={4}>
+                  Indirect time
+                </Text>
+                <Group gap={6}>{indirectCats.map((c) => catChip(c.id, c.name, "indirect"))}</Group>
+              </Chip.Group>
+            </Box>
+
+            <NoteEditor
+              value={note}
+              onChange={setNote}
+              onSubmit={submit}
+              canSubmit={valid}
+              submitLabel={editingId ? "Save changes" : "Log entry"}
+              studentIds={studentIds}
+              editingId={editingId}
+              date={date}
+            />
+
+            <Group>
+              <Button disabled={!valid} onClick={submit}>
+                {editingId ? "Save changes" : "Log entry"}
+              </Button>
+              {editingId && (
+                <Button variant="default" onClick={resetForm}>
+                  Cancel edit
+                </Button>
+              )}
+            </Group>
+          </Stack>
+        </Card>
+      </Grid.Col>
+
+      <Grid.Col span={{ base: 12, lg: 5 }}>
+        <Card>
+          <Group justify="space-between" mb="sm" wrap="nowrap">
+            <Text fw={600} size="sm">
+              {fmtFullDate(date)}
+            </Text>
+            {dayTotal > 0 && (
+              <Badge variant="light" color="gray">
+                {fmtDuration(dayTotal)}
+              </Badge>
             )}
-          </div>
-        </div>
-      </div>
+          </Group>
 
-      <div className="card">
-        <div className="card-head">
-          <h2 className="card-title">{fmtFullDate(date)}</h2>
-          <span className="secondary">{dayTotal ? fmtDuration(dayTotal) : ""}</span>
-        </div>
-        {dayEntries.length === 0 ? (
-          <div className="empty-state">No entries for this day yet.</div>
-        ) : (
-          <div>
-            {dayEntries.map((e) => {
-              const cat = doc.categories.find((c) => c.id === e.categoryId);
-              const names = e.studentIds
-                .map((id) => doc.students.find((s) => s.id === id)?.name ?? "(deleted)")
-                .join(", ");
-              return (
-                <div className="entry-row" key={e.id}>
-                  <span className="entry-min">{fmtDuration(e.minutes)}</span>
-                  <span
-                    className="cat-dot"
-                    style={{ background: cat?.group === "direct" ? "var(--direct)" : "var(--indirect)" }}
-                  />
-                  <div className="entry-main">
-                    <div className="entry-students">{names}</div>
-                    <div className="entry-meta">
-                      {cat?.name ?? "(deleted)"}
-                      {e.startTime ? ` · ${e.startTime}` : ""}
-                      {e.note ? ` · ${e.note}` : ""}
-                    </div>
-                  </div>
-                  <div className="entry-actions">
-                    <button className="btn small" type="button" onClick={() => startEdit(e)}>
-                      Edit
-                    </button>
-                    <button
-                      className="btn small danger-text"
-                      type="button"
-                      onClick={() => deleteEntry(e.id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
+          {dayEntries.length === 0 ? (
+            <Text size="sm" c="dimmed" ta="center" py="xl">
+              No entries for this day yet.
+            </Text>
+          ) : (
+            <Stack gap={2}>
+              {dayEntries.map((e) => {
+                const cat = doc.categories.find((c) => c.id === e.categoryId);
+                const names = e.studentIds
+                  .map((id) => doc.students.find((s) => s.id === id)?.name ?? "(deleted)")
+                  .join(", ");
+                return (
+                  <Group
+                    key={e.id}
+                    gap="xs"
+                    wrap="nowrap"
+                    py={6}
+                    style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
+                  >
+                    <Text size="sm" fw={600} w={58} className="tnum" style={{ flex: "none" }}>
+                      {fmtDuration(e.minutes)}
+                    </Text>
+                    <span className={`cat-dot ${cat?.group ?? "indirect"}`} />
+                    <Box style={{ flex: 1, minWidth: 0 }}>
+                      <Text size="sm" truncate>
+                        {names}
+                      </Text>
+                      <Text size="xs" c="dimmed" truncate>
+                        {cat?.name ?? "(deleted)"}
+                        {e.startTime ? ` · ${e.startTime}` : ""}
+                        {e.note ? ` · ${noteExcerpt(e.note, 60)}` : ""}
+                      </Text>
+                    </Box>
+                    <Group gap={2} wrap="nowrap" style={{ flex: "none" }}>
+                      <Tooltip label="Edit">
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          aria-label="Edit entry"
+                          onClick={() => startEdit(e)}
+                        >
+                          <IconPencil size={15} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Delete">
+                        <ActionIcon
+                          variant="subtle"
+                          color="red"
+                          aria-label="Delete entry"
+                          onClick={() => removeEntry(e)}
+                        >
+                          <IconTrash size={15} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
+                  </Group>
+                );
+              })}
+            </Stack>
+          )}
+        </Card>
+      </Grid.Col>
+    </Grid>
   );
 }

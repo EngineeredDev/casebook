@@ -1,16 +1,25 @@
 import { useMemo, useState } from "react";
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+  Box,
+  Button,
+  Group,
+  Menu,
+  Paper,
+  SimpleGrid,
+  Stack,
+  Table,
+  Text,
+  TextInput,
+  Title,
+  useComputedColorScheme,
+  useMantineColorScheme,
+} from "@mantine/core";
+import { BarChart } from "@mantine/charts";
+import { IconDownload, IconPrinter } from "@tabler/icons-react";
 import { useStore } from "../store.tsx";
-import { useTheme } from "../theme.tsx";
+import { useChartPalette } from "../theme.tsx";
 import {
+  categoryName,
   clockTotals,
   filterEntries,
   mandateComparison,
@@ -19,18 +28,27 @@ import {
   weekCount,
   weeklyByGroup,
   weeklySummaryRows,
-  categoryName,
   type Attribution,
 } from "../lib/aggregate.ts";
 import { downloadCsv, downloadFile } from "../lib/csv.ts";
 import { fmtDuration, fmtWeekLabel, toHours, todayYmd } from "../lib/time.ts";
-import { ChartTooltip, LegendRow, RangePicker, Seg, defaultRange } from "./ui.tsx";
+import {
+  ATTRIBUTION_OPTIONS,
+  ChartTooltip,
+  RangePicker,
+  Seg,
+  StatTile,
+  attributionNote,
+  defaultRange,
+} from "./ui.tsx";
 
 const fmtH = (v: number) => `${v}h`;
 
 export function ReportsPage() {
   const { doc, mutate } = useStore();
-  const { palette } = useTheme();
+  const palette = useChartPalette();
+  const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const computed = useComputedColorScheme("light");
   const [range, setRange] = useState(() => defaultRange(doc.settings.schoolYearStartMonth));
   const [attribution, setAttribution] = useState<Attribution>("share");
 
@@ -48,7 +66,10 @@ export function ReportsPage() {
     () => mandateComparison(entries, doc.students, doc.categories, range.range),
     [entries, doc.students, doc.categories, range],
   );
-  const catTotals = useMemo(() => perCategoryTotals(entries, doc.categories), [entries, doc.categories]);
+  const catTotals = useMemo(
+    () => perCategoryTotals(entries, doc.categories),
+    [entries, doc.categories],
+  );
   const weekly = useMemo(
     () =>
       weeklyByGroup(entries, doc.categories, range.range).map((r) => ({
@@ -76,10 +97,21 @@ export function ReportsPage() {
     return best ? categoryName(doc, best) : "—";
   };
 
-  const attributionNote =
-    attribution === "share"
-      ? "Group sessions are split evenly among attendees (workload view)."
-      : "Group sessions are credited in full to each attendee (service-minutes view).";
+  const note = attributionNote(attribution);
+
+  /** Charts take literal colors, so dark mode would print white text on white paper. */
+  const print = () => {
+    if (computed !== "dark") {
+      window.print();
+      return;
+    }
+    const restore = colorScheme;
+    setColorScheme("light");
+    setTimeout(() => {
+      window.print();
+      setColorScheme(restore);
+    }, 250);
+  };
 
   const exportWeeklyCsv = () => {
     const rows = weeklySummaryRows(entries, doc.students, doc.categories, attribution, range.range);
@@ -97,25 +129,31 @@ export function ReportsPage() {
     ]);
   };
 
+  /** Notes are deliberately absent — clinical narrative never leaves the app. */
   const exportRawCsv = () => {
     const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
     downloadCsv(`raw-entries-${todayYmd()}.csv`, [
-      ["Date", "Start", "Students", "Group size", "Category", "Direct/Indirect", "Minutes", "Note"],
+      ["Date", "Start", "Students", "Group size", "Category", "Direct/Indirect", "Minutes"],
       ...sorted.map((e) => [
         e.date,
         e.startTime ?? "",
-        e.studentIds.map((id) => doc.students.find((s) => s.id === id)?.name ?? "(deleted)").join("; "),
+        e.studentIds
+          .map((id) => doc.students.find((s) => s.id === id)?.name ?? "(deleted)")
+          .join("; "),
         e.studentIds.length,
         categoryName(doc, e.categoryId),
         doc.categories.find((c) => c.id === e.categoryId)?.group ?? "",
         e.minutes,
-        e.note ?? "",
       ]),
     ]);
   };
 
   const exportBackup = () => {
-    downloadFile(`clinician-tracker-backup-${todayYmd()}.json`, JSON.stringify(doc, null, 2), "application/json");
+    downloadFile(
+      `clinician-tracker-backup-${todayYmd()}.json`,
+      JSON.stringify(doc, null, 2),
+      "application/json",
+    );
   };
 
   const generated = new Date().toLocaleDateString(undefined, {
@@ -125,211 +163,220 @@ export function ReportsPage() {
   });
 
   return (
-    <div>
-      <div className="report-toolbar no-print">
+    <Stack gap="md">
+      <Group gap="sm" className="no-print">
         <RangePicker
           schoolYearStartMonth={doc.settings.schoolYearStartMonth}
           value={range}
           onChange={setRange}
         />
-        <Seg
-          options={[
-            { key: "share", label: "Workload share" },
-            { key: "service", label: "Service minutes" },
-          ]}
-          value={attribution}
-          onChange={setAttribution}
-        />
-        <input
-          className="input"
-          style={{ width: 200 }}
+        <Seg options={ATTRIBUTION_OPTIONS} value={attribution} onChange={setAttribution} />
+        <TextInput
+          w={210}
           placeholder="Clinician name (for header)"
           value={doc.settings.clinicianName}
           onChange={(e) =>
             mutate((d) => ({ ...d, settings: { ...d.settings, clinicianName: e.target.value } }))
           }
         />
-        <span className="spacer" style={{ flex: 1 }} />
-        <button className="btn" onClick={exportWeeklyCsv}>
-          CSV · weekly
-        </button>
-        <button className="btn" onClick={exportRawCsv}>
-          CSV · raw
-        </button>
-        <button className="btn" onClick={exportBackup}>
-          Backup JSON
-        </button>
-        <button className="btn primary" onClick={() => window.print()}>
-          Print / Save PDF
-        </button>
-      </div>
+        <Group gap="xs" ml="auto">
+          <Menu position="bottom-end" shadow="md">
+            <Menu.Target>
+              <Button variant="default" leftSection={<IconDownload size={16} />}>
+                Export
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Label>Spreadsheets · no notes</Menu.Label>
+              <Menu.Item onClick={exportWeeklyCsv}>CSV · weekly summary</Menu.Item>
+              <Menu.Item onClick={exportRawCsv}>CSV · raw entries</Menu.Item>
+              <Menu.Divider />
+              <Menu.Label>Backup</Menu.Label>
+              {/* The one export that carries notes — it has to, or a restore
+                  would silently lose every one of them. Say so at the point of
+                  export rather than burying it in a doc. */}
+              <Menu.Item onClick={exportBackup}>
+                Full data file (JSON)
+                <Text size="xs" c="dimmed">
+                  Includes notes — for restoring, not sharing
+                </Text>
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+          <Button leftSection={<IconPrinter size={16} />} onClick={print}>
+            Print / Save PDF
+          </Button>
+        </Group>
+      </Group>
 
-      <div className="report-sheet">
-        <h1>Caseload time report</h1>
-        <div className="report-meta">
+      <Paper withBorder p="xl" className="report-sheet">
+        <Title order={1}>Caseload time report</Title>
+        <Text size="sm" c="dimmed" mt={4} mb="lg">
           {doc.settings.clinicianName ? `${doc.settings.clinicianName} · ` : ""}
           {range.label} · generated {generated}
-        </div>
+        </Text>
 
-        <div className="stat-row">
-          <div className="stat-tile">
-            <div className="stat-label">Total time</div>
-            <div className="stat-value">{toHours(totals.total)}h</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-label">Avg per week</div>
-            <div className="stat-value">{weeks ? `${toHours(totals.total / weeks)}h` : "—"}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-label">Students</div>
-            <div className="stat-value">{students.length}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-label">Direct / Indirect</div>
-            <div className="stat-value">
-              {totals.total
-                ? `${Math.round((totals.direct / totals.total) * 100)} / ${Math.round((totals.indirect / totals.total) * 100)}`
-                : "—"}
-            </div>
-          </div>
-        </div>
-
-        <div className="report-section">
-          <h2>Hours per week</h2>
-          <LegendRow
-            items={[
-              { label: "Direct", color: palette.direct },
-              { label: "Indirect", color: palette.indirect },
-            ]}
+        <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm" mb="lg">
+          <StatTile label="Total time" value={`${toHours(totals.total)}h`} />
+          <StatTile
+            label="Avg per week"
+            value={weeks ? `${toHours(totals.total / weeks)}h` : "—"}
           />
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={weekly} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-              <CartesianGrid stroke={palette.gridline} vertical={false} />
-              <XAxis
-                dataKey="week"
-                tickLine={false}
-                axisLine={{ stroke: palette.baseline }}
-                tick={{ fill: palette.muted, fontSize: 11 }}
-              />
-              <YAxis tickLine={false} axisLine={false} tick={{ fill: palette.muted, fontSize: 11 }} tickFormatter={fmtH} />
-              <Tooltip cursor={{ fill: palette.gridline, opacity: 0.35 }} content={<ChartTooltip formatter={fmtH} />} />
-              <Bar isAnimationActive={false} dataKey="Direct" stackId="w" fill={palette.direct} maxBarSize={24} stroke={palette.surface} strokeWidth={1} />
-              <Bar
-            isAnimationActive={false}
-                dataKey="Indirect"
-                stackId="w"
-                fill={palette.indirect}
-                maxBarSize={24}
-                radius={[4, 4, 0, 0]}
-                stroke={palette.surface}
-                strokeWidth={1}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+          <StatTile label="Students" value={students.length} />
+          <StatTile
+            label="Direct / Indirect"
+            value={
+              totals.total
+                ? `${Math.round((totals.direct / totals.total) * 100)} / ${Math.round(
+                    (totals.indirect / totals.total) * 100,
+                  )}`
+                : "—"
+            }
+          />
+        </SimpleGrid>
 
-        <div className="report-section">
-          <h2>Time per student</h2>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>IEP</th>
-                <th className="num">Mandate/wk</th>
-                <th className="num">Total</th>
-                <th className="num">Avg/wk</th>
-                <th className="num">Direct %</th>
-                <th>Top category</th>
-              </tr>
-            </thead>
-            <tbody>
+        <Box className="report-section" mb="lg">
+          <Title order={2} mb="xs">
+            Hours per week
+          </Title>
+          <BarChart
+            h={220}
+            data={weekly}
+            dataKey="week"
+            type="stacked"
+            withLegend
+            legendProps={{ verticalAlign: "top", height: 32 }}
+            series={[
+              { name: "Direct", color: palette.direct },
+              { name: "Indirect", color: palette.indirect },
+            ]}
+            maxBarWidth={24}
+            barProps={(series) => ({
+              stroke: palette.surface,
+              strokeWidth: 1,
+              radius: series.name === "Indirect" ? [4, 4, 0, 0] : 0,
+            })}
+            gridAxis="x"
+            tickLine="none"
+            strokeDasharray="0"
+            valueFormatter={fmtH}
+            yAxisProps={{ tickFormatter: fmtH }}
+            tooltipProps={{ content: (p: any) => <ChartTooltip {...p} formatter={fmtH} /> }}
+          />
+        </Box>
+
+        <Box className="report-section" mb="lg">
+          <Title order={2} mb="xs">
+            Time per student
+          </Title>
+          <Table fz="xs" withTableBorder striped>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Student</Table.Th>
+                <Table.Th>IEP</Table.Th>
+                <Table.Th className="num">Mandate/wk</Table.Th>
+                <Table.Th className="num">Total</Table.Th>
+                <Table.Th className="num">Avg/wk</Table.Th>
+                <Table.Th className="num">Direct %</Table.Th>
+                <Table.Th>Top category</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
               {students.map((s) => (
-                <tr key={s.student.id}>
-                  <td>
-                    <strong>{s.student.name}</strong>
-                  </td>
-                  <td>{s.student.iep ? "Yes" : "—"}</td>
-                  <td className="num">
+                <Table.Tr key={s.student.id}>
+                  <Table.Td fw={500}>{s.student.name}</Table.Td>
+                  <Table.Td>{s.student.iep ? "Yes" : "—"}</Table.Td>
+                  <Table.Td className="num">
                     {s.student.iep && s.student.mandatedMinutesPerWeek
                       ? fmtDuration(s.student.mandatedMinutesPerWeek)
                       : "—"}
-                  </td>
-                  <td className="num">{toHours(s.total)}h</td>
-                  <td className="num">{toHours(s.avgPerWeek)}h</td>
-                  <td className="num">{s.total ? Math.round((s.direct / s.total) * 100) : 0}%</td>
-                  <td>{topCategory(s.student.id)}</td>
-                </tr>
+                  </Table.Td>
+                  <Table.Td className="num">{toHours(s.total)}h</Table.Td>
+                  <Table.Td className="num">{toHours(s.avgPerWeek)}h</Table.Td>
+                  <Table.Td className="num">
+                    {s.total ? Math.round((s.direct / s.total) * 100) : 0}%
+                  </Table.Td>
+                  <Table.Td>{topCategory(s.student.id)}</Table.Td>
+                </Table.Tr>
               ))}
-            </tbody>
-          </table>
-          <div className="footnote">{attributionNote}</div>
-        </div>
+            </Table.Tbody>
+          </Table>
+          <Text size="xs" c="dimmed" mt={6}>
+            {note}
+          </Text>
+        </Box>
 
         {mandates.length > 0 && (
-          <div className="report-section">
-            <h2>IEP mandated vs actual service time</h2>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th className="num">Mandated/wk</th>
-                  <th className="num">Actual/wk</th>
-                  <th className="num">Difference</th>
-                </tr>
-              </thead>
-              <tbody>
+          <Box className="report-section" mb="lg">
+            <Title order={2} mb="xs">
+              IEP mandated vs actual service time
+            </Title>
+            <Table fz="xs" withTableBorder striped>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Student</Table.Th>
+                  <Table.Th className="num">Mandated/wk</Table.Th>
+                  <Table.Th className="num">Actual/wk</Table.Th>
+                  <Table.Th className="num">Difference</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
                 {mandates.map((m) => {
                   const diff = m.actualPerWeek - m.mandated;
                   return (
-                    <tr key={m.student.id}>
-                      <td>
-                        <strong>{m.student.name}</strong>
-                      </td>
-                      <td className="num">{fmtDuration(m.mandated)}</td>
-                      <td className="num">{fmtDuration(m.actualPerWeek)}</td>
-                      <td className="num">
-                        {diff < 0 ? `−${fmtDuration(Math.abs(diff))} under` : `+${fmtDuration(diff)} over`}
-                      </td>
-                    </tr>
+                    <Table.Tr key={m.student.id}>
+                      <Table.Td fw={500}>{m.student.name}</Table.Td>
+                      <Table.Td className="num">{fmtDuration(m.mandated)}</Table.Td>
+                      <Table.Td className="num">{fmtDuration(m.actualPerWeek)}</Table.Td>
+                      <Table.Td className="num">
+                        {diff < 0
+                          ? `−${fmtDuration(Math.abs(diff))} under`
+                          : `+${fmtDuration(diff)} over`}
+                      </Table.Td>
+                    </Table.Tr>
                   );
                 })}
-              </tbody>
-            </table>
-            <div className="footnote">
+              </Table.Tbody>
+            </Table>
+            <Text size="xs" c="dimmed" mt={6}>
               Actual counts service minutes: group sessions credited in full to each attendee.
-            </div>
-          </div>
+            </Text>
+          </Box>
         )}
 
-        <div className="report-section">
-          <h2>Time by category</h2>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Category</th>
-                <th>Type</th>
-                <th className="num">Hours</th>
-                <th className="num">Share</th>
-              </tr>
-            </thead>
-            <tbody>
+        <Box className="report-section" mb="lg">
+          <Title order={2} mb="xs">
+            Time by category
+          </Title>
+          <Table fz="xs" withTableBorder striped>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Category</Table.Th>
+                <Table.Th>Type</Table.Th>
+                <Table.Th className="num">Hours</Table.Th>
+                <Table.Th className="num">Share</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
               {catTotals.map((c) => (
-                <tr key={c.category.id}>
-                  <td>{c.category.name}</td>
-                  <td>{c.category.group === "direct" ? "Direct" : "Indirect"}</td>
-                  <td className="num">{toHours(c.minutes)}h</td>
-                  <td className="num">{totals.total ? Math.round((c.minutes / totals.total) * 100) : 0}%</td>
-                </tr>
+                <Table.Tr key={c.category.id}>
+                  <Table.Td>{c.category.name}</Table.Td>
+                  <Table.Td>{c.category.group === "direct" ? "Direct" : "Indirect"}</Table.Td>
+                  <Table.Td className="num">{toHours(c.minutes)}h</Table.Td>
+                  <Table.Td className="num">
+                    {totals.total ? Math.round((c.minutes / totals.total) * 100) : 0}%
+                  </Table.Td>
+                </Table.Tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </Table.Tbody>
+          </Table>
+        </Box>
 
-        <div className="footnote report-section">
+        <Text size="xs" c="dimmed">
           Produced with Clinician Tracker. Total time counts each entry once (actual clock time);
-          per-student numbers follow the selected attribution method. {attributionNote}
-        </div>
-      </div>
-    </div>
+          per-student numbers follow the selected attribution method. {note}
+        </Text>
+      </Paper>
+    </Stack>
   );
 }

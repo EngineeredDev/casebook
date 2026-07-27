@@ -1,34 +1,45 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useTheme } from "../theme.tsx";
-import { rangePresets, type DateRange, todayYmd, addDaysYmd } from "../lib/time.ts";
+import { useState, type ReactNode } from "react";
+import {
+  ActionIcon,
+  Badge,
+  Box,
+  Button,
+  Card,
+  Group,
+  Menu,
+  Paper,
+  SegmentedControl,
+  Stack,
+  Table,
+  Text,
+  Tooltip,
+} from "@mantine/core";
+import { DatePickerInput } from "@mantine/dates";
+import {
+  IconCalendar,
+  IconCheck,
+  IconChartBar,
+  IconChevronDown,
+  IconTable,
+} from "@tabler/icons-react";
+import { rangePresets, type DateRange } from "../lib/time.ts";
+import type { Attribution } from "../lib/aggregate.ts";
 
-export function useClickOutside(onClose: () => void) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
-  return ref;
-}
-
-export function StatTile({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: ReactNode;
-  sub?: ReactNode;
-}) {
+export function StatTile({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
   return (
-    <div className="stat-tile">
-      <div className="stat-label">{label}</div>
-      <div className="stat-value">{value}</div>
-      {sub != null && <div className="stat-delta">{sub}</div>}
-    </div>
+    <Paper withBorder p="sm">
+      <Text size="xs" c="dimmed" fw={600} tt="uppercase" lts={0.4}>
+        {label}
+      </Text>
+      <Text fz={26} fw={600} lh={1.2} mt={4} className="tnum">
+        {value}
+      </Text>
+      {sub != null && (
+        <Text size="xs" c="dimmed" mt={2}>
+          {sub}
+        </Text>
+      )}
+    </Paper>
   );
 }
 
@@ -42,19 +53,24 @@ export function Seg<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="seg" role="group">
-      {options.map((o) => (
-        <button
-          key={o.key}
-          className={o.key === value ? "active" : ""}
-          onClick={() => onChange(o.key)}
-          type="button"
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
+    <SegmentedControl
+      size="xs"
+      value={value}
+      onChange={(v) => onChange(v as T)}
+      data={options.map((o) => ({ value: o.key, label: o.label }))}
+    />
   );
+}
+
+export const ATTRIBUTION_OPTIONS: { key: Attribution; label: string }[] = [
+  { key: "share", label: "Workload share" },
+  { key: "service", label: "Service minutes" },
+];
+
+export function attributionNote(attribution: Attribution): string {
+  return attribution === "share"
+    ? "Group sessions are split evenly among attendees (workload view)."
+    : "Group sessions are credited in full to each attendee (service-minutes view).";
 }
 
 export interface RangeSelection {
@@ -77,72 +93,113 @@ export function RangePicker({
   value: RangeSelection;
   onChange: (v: RangeSelection) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [customFrom, setCustomFrom] = useState(addDaysYmd(todayYmd(), -28));
-  const [customTo, setCustomTo] = useState(todayYmd());
-  const ref = useClickOutside(() => setOpen(false));
+  const [opened, setOpened] = useState(false);
+  const [custom, setCustom] = useState<[string | null, string | null]>([null, null]);
   const presets = rangePresets(schoolYearStartMonth);
+  const [from, to] = custom;
 
   return (
-    <div className="range-menu-wrap" ref={ref}>
-      <button className="btn" type="button" onClick={() => setOpen((o) => !o)}>
-        {value.label} ▾
-      </button>
-      {open && (
-        <div className="range-menu">
-          {presets.map((p) => (
-            <button
-              key={p.key}
-              type="button"
-              className="range-item"
-              onClick={() => {
-                onChange({ key: p.key, label: p.label, range: p.range() });
-                setOpen(false);
-              }}
-            >
-              <span>{p.label}</span>
-              {value.key === p.key && <span className="check">✓</span>}
-            </button>
-          ))}
-          <div className="range-custom">
-            <input
-              type="date"
-              value={customFrom}
-              onChange={(e) => setCustomFrom(e.target.value)}
-              aria-label="Custom range start"
-            />
-            <span>–</span>
-            <input
-              type="date"
-              value={customTo}
-              onChange={(e) => setCustomTo(e.target.value)}
-              aria-label="Custom range end"
-            />
-            <button
-              className="btn small"
-              type="button"
-              disabled={!customFrom || !customTo || customFrom > customTo}
-              onClick={() => {
-                onChange({
-                  key: "custom",
-                  label: `${customFrom} – ${customTo}`,
-                  range: { from: customFrom, to: customTo },
-                });
-                setOpen(false);
-              }}
-            >
-              Apply
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    <Menu
+      opened={opened}
+      onChange={setOpened}
+      width={280}
+      shadow="md"
+      position="bottom-start"
+      closeOnItemClick={false}
+    >
+      <Menu.Target>
+        <Button
+          variant="default"
+          leftSection={<IconCalendar size={16} />}
+          rightSection={<IconChevronDown size={14} />}
+        >
+          {value.label}
+        </Button>
+      </Menu.Target>
+      <Menu.Dropdown>
+        {presets.map((p) => (
+          <Menu.Item
+            key={p.key}
+            rightSection={value.key === p.key ? <IconCheck size={14} /> : null}
+            onClick={() => {
+              onChange({ key: p.key, label: p.label, range: p.range() });
+              setOpened(false);
+            }}
+          >
+            {p.label}
+          </Menu.Item>
+        ))}
+        <Menu.Divider />
+        <Menu.Label>Custom range</Menu.Label>
+        <Box px="xs" pb="xs">
+          <DatePickerInput
+            type="range"
+            size="xs"
+            placeholder="Start – end"
+            value={custom}
+            onChange={setCustom}
+          />
+          <Button
+            fullWidth
+            size="xs"
+            mt={6}
+            disabled={!from || !to}
+            onClick={() => {
+              if (!from || !to) return;
+              onChange({ key: "custom", label: `${from} – ${to}`, range: { from, to } });
+              setOpened(false);
+            }}
+          >
+            Apply
+          </Button>
+        </Box>
+      </Menu.Dropdown>
+    </Menu>
   );
 }
 
 export function IepBadge({ iep }: { iep: boolean }) {
   if (!iep) return null;
-  return <span className="badge iep">IEP</span>;
+  return (
+    <Badge size="xs" variant="light" color="clinical">
+      IEP
+    </Badge>
+  );
+}
+
+export interface TableTwin {
+  headers: string[];
+  rows: (string | number)[][];
+}
+
+/** Plain-table rendering of a chart's data — the first column is a label, the rest are numbers. */
+export function DataTable({ headers, rows }: TableTwin) {
+  return (
+    <Table.ScrollContainer minWidth={320}>
+      <Table striped highlightOnHover fz="xs">
+        <Table.Thead>
+          <Table.Tr>
+            {headers.map((h, i) => (
+              <Table.Th key={h} className={i === 0 ? undefined : "num"}>
+                {h}
+              </Table.Th>
+            ))}
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {rows.map((r, i) => (
+            <Table.Tr key={i}>
+              {r.map((c, j) => (
+                <Table.Td key={j} className={j === 0 ? undefined : "num"}>
+                  {c}
+                </Table.Td>
+              ))}
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
+    </Table.ScrollContainer>
+  );
 }
 
 /**
@@ -152,127 +209,117 @@ export function IepBadge({ iep }: { iep: boolean }) {
 export function ChartCard({
   title,
   sub,
-  wide,
   legend,
   table,
   children,
 }: {
   title: string;
   sub?: string;
-  wide?: boolean;
   legend?: ReactNode;
-  table?: { headers: string[]; rows: (string | number)[][] };
+  table?: TableTwin;
   children: ReactNode;
 }) {
   const [showTable, setShowTable] = useState(false);
   return (
-    <div className={`chart-card${wide ? " wide" : ""}`}>
-      <div className="card-head">
+    <Card h="100%">
+      <Group justify="space-between" align="flex-start" wrap="nowrap" mb="xs">
         <div>
-          <div className="card-title">{title}</div>
-          {sub && <div className="card-sub">{sub}</div>}
+          <Text fw={600} size="sm">
+            {title}
+          </Text>
+          {sub && (
+            <Text size="xs" c="dimmed" mt={2}>
+              {sub}
+            </Text>
+          )}
         </div>
         {table && (
-          <button
-            className="btn small no-print"
-            type="button"
-            onClick={() => setShowTable((s) => !s)}
-          >
-            {showTable ? "Chart" : "Table"}
-          </button>
+          <Tooltip label={showTable ? "Show chart" : "Show data table"}>
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              className="no-print"
+              aria-label={showTable ? "Show chart" : "Show data table"}
+              onClick={() => setShowTable((s) => !s)}
+            >
+              {showTable ? <IconChartBar size={16} /> : <IconTable size={16} />}
+            </ActionIcon>
+          </Tooltip>
         )}
-      </div>
+      </Group>
       {legend}
-      {showTable && table ? (
-        <div style={{ overflowX: "auto" }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                {table.headers.map((h, i) => (
-                  <th key={h} className={i === 0 ? "" : "num"}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {table.rows.map((r, i) => (
-                <tr key={i}>
-                  {r.map((c, j) => (
-                    <td key={j} className={j === 0 ? "" : "num"}>
-                      {c}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        children
-      )}
-    </div>
+      {showTable && table ? <DataTable {...table} /> : children}
+    </Card>
   );
 }
 
-export function LegendRow({ items }: { items: { label: string; color: string; line?: boolean }[] }) {
+export function LegendRow({
+  items,
+}: {
+  items: { label: string; color: string; line?: boolean }[];
+}) {
   return (
-    <div className="legend-row">
+    <Group gap="md" mb="xs">
       {items.map((i) => (
-        <span key={i.label} className="legend-key">
-          <span
-            className={i.line ? "legend-line" : "legend-swatch"}
-            style={{ background: i.color }}
-          />
-          {i.label}
-        </span>
+        <Group key={i.label} gap={6} wrap="nowrap">
+          <span className={i.line ? "legend-line" : "legend-swatch"} style={{ background: i.color }} />
+          <Text size="xs" c="dimmed">
+            {i.label}
+          </Text>
+        </Group>
       ))}
-    </div>
+    </Group>
   );
 }
 
-/** Recharts custom tooltip: values lead, series names follow, line keys not boxes. */
+interface TooltipPayloadItem {
+  name?: string;
+  value?: number | string;
+  color?: string;
+}
+
+/**
+ * Chart tooltip: values lead, series names follow.
+ *
+ * `labels` maps a series key to its display name. Series keys must not contain
+ * a "." — Mantine reads that as a nested-object path — so charts keyed by
+ * anything user-named pass synthetic keys plus this map.
+ */
 export function ChartTooltip({
-  active,
   label,
   payload,
   formatter,
+  labels,
 }: {
-  active?: boolean;
-  label?: string | number;
-  payload?: { name?: string; value?: number | string; color?: string }[];
+  label?: ReactNode;
+  payload?: TooltipPayloadItem[] | null;
   formatter?: (v: number) => string;
+  labels?: Record<string, string>;
 }) {
-  if (!active || !payload || payload.length === 0) return null;
+  const items = (payload ?? [])
+    .filter((p) => p.value != null)
+    .map((p) => ({ ...p, name: (p.name && labels?.[p.name]) ?? p.name }));
+  if (items.length === 0) return null;
   return (
-    <div className="chart-tooltip">
-      {label != null && <div className="tt-title">{String(label)}</div>}
-      {payload.map((p, i) => (
-        <div className="tt-row" key={i}>
-          <span className="tt-key" style={{ background: p.color }} />
-          <span className="tt-val">
-            {formatter && typeof p.value === "number" ? formatter(p.value) : String(p.value)}
-          </span>
-          <span className="tt-name">{p.name}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/** 12-point sparkline in the de-emphasis hue, current period in the accent. */
-export function Sparkline({ points, width = 96, height = 28 }: { points: number[]; width?: number; height?: number }) {
-  const { palette } = useTheme();
-  if (points.length < 2) return null;
-  const max = Math.max(...points, 1);
-  const step = width / (points.length - 1);
-  const y = (v: number) => height - 3 - (v / max) * (height - 6);
-  const d = points.map((p, i) => `${i === 0 ? "M" : "L"}${(i * step).toFixed(1)},${y(p).toFixed(1)}`).join(" ");
-  const lastX = (points.length - 1) * step;
-  return (
-    <svg width={width} height={height} aria-hidden="true">
-      <path d={d} fill="none" stroke={palette.deEmphasis} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx={lastX} cy={y(points[points.length - 1])} r="4" fill={palette.series[0]} stroke={palette.surface} strokeWidth="2" />
-    </svg>
+    <Paper withBorder shadow="md" px="sm" py="xs">
+      {label != null && (
+        <Text size="xs" c="dimmed" mb={4}>
+          {label}
+        </Text>
+      )}
+      <Stack gap={2}>
+        {items.map((item, i) => (
+          <Group key={i} gap={6} wrap="nowrap">
+            <span className="legend-swatch" style={{ background: item.color }} />
+            <Text size="xs" fw={600} className="tnum">
+              {formatter && typeof item.value === "number" ? formatter(item.value) : String(item.value)}
+            </Text>
+            <Text size="xs" c="dimmed">
+              {item.name}
+            </Text>
+          </Group>
+        ))}
+      </Stack>
+    </Paper>
   );
 }
