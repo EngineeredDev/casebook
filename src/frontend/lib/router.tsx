@@ -4,8 +4,7 @@
  * Deliberately not react-router: everything that library adds beyond this file
  * — nested layouts, loaders, lazy routes, navigation blocking, scroll
  * restoration — is either unusable in its declarative mode or meaningless in a
- * single-user app served from loopback with no code splitting. See
- * docs/routing-and-student-page.md §4.
+ * single-user app served from loopback with no code splitting.
  */
 
 import { useCallback, useMemo, useSyncExternalStore, type ComponentPropsWithoutRef } from "react";

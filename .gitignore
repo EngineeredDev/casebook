@@ -1,5 +1,7 @@
 node_modules/
 dist/
+# Implementation specs — kept locally, not published.
+docs/
 data.json
 backups/
 *.tmp

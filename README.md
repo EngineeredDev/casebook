@@ -188,7 +188,7 @@ beside itself.
   `string` rather than `string | undefined`. `lib/urlState.ts` puts view state in
   the query string, omitting each param when it holds its default and falling
   back rather than throwing on a bad value.
-  Why not react-router: `docs/routing-and-student-page.md` §4.
+  Why not react-router: see the comment at the top of that file.
 - `src/frontend/lib/search.ts` — the Timeline's query language: an index built
   once per document (parsing note HTML is the expensive part, so it does not
   happen per keystroke) and a parser for the `field:value` / `-negated` /
@@ -211,8 +211,7 @@ Notes use [Tiptap](https://tiptap.dev) via `@mantine/tiptap`. Everything used is
 MIT and runs entirely offline; Tiptap's paid tiers only cover their cloud
 services (collaboration, comments, AI), none of which are here. Note HTML is
 never injected with `dangerouslySetInnerHTML` — read-only views re-parse it
-through the same editor schema, so nothing outside that schema can render. See
-`docs/rich-notes-spec.md`.
+through the same editor schema, so nothing outside that schema can render.
 
 ## License
 

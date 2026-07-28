@@ -38,7 +38,7 @@ export interface Entry {
   /**
    * Clinical note as HTML, constrained to the editor schema (see
    * frontend/lib/notes.ts). Absent when empty. Was plain text in doc version 1;
-   * storage.ts migrates those forward. Never exported — see docs/rich-notes-spec.md.
+   * storage.ts migrates those forward. Never exported except in the JSON backup.
    */
   note?: string;
   createdAt: string;
