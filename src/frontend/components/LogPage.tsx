@@ -34,7 +34,7 @@ import type { Entry, Student } from "../../types.ts";
 import { addDaysYmd, fmtDuration, fmtFullDate, todayYmd } from "../lib/time.ts";
 import { navigate, useLocation, useSearchParams } from "../lib/router.tsx";
 import { useDateParam, type LogNavState } from "../lib/urlState.ts";
-import { IepBadge } from "./ui.tsx";
+import { DeleteEntryModal, IepBadge } from "./ui.tsx";
 import { NoteEditor } from "./NoteEditor.tsx";
 import { isBlankNote, noteExcerpt } from "../lib/notes.ts";
 
@@ -187,6 +187,7 @@ export function LogPage() {
   const [customMinutes, setCustomMinutes] = useState<number | "">("");
   const [startTime, setStartTime] = useState("");
   const [note, setNote] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<Entry | null>(null);
   const studentInputRef = useRef<HTMLInputElement>(null);
 
   /** The entry under edit lives in the URL, so an edit link is shareable and survives reload. */
@@ -323,11 +324,18 @@ export function LogPage() {
 
   const removeEntry = (entry: Entry) => {
     deleteEntry(entry.id);
+    setPendingDelete(null);
     if (editingId === entry.id) resetForm();
     notifications.show({
       message: entry.minutes ? `Deleted ${fmtDuration(entry.minutes)} entry` : "Deleted entry",
       color: "gray",
     });
+  };
+
+  /** An entry with a note is clinical documentation — deleting it asks first. */
+  const askDelete = (entry: Entry) => {
+    if (entry.note) setPendingDelete(entry);
+    else removeEntry(entry);
   };
 
   const catChip = (c: (typeof categories)[number]) => (
@@ -347,268 +355,276 @@ export function LogPage() {
   );
 
   return (
-    <Grid>
-      <Grid.Col span={{ base: 12, lg: 7 }}>
-        <Card>
-          <Text fw={600} mb="md">
-            {editingId ? "Edit entry" : "Log time"}
-          </Text>
-
-          {editingMissing && (
-            <Alert variant="light" color="gray" mb="md" p="xs">
-              <Group justify="space-between" wrap="nowrap" gap="sm">
-                <Text size="xs">That entry no longer exists — it may have been deleted.</Text>
-                <Button size="compact-xs" variant="default" onClick={cancelEdit}>
-                  Dismiss
-                </Button>
-              </Group>
-            </Alert>
-          )}
-
-          <Stack gap="md">
-            <Group grow align="flex-start">
-              <DatePickerInput
-                label="Date"
-                value={date}
-                onChange={(v) => setDate(v ?? todayYmd())}
-                leftSection={
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    size="sm"
-                    aria-label="Previous day"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDate(addDaysYmd(date, -1));
-                    }}
-                  >
-                    <IconChevronLeft size={16} />
-                  </ActionIcon>
-                }
-                rightSection={
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    size="sm"
-                    aria-label="Next day"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDate(addDaysYmd(date, 1));
-                    }}
-                  >
-                    <IconChevronRight size={16} />
-                  </ActionIcon>
-                }
-              />
-              <TimeInput
-                label={optionalLabel("Start time")}
-                leftSection={<IconClock size={16} />}
-                value={startTime}
-                onChange={(e) => setStartTime(e.currentTarget.value)}
-              />
-            </Group>
-
-            <Box>
-              <Text component="label" size="sm" fw={500} display="block" mb={6}>
-                Duration
-              </Text>
-              {untimed ? (
-                <Alert variant="light" color="gray" p="xs" icon={<IconClockOff size={16} />}>
-                  <Text size="xs">
-                    Untimed category — logged as an event, with no minutes counted toward your day.
-                  </Text>
-                </Alert>
-              ) : (
-                <Group gap={6} align="center">
-                  <Chip.Group
-                    multiple={false}
-                    value={customMinutes === "" && minutes ? String(minutes) : ""}
-                    onChange={(v) => {
-                      setMinutes(Number(v));
-                      setCustomMinutes("");
-                    }}
-                  >
-                    <Group gap={6}>
-                      {DURATION_PRESETS.map((m) => (
-                        <Chip key={m} value={String(m)} size="sm" variant="outline">
-                          {m}m
-                        </Chip>
-                      ))}
-                    </Group>
-                  </Chip.Group>
-                  <NumberInput
-                    size="xs"
-                    w={110}
-                    min={1}
-                    placeholder="Custom"
-                    suffix=" min"
-                    value={customMinutes}
-                    onChange={(v) => {
-                      setCustomMinutes(v === "" ? "" : Number(v));
-                      if (v !== "") setMinutes(null);
-                    }}
-                  />
-                </Group>
-              )}
-            </Box>
-
-            <Box>
-              <Text component="label" size="sm" fw={500} display="block" mb={4}>
-                Student(s)
-              </Text>
-              <StudentPicker
-                selectedIds={studentIds}
-                onChange={setStudentIds}
-                inputRef={studentInputRef}
-              />
-              {studentIds.length > 1 && (
-                <Alert
-                  variant="light"
-                  color="gray"
-                  mt="xs"
-                  p="xs"
-                  icon={<IconUsers size={16} />}
-                >
-                  <Text size="xs">
-                    Group session — the time counts once toward your day, and per-student views can
-                    show it in full or split.
-                  </Text>
-                </Alert>
-              )}
-            </Box>
-
-            <Box>
-              <Text component="label" size="sm" fw={500} display="block" mb={6}>
-                Category
-              </Text>
-              <Chip.Group multiple={false} value={categoryId ?? ""} onChange={setCategoryId}>
-                <Text size="xs" c="dimmed" mb={4}>
-                  Direct time
-                </Text>
-                <Group gap={6} mb="xs">
-                  {directCats.map(catChip)}
-                </Group>
-                <Text size="xs" c="dimmed" mb={4}>
-                  Indirect time
-                </Text>
-                <Group gap={6}>{indirectCats.map(catChip)}</Group>
-              </Chip.Group>
-            </Box>
-
-            <NoteEditor
-              value={note}
-              onChange={setNote}
-              onSubmit={submit}
-              canSubmit={valid}
-              submitLabel={editingId ? "Save changes" : "Log entry"}
-              studentIds={studentIds}
-              editingId={editingId}
-              date={date}
-            />
-
-            <Group>
-              <Button disabled={!valid} onClick={submit}>
-                {editingId ? "Save changes" : "Log entry"}
-              </Button>
-              {editingId && (
-                <Button variant="default" onClick={cancelEdit}>
-                  {returnTo ? "Cancel" : "Cancel edit"}
-                </Button>
-              )}
-            </Group>
-          </Stack>
-        </Card>
-      </Grid.Col>
-
-      <Grid.Col span={{ base: 12, lg: 5 }}>
-        <Card>
-          <Group justify="space-between" mb="sm" wrap="nowrap">
-            <Text fw={600} size="sm">
-              {fmtFullDate(date)}
+    <>
+      <Grid>
+        <Grid.Col span={{ base: 12, lg: 7 }}>
+          <Card>
+            <Text fw={600} mb="md">
+              {editingId ? "Edit entry" : "Log time"}
             </Text>
-            <Group gap={6} wrap="nowrap">
-              {dayUntimed > 0 && (
-                <Badge variant="default" leftSection={<IconClockOff size={11} />}>
-                  {dayUntimed}
-                </Badge>
-              )}
-              {dayTotal > 0 && (
-                <Badge variant="light" color="gray">
-                  {fmtDuration(dayTotal)}
-                </Badge>
-              )}
-            </Group>
-          </Group>
 
-          {dayEntries.length === 0 ? (
-            <Text size="sm" c="dimmed" ta="center" py="xl">
-              No entries for this day yet.
-            </Text>
-          ) : (
-            <Stack gap={2}>
-              {dayEntries.map((e) => {
-                const cat = doc.categories.find((c) => c.id === e.categoryId);
-                const names = e.studentIds
-                  .map((id) => doc.students.find((s) => s.id === id)?.name ?? "(deleted)")
-                  .join(", ");
-                return (
-                  <Group
-                    key={e.id}
-                    gap="xs"
-                    wrap="nowrap"
-                    py={6}
-                    style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
-                  >
-                    <Text
+            {editingMissing && (
+              <Alert variant="light" color="gray" mb="md" p="xs">
+                <Group justify="space-between" wrap="nowrap" gap="sm">
+                  <Text size="xs">That entry no longer exists — it may have been deleted.</Text>
+                  <Button size="compact-xs" variant="default" onClick={cancelEdit}>
+                    Dismiss
+                  </Button>
+                </Group>
+              </Alert>
+            )}
+
+            <Stack gap="md">
+              <Group grow align="flex-start">
+                <DatePickerInput
+                  label="Date"
+                  value={date}
+                  onChange={(v) => setDate(v ?? todayYmd())}
+                  leftSection={
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
                       size="sm"
-                      fw={600}
-                      w={58}
-                      c={cat?.untimed ? "dimmed" : undefined}
-                      className="tnum"
-                      style={{ flex: "none" }}
+                      aria-label="Previous day"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDate(addDaysYmd(date, -1));
+                      }}
                     >
-                      {cat?.untimed ? "—" : fmtDuration(e.minutes)}
+                      <IconChevronLeft size={16} />
+                    </ActionIcon>
+                  }
+                  rightSection={
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      size="sm"
+                      aria-label="Next day"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDate(addDaysYmd(date, 1));
+                      }}
+                    >
+                      <IconChevronRight size={16} />
+                    </ActionIcon>
+                  }
+                />
+                <TimeInput
+                  label={optionalLabel("Start time")}
+                  leftSection={<IconClock size={16} />}
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.currentTarget.value)}
+                />
+              </Group>
+
+              <Box>
+                <Text component="label" size="sm" fw={500} display="block" mb={6}>
+                  Duration
+                </Text>
+                {untimed ? (
+                  <Alert variant="light" color="gray" p="xs" icon={<IconClockOff size={16} />}>
+                    <Text size="xs">
+                      Untimed category — logged as an event, with no minutes counted toward your day.
                     </Text>
-                    <span className={`cat-dot ${cat?.group ?? "indirect"}`} />
-                    <Box style={{ flex: 1, minWidth: 0 }}>
-                      <Text size="sm" truncate>
-                        {names}
-                      </Text>
-                      <Text size="xs" c="dimmed" truncate>
-                        {cat?.name ?? "(deleted)"}
-                        {e.startTime ? ` · ${e.startTime}` : ""}
-                        {e.note ? ` · ${noteExcerpt(e.note, 60)}` : ""}
-                      </Text>
-                    </Box>
-                    <Group gap={2} wrap="nowrap" style={{ flex: "none" }}>
-                      <Tooltip label="Edit">
-                        <ActionIcon
-                          variant="subtle"
-                          color="gray"
-                          aria-label="Edit entry"
-                          onClick={() => startEdit(e)}
-                        >
-                          <IconPencil size={15} />
-                        </ActionIcon>
-                      </Tooltip>
-                      <Tooltip label="Delete">
-                        <ActionIcon
-                          variant="subtle"
-                          color="red"
-                          aria-label="Delete entry"
-                          onClick={() => removeEntry(e)}
-                        >
-                          <IconTrash size={15} />
-                        </ActionIcon>
-                      </Tooltip>
-                    </Group>
+                  </Alert>
+                ) : (
+                  <Group gap={6} align="center">
+                    <Chip.Group
+                      multiple={false}
+                      value={customMinutes === "" && minutes ? String(minutes) : ""}
+                      onChange={(v) => {
+                        setMinutes(Number(v));
+                        setCustomMinutes("");
+                      }}
+                    >
+                      <Group gap={6}>
+                        {DURATION_PRESETS.map((m) => (
+                          <Chip key={m} value={String(m)} size="sm" variant="outline">
+                            {m}m
+                          </Chip>
+                        ))}
+                      </Group>
+                    </Chip.Group>
+                    <NumberInput
+                      size="xs"
+                      w={110}
+                      min={1}
+                      placeholder="Custom"
+                      suffix=" min"
+                      value={customMinutes}
+                      onChange={(v) => {
+                        setCustomMinutes(v === "" ? "" : Number(v));
+                        if (v !== "") setMinutes(null);
+                      }}
+                    />
                   </Group>
-                );
-              })}
+                )}
+              </Box>
+
+              <Box>
+                <Text component="label" size="sm" fw={500} display="block" mb={4}>
+                  Student(s)
+                </Text>
+                <StudentPicker
+                  selectedIds={studentIds}
+                  onChange={setStudentIds}
+                  inputRef={studentInputRef}
+                />
+                {studentIds.length > 1 && (
+                  <Alert
+                    variant="light"
+                    color="gray"
+                    mt="xs"
+                    p="xs"
+                    icon={<IconUsers size={16} />}
+                  >
+                    <Text size="xs">
+                      Group session — the time counts once toward your day, and per-student views can
+                      show it in full or split.
+                    </Text>
+                  </Alert>
+                )}
+              </Box>
+
+              <Box>
+                <Text component="label" size="sm" fw={500} display="block" mb={6}>
+                  Category
+                </Text>
+                <Chip.Group multiple={false} value={categoryId ?? ""} onChange={setCategoryId}>
+                  <Text size="xs" c="dimmed" mb={4}>
+                    Direct time
+                  </Text>
+                  <Group gap={6} mb="xs">
+                    {directCats.map(catChip)}
+                  </Group>
+                  <Text size="xs" c="dimmed" mb={4}>
+                    Indirect time
+                  </Text>
+                  <Group gap={6}>{indirectCats.map(catChip)}</Group>
+                </Chip.Group>
+              </Box>
+
+              <NoteEditor
+                value={note}
+                onChange={setNote}
+                onSubmit={submit}
+                canSubmit={valid}
+                submitLabel={editingId ? "Save changes" : "Log entry"}
+                studentIds={studentIds}
+                editingId={editingId}
+                date={date}
+              />
+
+              <Group>
+                <Button disabled={!valid} onClick={submit}>
+                  {editingId ? "Save changes" : "Log entry"}
+                </Button>
+                {editingId && (
+                  <Button variant="default" onClick={cancelEdit}>
+                    {returnTo ? "Cancel" : "Cancel edit"}
+                  </Button>
+                )}
+              </Group>
             </Stack>
-          )}
-        </Card>
-      </Grid.Col>
-    </Grid>
+          </Card>
+        </Grid.Col>
+
+        <Grid.Col span={{ base: 12, lg: 5 }}>
+          <Card>
+            <Group justify="space-between" mb="sm" wrap="nowrap">
+              <Text fw={600} size="sm">
+                {fmtFullDate(date)}
+              </Text>
+              <Group gap={6} wrap="nowrap">
+                {dayUntimed > 0 && (
+                  <Badge variant="default" leftSection={<IconClockOff size={11} />}>
+                    {dayUntimed}
+                  </Badge>
+                )}
+                {dayTotal > 0 && (
+                  <Badge variant="light" color="gray">
+                    {fmtDuration(dayTotal)}
+                  </Badge>
+                )}
+              </Group>
+            </Group>
+
+            {dayEntries.length === 0 ? (
+              <Text size="sm" c="dimmed" ta="center" py="xl">
+                No entries for this day yet.
+              </Text>
+            ) : (
+              <Stack gap={2}>
+                {dayEntries.map((e) => {
+                  const cat = doc.categories.find((c) => c.id === e.categoryId);
+                  const names = e.studentIds
+                    .map((id) => doc.students.find((s) => s.id === id)?.name ?? "(deleted)")
+                    .join(", ");
+                  return (
+                    <Group
+                      key={e.id}
+                      gap="xs"
+                      wrap="nowrap"
+                      py={6}
+                      style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
+                    >
+                      <Text
+                        size="sm"
+                        fw={600}
+                        w={58}
+                        c={cat?.untimed ? "dimmed" : undefined}
+                        className="tnum"
+                        style={{ flex: "none" }}
+                      >
+                        {cat?.untimed ? "—" : fmtDuration(e.minutes)}
+                      </Text>
+                      <span className={`cat-dot ${cat?.group ?? "indirect"}`} />
+                      <Box style={{ flex: 1, minWidth: 0 }}>
+                        <Text size="sm" truncate>
+                          {names}
+                        </Text>
+                        <Text size="xs" c="dimmed" truncate>
+                          {cat?.name ?? "(deleted)"}
+                          {e.startTime ? ` · ${e.startTime}` : ""}
+                          {e.note ? ` · ${noteExcerpt(e.note, 60)}` : ""}
+                        </Text>
+                      </Box>
+                      <Group gap={2} wrap="nowrap" style={{ flex: "none" }}>
+                        <Tooltip label="Edit">
+                          <ActionIcon
+                            variant="subtle"
+                            color="gray"
+                            aria-label="Edit entry"
+                            onClick={() => startEdit(e)}
+                          >
+                            <IconPencil size={15} />
+                          </ActionIcon>
+                        </Tooltip>
+                        <Tooltip label="Delete">
+                          <ActionIcon
+                            variant="subtle"
+                            color="red"
+                            aria-label="Delete entry"
+                            onClick={() => askDelete(e)}
+                          >
+                            <IconTrash size={15} />
+                          </ActionIcon>
+                        </Tooltip>
+                      </Group>
+                    </Group>
+                  );
+                })}
+              </Stack>
+            )}
+          </Card>
+        </Grid.Col>
+      </Grid>
+
+      <DeleteEntryModal
+        entry={pendingDelete}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={removeEntry}
+      />
+    </>
   );
 }
