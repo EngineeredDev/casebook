@@ -213,3 +213,7 @@ services (collaboration, comments, AI), none of which are here. Note HTML is
 never injected with `dangerouslySetInnerHTML` — read-only views re-parse it
 through the same editor schema, so nothing outside that schema can render. See
 `docs/rich-notes-spec.md`.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
