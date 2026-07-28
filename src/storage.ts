@@ -111,7 +111,7 @@ export function backupIfNeeded(): void {
   copyFileSync(src, dest);
   const backups = readdirSync(dir)
     .filter((f) => /^data-\d{4}-\d{2}-\d{2}\.json$/.test(basename(f)))
-    .sort();
+    .toSorted();
   for (const old of backups.slice(0, Math.max(0, backups.length - KEEP_BACKUPS))) {
     unlinkSync(join(dir, old));
   }

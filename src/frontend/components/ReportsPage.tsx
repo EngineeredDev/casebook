@@ -144,7 +144,7 @@ export function ReportsPage() {
 
   /** Notes are deliberately absent — clinical narrative never leaves the app. */
   const exportRawCsv = () => {
-    const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+    const sorted = entries.toSorted((a, b) => a.date.localeCompare(b.date));
     downloadCsv(`raw-entries-${todayYmd()}.csv`, [
       [
         "Date",

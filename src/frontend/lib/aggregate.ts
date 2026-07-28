@@ -148,7 +148,7 @@ export function perStudentTotals(
   }
   const out = [...map.values()].filter((r) => r.entryCount > 0 || r.student.active);
   for (const r of out) r.avgPerWeek = r.total / weeks;
-  return out.sort((a, b) => b.total - a.total);
+  return out.toSorted((a, b) => b.total - a.total);
 }
 
 export interface CategoryTotal {
@@ -173,7 +173,7 @@ export function perCategoryTotals(entries: Entry[], categories: Category[]): Cat
   return categories
     .map((category) => ({ category, ...(map.get(category.id) ?? { minutes: 0, count: 0 }) }))
     .filter((r) => r.count > 0)
-    .sort((a, b) => b.minutes - a.minutes || b.count - a.count);
+    .toSorted((a, b) => b.minutes - a.minutes || b.count - a.count);
 }
 
 /** week -> studentId -> minutes, zero-filled weeks; for trend lines and the weekly CSV. */
@@ -224,7 +224,7 @@ export function studentWeeklyByGroup(
 export function studentEntries(entries: Entry[], studentId: string): Entry[] {
   return entries
     .filter((e) => e.studentIds.includes(studentId))
-    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+    .toSorted((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 }
 
 export interface MandateRow {
@@ -249,7 +249,7 @@ export function mandateComparison(
       mandated: t.student.mandatedMinutesPerWeek!,
       actualPerWeek: t.avgPerWeek,
     }))
-    .sort((a, b) => b.actualPerWeek - a.actualPerWeek);
+    .toSorted((a, b) => b.actualPerWeek - a.actualPerWeek);
 }
 
 export interface WeeklySummaryRow {
@@ -296,7 +296,7 @@ export function weeklySummaryRows(
       row.total += per;
     }
   }
-  return [...acc.values()].sort(
+  return [...acc.values()].toSorted(
     (a, b) => a.week.localeCompare(b.week) || a.student.name.localeCompare(b.student.name),
   );
 }

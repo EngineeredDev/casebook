@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -189,6 +190,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [mutate],
   );
 
+  // Built once per doc change rather than per render: every consumer re-renders
+  // whenever this value's identity changes, and the actions are already
+  // useCallback-stable. It has to be computed above the early returns below,
+  // so it carries the null case rather than being guarded by it.
+  const value = useMemo(
+    () =>
+      doc
+        ? {
+            doc,
+            saveState,
+            mutate,
+            reload: load,
+            addStudent,
+            updateStudent,
+            addEntry,
+            updateEntry,
+            deleteEntry,
+            addCategory,
+            updateCategory,
+          }
+        : null,
+    [
+      doc,
+      saveState,
+      mutate,
+      load,
+      addStudent,
+      updateStudent,
+      addEntry,
+      updateEntry,
+      deleteEntry,
+      addCategory,
+      updateCategory,
+    ],
+  );
+
   if (loadError) {
     return (
       <Center h="100vh" p="md">
@@ -201,7 +238,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       </Center>
     );
   }
-  if (!doc) {
+  if (!value) {
     return (
       <Center h="100vh">
         <Loader />
@@ -209,25 +246,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  return (
-    <StoreContext.Provider
-      value={{
-        doc,
-        saveState,
-        mutate,
-        reload: load,
-        addStudent,
-        updateStudent,
-        addEntry,
-        updateEntry,
-        deleteEntry,
-        addCategory,
-        updateCategory,
-      }}
-    >
-      {children}
-    </StoreContext.Provider>
-  );
+  return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 
 export function useStore(): StoreValue {

@@ -57,7 +57,7 @@ export function buildIndex(doc: DataDoc): IndexedEntry[] {
   const studentsById = new Map(doc.students.map((s) => [s.id, s]));
   const categoriesById = new Map(doc.categories.map((c) => [c.id, c]));
 
-  return [...doc.entries].sort(byNewestDay).map((entry) => {
+  return doc.entries.toSorted(byNewestDay).map((entry) => {
     const students = entry.studentIds
       .map((id) => studentsById.get(id))
       .filter((s): s is Student => !!s);

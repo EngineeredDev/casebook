@@ -248,6 +248,37 @@ function WeeklyChart({
   );
 }
 
+/**
+ * Axis label that appends an IEP marker, so the flag isn't carried by color
+ * alone. Lives at module scope so the tick keeps a stable component type;
+ * Recharts clones it with x/y/payload, and data/palette come from the caller.
+ */
+function StudentLoadTick({
+  x = 0,
+  y = 0,
+  payload,
+  rows,
+  palette,
+}: {
+  x?: number;
+  y?: number;
+  payload?: { value?: string };
+  rows: { name: string; iep: boolean }[];
+  palette: ChartPalette;
+}) {
+  const row = rows.find((d) => d.name === payload?.value);
+  return (
+    <text x={x} y={y} dy={4} textAnchor="end" fill={palette.textSecondary} fontSize={12}>
+      {payload?.value}
+      {row?.iep ? (
+        <tspan fill={palette.series[0]} fontSize={9} fontWeight={700} dx={4} dy={-1}>
+          IEP
+        </tspan>
+      ) : null}
+    </text>
+  );
+}
+
 function StudentLoadChart({
   students,
   palette,
@@ -264,22 +295,6 @@ function StudentLoadChart({
     avgH: toHours(s.avgPerWeek),
   }));
   const height = Math.max(180, data.length * 34 + 60);
-
-  /** Axis label that appends an IEP marker, so the flag isn't carried by color alone. */
-  const Tick = (props: { x?: number; y?: number; payload?: { value?: string } }) => {
-    const { x = 0, y = 0, payload } = props;
-    const row = data.find((d) => d.name === payload?.value);
-    return (
-      <text x={x} y={y} dy={4} textAnchor="end" fill={palette.textSecondary} fontSize={12}>
-        {payload?.value}
-        {row?.iep ? (
-          <tspan fill={palette.series[0]} fontSize={9} fontWeight={700} dx={4} dy={-1}>
-            IEP
-          </tspan>
-        ) : null}
-      </text>
-    );
-  };
 
   return (
     <ChartCard
@@ -319,7 +334,7 @@ function StudentLoadChart({
         strokeDasharray={GRID}
         valueFormatter={fmtH}
         xAxisProps={{ tickFormatter: fmtH }}
-        yAxisProps={{ width: 140, tick: <Tick /> }}
+        yAxisProps={{ width: 140, tick: <StudentLoadTick rows={data} palette={palette} /> }}
         tooltipProps={tooltip}
       />
     </ChartCard>

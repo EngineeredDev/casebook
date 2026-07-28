@@ -12,6 +12,11 @@
   },
   "ignorePatterns": ["dist/", "backups/", "seed/", "data.json"],
   "rules": {
+    // Ships in `pedantic` rather than `correctness`, so it is off under the
+    // categories above — but a hook called behind an early return corrupts hook
+    // order for the whole component, which is a bug and not a style opinion.
+    "react-hooks/rules-of-hooks": "error",
+
     // The automatic JSX runtime ("jsx": "react-jsx") means React never has to
     // be in scope.
     "react/react-in-jsx-scope": "off",
@@ -29,7 +34,20 @@
 
     // Small helpers defined next to their only caller read better here than
     // hoisted to module scope.
-    "unicorn/consistent-function-scoping": "off"
+    "unicorn/consistent-function-scoping": "off",
+
+    // Recharts and Mantine take render props (`tooltipProps.content`, `tick`)
+    // and invoke them directly rather than mounting them, so a closure passed
+    // as a prop is the intended API, not an unstable component. Definitions in
+    // render that are *not* props are still reported.
+    "react/no-unstable-nested-components": ["warn", { "allowAsProps": true }],
+
+    // Both remaining sites are per-item transforms over short arrays, not the
+    // accumulator-spread pattern this rule is aimed at. In types.ts the spread
+    // is load-bearing: SEED_CATEGORIES is Omit<Category, "id">[] and one seed
+    // sets `untimed: true`, so listing fields explicitly would silently drop it
+    // and break no-show tracking on every fresh install.
+    "oxc/no-map-spread": "off"
   },
   "overrides": [
     {

@@ -83,7 +83,7 @@ function StudentPicker({
       doc.students
         .filter((s) => s.active && !selectedIds.includes(s.id))
         .filter((s) => !query || s.name.toLowerCase().includes(query))
-        .sort((a, b) => a.name.localeCompare(b.name))
+        .toSorted((a, b) => a.name.localeCompare(b.name))
         .slice(0, 8),
     [doc.students, query, selectedIds],
   );

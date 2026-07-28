@@ -277,7 +277,15 @@ export interface TableTwin {
   rows: (string | number)[][];
 }
 
-/** Plain-table rendering of a chart's data — the first column is a label, the rest are numbers. */
+/**
+ * Plain-table rendering of a chart's data — the first column is a label, the
+ * rest are numbers.
+ *
+ * Cells are keyed by index deliberately: `rows` is a positional grid rebuilt
+ * from chart data on every render, carrying no id to key on and no per-cell
+ * state to preserve, so position is the only identity a cell has.
+ */
+/* oxlint-disable react/no-array-index-key */
 export function DataTable({ headers, rows }: TableTwin) {
   return (
     <Table.ScrollContainer minWidth={320}>
@@ -306,6 +314,7 @@ export function DataTable({ headers, rows }: TableTwin) {
     </Table.ScrollContainer>
   );
 }
+/* oxlint-enable react/no-array-index-key */
 
 /**
  * Chart container with a "view as table" twin so no value is gated behind
@@ -417,7 +426,7 @@ export function ChartTooltip({
       )}
       <Stack gap={2}>
         {items.map((item, i) => (
-          <Group key={i} gap={6} wrap="nowrap">
+          <Group key={item.name ?? i} gap={6} wrap="nowrap">
             <span className="legend-swatch" style={{ background: item.color }} />
             <Text size="xs" fw={600} className="tnum">
               {formatter && typeof item.value === "number"

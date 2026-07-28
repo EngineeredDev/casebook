@@ -32,7 +32,7 @@ function PastNotes({
             !!e.note &&
             e.studentIds.some((id) => studentIds.includes(id)),
         )
-        .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
+        .toSorted((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
         .slice(0, 12),
     [doc.entries, studentIds, excludeEntryId],
   );
@@ -130,7 +130,7 @@ export function NoteEditor({
   const editor = useEditor({
     extensions: [...noteExtensions, SubmitShortcut.configure({ onSubmit: submitAndCollapse })],
     content: value,
-    onUpdate: ({ editor }) => onChange(editor.isEmpty ? "" : editor.getHTML()),
+    onUpdate: ({ editor: ed }) => onChange(ed.isEmpty ? "" : ed.getHTML()),
   });
 
   // Pull in changes that came from outside the editor — starting an edit, or

@@ -108,12 +108,12 @@ export function StudentsPage() {
           return 0;
       }
     };
-    const sorted = [...rows].sort((a, b) =>
+    const sorted = rows.toSorted((a, b) =>
       sort.key === "name"
         ? a.name.localeCompare(b.name)
         : value(b.id, sort.key) - value(a.id, sort.key),
     );
-    return sort.reversed ? sorted.reverse() : sorted;
+    return sort.reversed ? sorted.toReversed() : sorted;
   }, [doc.students, query, showInactive, sort, recent, allTime]);
 
   const onSort = (key: SortKey) =>
