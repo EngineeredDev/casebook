@@ -61,7 +61,7 @@ jobs:
           (cd dist/mac-intel && zip -qX "$GITHUB_WORKSPACE/artifacts/Casebook-mac-intel.zip" Casebook)
       - uses: actions/upload-artifact@v7
         with:
-          name: macos
+          name: binaries-macos
           path: artifacts/*.zip
           if-no-files-found: error
           compression-level: 0 # already-compressed zips
@@ -85,7 +85,7 @@ jobs:
           (cd dist/windows && zip -qX "$GITHUB_WORKSPACE/artifacts/Casebook-windows-x64.zip" Casebook.exe)
       - uses: actions/upload-artifact@v7
         with:
-          name: windows
+          name: binaries-windows
           path: artifacts/*.zip
           if-no-files-found: error
           compression-level: 0
@@ -136,16 +136,22 @@ jobs:
     permissions:
       contents: write # create releases and move the `latest` tag
     steps:
-      # No checkout: the release is assembled entirely from the built artifacts
-      # and the gh API.
+      # Matched by prefix rather than taking everything: build-push-action also
+      # uploads a .dockerbuild build record, and an unfiltered download drops it
+      # in beside the binaries.
       - uses: actions/download-artifact@v8
         with:
+          pattern: binaries-*
           path: artifacts
           merge-multiple: true
 
       - name: Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # gh works out the repository from a git remote, and this job checks
+          # nothing out — without GH_REPO every gh call below fails with
+          # "not a git repository".
+          GH_REPO: ${{ github.repository }}
           IMAGE: ghcr.io/${{ github.repository }}
         run: |
           set -euo pipefail
