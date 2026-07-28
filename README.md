@@ -41,6 +41,31 @@ First-run notes:
 Double-clicking twice is safe — a second launch notices the running copy and
 just reopens the browser tab.
 
+### Keeping it running in the background (macOS)
+
+Double-clicking launches the app through Terminal, so that window has to stay
+open — closing it stops the server. This installs it to run from login instead,
+with no window at all, and replaces steps 1 and 2 above:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/EngineeredDev/casebook/main/scripts/install-macos.sh | sh
+```
+
+It downloads the right build for your Mac (Apple silicon or Intel) into
+`~/Applications/Casebook`, registers a LaunchAgent, starts the app, and confirms
+it is answering. From then on the address is a bookmark that always works and
+the executable never needs double-clicking again. A browser tab still opens at
+each login, which is the app's normal startup behaviour.
+
+Re-run it to upgrade: same command. It replaces the executable wherever the
+current copy lives — including a non-default folder — and leaves `data.json` and
+`backups/` where they are. To remove the agent, add `-s -- --uninstall` to the
+pipe above, or run `sh scripts/install-macos.sh --uninstall` from a checkout.
+Your data survives either way.
+
+Pass a path (`sh scripts/install-macos.sh dist/mac-arm/Casebook`) to register a
+copy you already have instead of downloading one.
+
 ## Smoke test for a locked-down school machine
 
 Put `Casebook` on the target machine — either download above, or
