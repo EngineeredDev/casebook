@@ -1,0 +1,3230 @@
+{
+  "version": 2,
+  "rev": 20,
+  "settings": {
+    "clinicianName": "James Bond",
+    "schoolYearStartMonth": 8
+  },
+  "categories": [
+    {
+      "name": "Direct service — individual",
+      "group": "direct",
+      "id": "e75228c7-31e2-4a26-b069-ad4a450b1072"
+    },
+    {
+      "name": "Direct service — group",
+      "group": "direct",
+      "id": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc"
+    },
+    {
+      "name": "Crisis response",
+      "group": "direct",
+      "id": "3539109f-d5f5-402b-8dd8-86a9b578dd85"
+    },
+    {
+      "name": "Assessment / evaluation",
+      "group": "direct",
+      "id": "55b1d9cd-8069-4802-b19f-400206674757"
+    },
+    {
+      "name": "IEP meeting",
+      "group": "indirect",
+      "id": "d141cb85-c659-45fa-9598-8c3e3fe9ea5c"
+    },
+    {
+      "name": "Parent contact",
+      "group": "indirect",
+      "id": "dda54f30-798a-45c4-a6fe-7e92a34e82fa"
+    },
+    {
+      "name": "Teacher / staff consultation",
+      "group": "indirect",
+      "id": "5770778b-1ccb-457f-841d-292ecef32c21"
+    },
+    {
+      "name": "Case management",
+      "group": "indirect",
+      "id": "2725f74c-fe1e-4742-92b0-60f08edf03c3"
+    },
+    {
+      "name": "Documentation",
+      "group": "indirect",
+      "id": "8713ea93-ab6d-497c-a564-75486ee50751"
+    },
+    {
+      "name": "Other",
+      "group": "indirect",
+      "id": "71e154fb-d159-43bb-922b-e07b03deeb12"
+    },
+    {
+      "id": "9ae438fb-7761-4e19-a896-6921631571e5",
+      "name": "No-show / cancellation",
+      "group": "direct",
+      "untimed": true
+    }
+  ],
+  "students": [
+    {
+      "id": "eb08992d-2c19-4995-bd1b-a92990bf1b31",
+      "name": "Avery M.",
+      "iep": true,
+      "mandatedMinutesPerWeek": 60,
+      "grade": "3",
+      "active": true,
+      "createdAt": "2026-07-27T17:38:50.914Z"
+    },
+    {
+      "id": "ba3407e6-9288-4b7a-8c3d-d33d62452c1f",
+      "name": "Jordan P.",
+      "iep": true,
+      "mandatedMinutesPerWeek": 30,
+      "grade": "5",
+      "active": true,
+      "createdAt": "2026-07-27T17:38:50.914Z"
+    },
+    {
+      "id": "f952bcbb-065c-4872-9c7b-136ad3b542df",
+      "name": "Sam T.",
+      "iep": true,
+      "mandatedMinutesPerWeek": 30,
+      "grade": "4",
+      "active": true,
+      "createdAt": "2026-07-27T17:38:50.914Z"
+    },
+    {
+      "id": "82a6e03b-e315-4605-9a9b-121a9fd3a400",
+      "name": "Riley K.",
+      "iep": true,
+      "mandatedMinutesPerWeek": 45,
+      "grade": "2",
+      "active": true,
+      "createdAt": "2026-07-27T17:38:50.914Z"
+    },
+    {
+      "id": "dc718d83-3ced-4948-8571-579a8d03359d",
+      "name": "Quinn B.",
+      "iep": true,
+      "mandatedMinutesPerWeek": 30,
+      "grade": "5",
+      "active": true,
+      "createdAt": "2026-07-27T17:38:50.914Z"
+    },
+    {
+      "id": "8b876920-8b65-47f7-8efb-98ab56be459c",
+      "name": "Casey L.",
+      "iep": true,
+      "mandatedMinutesPerWeek": 60,
+      "grade": "1",
+      "active": true,
+      "createdAt": "2026-07-27T17:38:50.914Z"
+    },
+    {
+      "id": "7dea2ab6-0703-4af1-84f0-6cf05b749f64",
+      "name": "Rowan F.",
+      "iep": false,
+      "mandatedMinutesPerWeek": null,
+      "grade": "4",
+      "active": true,
+      "createdAt": "2026-07-27T17:38:50.914Z"
+    },
+    {
+      "id": "a4d6bb7c-1b8d-4b43-8306-ef5589689df1",
+      "name": "Taylor S.",
+      "iep": false,
+      "mandatedMinutesPerWeek": null,
+      "grade": "3",
+      "active": true,
+      "createdAt": "2026-07-27T17:38:50.914Z"
+    },
+    {
+      "id": "e89a101c-e75c-4866-80e3-715b5fee65b0",
+      "name": "Jamie R.",
+      "iep": false,
+      "mandatedMinutesPerWeek": null,
+      "grade": "2",
+      "active": true,
+      "createdAt": "2026-07-27T17:38:50.914Z"
+    },
+    {
+      "id": "fb1c6531-69bf-4900-b18c-4ff64b38f6c1",
+      "name": "Alex W.",
+      "iep": false,
+      "mandatedMinutesPerWeek": null,
+      "grade": "5",
+      "active": true,
+      "createdAt": "2026-07-27T17:38:50.914Z"
+    }
+  ],
+  "entries": [
+    {
+      "id": "14288092-bc96-48e9-bda5-3023f77d706d",
+      "date": "2026-05-11",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "cd46e567-efd7-460c-b366-ff6f45f1e0d4",
+      "date": "2026-05-11",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "0b84bed3-f27e-40ec-b15e-4453174f3199",
+      "date": "2026-05-11",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "5beadb08-5e69-4954-9bf9-f0970542abbc",
+      "date": "2026-05-12",
+      "minutes": 45,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "c68a5166-3d0c-4601-b640-352b2fb32365",
+      "date": "2026-05-12",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "e6ac0598-fd95-403f-8fef-0c58b42a2833",
+      "date": "2026-05-12",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "76a85f37-e5fc-41a8-9c61-b588aa642006",
+      "date": "2026-05-12",
+      "minutes": 20,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "80d348e6-c99b-4a99-a3f6-fc576950d642",
+      "date": "2026-05-12",
+      "minutes": 15,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "157dca94-ff7e-43af-9d19-03d2cb420f61",
+      "date": "2026-05-13",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "baa2ae70-1a51-4366-88f9-52c3e68fcb92",
+      "date": "2026-05-13",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "1cde9074-aab8-4f9a-83e5-df585a31e6a6",
+      "date": "2026-05-13",
+      "minutes": 20,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "3e61d812-3461-4883-b89a-c80b9840ee32",
+      "date": "2026-05-13",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "fb1c6531-69bf-4900-b18c-4ff64b38f6c1"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "e9eb67a0-808f-4981-b43a-6e45372137ab",
+      "date": "2026-05-14",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f",
+        "f952bcbb-065c-4872-9c7b-136ad3b542df",
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>lunch group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "9f2113f1-ae9d-4ac7-88b0-b8bdbd5c2118",
+      "date": "2026-05-14",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "83f745ff-fe0f-4a12-bb07-30fcf5ae73e7",
+      "date": "2026-05-14",
+      "minutes": 15,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "d0c4c820-7ddb-4f8f-a0a8-0e9782cb2d42",
+      "date": "2026-05-14",
+      "minutes": 20,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "bb050fe1-5621-4834-b77a-adf9df486822",
+      "date": "2026-05-14",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "6030bfe1-ca8d-4fac-800c-68e940ec9eb3",
+      "date": "2026-05-15",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64",
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1",
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>social skills group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "b4bbfc3d-cf5a-475b-a507-9d5b2f24685c",
+      "date": "2026-05-15",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "672f7d20-f5a8-4470-902a-8618bdd8c084",
+      "date": "2026-05-15",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "70acd98e-09d0-47db-9b74-ef938410011c",
+      "date": "2026-05-15",
+      "minutes": 60,
+      "categoryId": "55b1d9cd-8069-4802-b19f-400206674757",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>re-eval</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "0b7d1ffb-41ba-4ca4-856d-ce900e56c3ba",
+      "date": "2026-05-18",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "ab596d1e-2713-4d73-8cb5-d082de9a8b51",
+      "date": "2026-05-18",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "a83fca3b-c858-49dd-90aa-cebfef444b6f",
+      "date": "2026-05-18",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "fcabb18d-abb9-4b86-871c-58678fc9f3b5",
+      "date": "2026-05-18",
+      "minutes": 15,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "a0e46a77-765b-4567-9009-a965d3a6fb74",
+      "date": "2026-05-18",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "da54f9ab-1b4a-4be7-a301-1574619c1d7c",
+      "date": "2026-05-19",
+      "minutes": 45,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "cd512faa-4fa3-4dcb-8b85-4f99d99e87b2",
+      "date": "2026-05-19",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "92251208-c70b-4165-a2d3-c113f5467a2c",
+      "date": "2026-05-19",
+      "minutes": 10,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "957d5dda-2d1b-442f-bbca-614a3a00419a",
+      "date": "2026-05-19",
+      "minutes": 20,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "75a8b40c-9335-4bf1-9a97-b6a6449ca431",
+      "date": "2026-05-19",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "cff6c15f-ba07-4044-9d02-43ae7a547f41",
+      "date": "2026-05-20",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "22e8f5fb-0896-4d22-a7b9-e3a01e10654d",
+      "date": "2026-05-20",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "2cdf0eb2-8882-47bc-b1cb-87b85b2d532e",
+      "date": "2026-05-20",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "ce394d17-f44b-494f-93ee-aa3474c00ab0",
+      "date": "2026-05-20",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "9c00f81f-dfcd-4c8b-b43f-ef3dce311942",
+      "date": "2026-05-21",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>2nd weekly session</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "4b07f3b9-b5eb-4329-92cd-b5dd5ae5d544",
+      "date": "2026-05-21",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f",
+        "f952bcbb-065c-4872-9c7b-136ad3b542df",
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>lunch group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "78391283-e35a-439c-83bf-0ff822b45e95",
+      "date": "2026-05-21",
+      "minutes": 45,
+      "categoryId": "3539109f-d5f5-402b-8dd8-86a9b578dd85",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "8743322c-3158-4679-b675-c7de51782338",
+      "date": "2026-05-21",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "ab047eef-cee6-4106-a90c-61cd2b89b2ba",
+      "date": "2026-05-21",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "d90ac55d-77ba-47ee-a7a5-36ee1c1622a6",
+      "date": "2026-05-22",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64",
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1",
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>social skills group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "5c70ebe9-576d-4cfa-8c05-7cfc3cc15e50",
+      "date": "2026-05-22",
+      "minutes": 15,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "29af48ee-0013-4b7f-8592-cf4fec501511",
+      "date": "2026-05-22",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "fb1c6531-69bf-4900-b18c-4ff64b38f6c1"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "e3d97ba0-ef8d-439d-a584-6e1acf0a4bf6",
+      "date": "2026-05-22",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "a553879d-d867-400c-a1fd-1510d6998b40",
+      "date": "2026-05-25",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "ac7a61a2-3490-4b6b-9262-0faeee091151",
+      "date": "2026-05-25",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "b26a36ed-a238-4ef5-a3e6-9d044e25d1ec",
+      "date": "2026-05-25",
+      "minutes": 20,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "70b6f9ca-fe10-44cb-baef-8478b57f01ec",
+      "date": "2026-05-25",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "da56cb21-c34b-443b-810f-b1f14ee8d6e8",
+      "date": "2026-05-26",
+      "minutes": 45,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "585a2a4b-1337-4f18-bda1-9546f085b477",
+      "date": "2026-05-26",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "22a40714-ce10-4c42-ab81-304226bca926",
+      "date": "2026-05-26",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "781eb6f7-59ef-42df-8d34-f2c021637c47",
+      "date": "2026-05-26",
+      "minutes": 20,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "89f1a97b-9e4d-46d6-b1b0-bb584f36e57a",
+      "date": "2026-05-26",
+      "minutes": 15,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "ef0574f6-fa1e-450b-bd32-fefb03412afb",
+      "date": "2026-05-27",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "e9f04254-145a-4ded-9328-2db9dfb1cee0",
+      "date": "2026-05-27",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "9bfda881-36c8-496c-b049-b15f5f74371e",
+      "date": "2026-05-27",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "fb1c6531-69bf-4900-b18c-4ff64b38f6c1"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "220e13c2-9b2a-4a6f-aec2-a2e15bad63f0",
+      "date": "2026-05-27",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "74cb58d4-6b2d-40a9-a475-35bf0a28ac97",
+      "date": "2026-05-28",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>2nd weekly session</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "de233812-7e2d-4ccb-88a4-436e3c8f7c73",
+      "date": "2026-05-28",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f",
+        "f952bcbb-065c-4872-9c7b-136ad3b542df",
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>lunch group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "c70e9402-2a57-47e8-9650-df18f5a1c9fc",
+      "date": "2026-05-28",
+      "minutes": 10,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "e26a2f8f-303a-4fd0-9651-d7eb03afe968",
+      "date": "2026-05-28",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "fb1c6531-69bf-4900-b18c-4ff64b38f6c1"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "8fede908-eca4-42d7-b28a-4246d1784529",
+      "date": "2026-05-28",
+      "minutes": 15,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "abea44c7-799b-4feb-96fa-4065028842b5",
+      "date": "2026-05-29",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64",
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1",
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>social skills group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "7611551a-7486-4cd2-8a67-bfe9dfbb4016",
+      "date": "2026-05-29",
+      "minutes": 10,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "efdb3412-b390-497a-9a5b-767e88912451",
+      "date": "2026-05-29",
+      "minutes": 15,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "f73861e9-b704-466f-9c18-f645be5a687a",
+      "date": "2026-05-29",
+      "minutes": 60,
+      "categoryId": "55b1d9cd-8069-4802-b19f-400206674757",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "note": "<p>re-eval</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "05eb42ca-9df3-4050-8670-9687f26ebf4b",
+      "date": "2026-06-01",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "5c26acf8-80cd-4bb6-8335-10fcd679e032",
+      "date": "2026-06-01",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "c118fd56-8d89-4962-8b84-f9801cedd63c",
+      "date": "2026-06-01",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "a61775e4-e834-4fe3-87c3-7247ee6307ba",
+      "date": "2026-06-01",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "13f1f942-0249-46a8-9d07-07e5a4f763e2",
+      "date": "2026-06-01",
+      "minutes": 15,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "80d5bc23-0de2-49cd-8a73-fb12881ebe2a",
+      "date": "2026-06-01",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "7f08c4c0-00c0-4771-9586-64ab16d16fbf",
+      "date": "2026-06-02",
+      "minutes": 45,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "bb2b88b9-0355-47f5-a6c4-3713b3b8492e",
+      "date": "2026-06-02",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "184ef4ed-85fb-4491-916a-629d821043bd",
+      "date": "2026-06-02",
+      "minutes": 45,
+      "categoryId": "3539109f-d5f5-402b-8dd8-86a9b578dd85",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "af3ff21f-3ce2-417b-a96e-d8f6a7b0528f",
+      "date": "2026-06-02",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "10847fa0-4e6d-4342-97b5-6248c868693e",
+      "date": "2026-06-02",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "1152550e-5682-4067-a895-755f11c02ec9",
+      "date": "2026-06-03",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "4c2be50b-7333-45fe-a57a-3d97c0ad5561",
+      "date": "2026-06-03",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "6bb2b44f-849e-4740-af3f-a87e6b197ec1",
+      "date": "2026-06-03",
+      "minutes": 15,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "34b5f207-a3ea-49c4-aa13-196284c24698",
+      "date": "2026-06-03",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "bd1d7ce1-1d5a-4310-94c8-b07316d31831",
+      "date": "2026-06-04",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>2nd weekly session</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "f20edcd3-1323-4262-af3a-c9b051695f41",
+      "date": "2026-06-04",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f",
+        "f952bcbb-065c-4872-9c7b-136ad3b542df",
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>lunch group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "a8b87a83-7897-4bbc-a89b-b8081395ce40",
+      "date": "2026-06-04",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "cb19c120-f599-467b-913c-9a1b8f83a033",
+      "date": "2026-06-05",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64",
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1",
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>social skills group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "15ac6496-9806-4483-8bf1-127fad055797",
+      "date": "2026-06-05",
+      "minutes": 15,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "609ec995-276a-4d9a-8f82-67101c728f37",
+      "date": "2026-06-05",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "86f35a8b-3523-4845-a16b-4052363c8356",
+      "date": "2026-06-03",
+      "minutes": 60,
+      "categoryId": "d141cb85-c659-45fa-9598-8c3e3fe9ea5c",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>IEP team meeting</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "99f9b600-ec7d-423f-a8ce-483dc6d1a94b",
+      "date": "2026-06-03",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>meeting prep + paperwork</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "f6c4f334-92b5-4e2e-a09c-cd51e23df438",
+      "date": "2026-06-05",
+      "minutes": 60,
+      "categoryId": "55b1d9cd-8069-4802-b19f-400206674757",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "note": "<p>re-eval</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "6d7ecd79-b2c9-4785-a718-0323e8d581b5",
+      "date": "2026-06-08",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "facfc6ff-04c4-42bc-97ff-c9282fa978df",
+      "date": "2026-06-08",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "9d7772c0-8ee7-4dfc-b196-ad4fae01a4c3",
+      "date": "2026-06-08",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "05e481b6-2cb1-475e-ac2f-9060f4d4fb33",
+      "date": "2026-06-08",
+      "minutes": 10,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "bf8ea6d6-4bbb-4177-8a7b-4b6eac1cb02b",
+      "date": "2026-06-08",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "e2a5492c-04a0-41e0-8d18-5f5c69ca0765",
+      "date": "2026-06-08",
+      "minutes": 15,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "33359460-b9e2-4ee0-b1fa-e8f2d8ef4491",
+      "date": "2026-06-08",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "37e5b5bd-8a78-4a14-9fe7-e1d544105fe5",
+      "date": "2026-06-09",
+      "minutes": 45,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "31b3e6d0-740c-4259-b123-be042209786d",
+      "date": "2026-06-09",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "534261d1-814d-4b09-95d2-4591c2998de4",
+      "date": "2026-06-09",
+      "minutes": 15,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "b7e2235a-a87a-4330-8373-896df57e1d0f",
+      "date": "2026-06-09",
+      "minutes": 15,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "5ac93100-4480-4820-a2b9-431c3fc9eb81",
+      "date": "2026-06-10",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "18c03b0b-d404-4264-b04a-8a48ec403c78",
+      "date": "2026-06-10",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "a7830b7d-fdde-41c1-b99d-d00c2fee82b7",
+      "date": "2026-06-10",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "613b4c59-e057-4f75-b4e0-e9e3e81dcd50",
+      "date": "2026-06-10",
+      "minutes": 15,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "767a6c1b-c646-403f-8003-bc301bb8a609",
+      "date": "2026-06-10",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "dde660fe-da3a-4b74-a46b-566c8a0947a3",
+      "date": "2026-06-10",
+      "minutes": 15,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "6294dbba-219b-4e28-8636-8c0ea2057caa",
+      "date": "2026-06-10",
+      "minutes": 15,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "fe6634e1-4475-41df-a649-185f8175fcf2",
+      "date": "2026-06-11",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f",
+        "f952bcbb-065c-4872-9c7b-136ad3b542df",
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>lunch group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "44c11a76-bcb0-446c-8e6e-1fda472e7ca9",
+      "date": "2026-06-11",
+      "minutes": 15,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "6a031d6c-73a1-400a-8bea-14e6ba4146fe",
+      "date": "2026-06-11",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "e22a07e5-6de5-42b2-bb63-94fc3140b0bb",
+      "date": "2026-06-12",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64",
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1",
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>social skills group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "1be17a53-42bf-4852-a13f-de6138f93264",
+      "date": "2026-06-12",
+      "minutes": 10,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "0d3b1444-c6c9-46a1-afa1-a0d8084051bf",
+      "date": "2026-06-12",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "e90a2893-cabf-4106-92e2-7928d43be211",
+      "date": "2026-06-12",
+      "minutes": 20,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "d65c98f4-85d5-4a52-846f-05f96559cfeb",
+      "date": "2026-06-12",
+      "minutes": 15,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "4d255c09-9b75-4234-9898-5b1a5fb10dce",
+      "date": "2026-06-10",
+      "minutes": 45,
+      "categoryId": "d141cb85-c659-45fa-9598-8c3e3fe9ea5c",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "note": "<p>IEP team meeting</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "56e6e846-1be8-4d36-b7b3-78e042c268bd",
+      "date": "2026-06-10",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "note": "<p>meeting prep + paperwork</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "fae6b8bc-f355-465d-b986-d7296ab6841c",
+      "date": "2026-06-15",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "230cefb7-db17-4bd6-8328-c390532602ba",
+      "date": "2026-06-15",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "ee956a70-07ef-46a0-a4c4-82a2adeb3246",
+      "date": "2026-06-15",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "c93614bd-0820-4e9d-9b43-a915a79d7fed",
+      "date": "2026-06-15",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "5efebe52-a6cb-409a-ac5c-8d6b265749db",
+      "date": "2026-06-15",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "2fa675dc-b627-41c5-8801-3d97d4a11a61",
+      "date": "2026-06-16",
+      "minutes": 45,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "2750d3cc-50b7-43ab-96f3-696d276cff99",
+      "date": "2026-06-16",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "3ef3bf63-4b3a-4383-bcf9-6a6d4c0110e1",
+      "date": "2026-06-16",
+      "minutes": 15,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "bf38f4b0-9404-4524-a82c-a3667262302f",
+      "date": "2026-06-17",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "2fedc6ad-388c-46b9-8527-c89b1a0f8f5a",
+      "date": "2026-06-17",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "a9cff675-a2cf-4641-b2e8-16fd8325f30d",
+      "date": "2026-06-17",
+      "minutes": 20,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "f239752a-8756-4e84-b2a8-6f7856e312de",
+      "date": "2026-06-17",
+      "minutes": 15,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "72a84723-560a-47cf-a415-0071932635ba",
+      "date": "2026-06-18",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>2nd weekly session</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "856677de-6c92-44fc-b1e5-4a6f75781e68",
+      "date": "2026-06-18",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f",
+        "f952bcbb-065c-4872-9c7b-136ad3b542df",
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>lunch group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "4aa2289a-9620-4022-90cc-0028b4abd2b3",
+      "date": "2026-06-18",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "fb1c6531-69bf-4900-b18c-4ff64b38f6c1"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "1d7b3d1c-1f6b-4f46-a208-5a025a8bb375",
+      "date": "2026-06-18",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "5d3f08e1-2b1f-42e9-af4a-5c9edbd2d26c",
+      "date": "2026-06-19",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64",
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1",
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>social skills group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "50063c0d-c10e-4b8e-9fd1-56386a93ba79",
+      "date": "2026-06-19",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "fb1c6531-69bf-4900-b18c-4ff64b38f6c1"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "e555d3c8-7391-4a21-a660-dec5d11b627b",
+      "date": "2026-06-17",
+      "minutes": 45,
+      "categoryId": "d141cb85-c659-45fa-9598-8c3e3fe9ea5c",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>IEP team meeting</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "c8fe87ae-c9e3-4434-91b7-5ccd8a54b680",
+      "date": "2026-06-17",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>meeting prep + paperwork</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "bcffd2fe-360d-4ecf-96a1-55b4496e69c0",
+      "date": "2026-06-22",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "ab25164e-cfe1-40e3-8afa-71a7b05e2fd3",
+      "date": "2026-06-22",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "c7ddc2e3-6eb2-4809-a13c-5f2b60452f8e",
+      "date": "2026-06-22",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "fb1c6531-69bf-4900-b18c-4ff64b38f6c1"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "57253792-42f5-4a09-9e51-4c11113e422f",
+      "date": "2026-06-22",
+      "minutes": 10,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "034b1986-603a-4736-bebe-048707eb7c0e",
+      "date": "2026-06-22",
+      "minutes": 15,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "06e968e2-0e0b-48cc-83b2-63dbaf445ece",
+      "date": "2026-06-23",
+      "minutes": 45,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "6331875a-cacf-43c5-95a7-78b2045b3fbe",
+      "date": "2026-06-23",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "4ba20d1c-395f-4420-80ee-923dca8bc4d0",
+      "date": "2026-06-23",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "de46dd48-5a99-42cb-b701-d327e732f356",
+      "date": "2026-06-23",
+      "minutes": 15,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "4658daf3-c341-44e5-bc80-5fc01102d7f7",
+      "date": "2026-06-23",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "c9836bdb-ad5f-412e-be8f-efe33de960c9",
+      "date": "2026-06-24",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "0bd6474a-cd60-461a-8b3a-dc37cdd6d354",
+      "date": "2026-06-24",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "f2f6550c-59b2-443f-936b-710208d73697",
+      "date": "2026-06-24",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "c4126884-ffe3-460f-9a5b-16c17c07007e",
+      "date": "2026-06-24",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "6400cee0-adc7-47fd-accc-47360b85ccf4",
+      "date": "2026-06-24",
+      "minutes": 15,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "a1e52cc0-17a5-48d0-855b-eecfaac0ffec",
+      "date": "2026-06-25",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f",
+        "f952bcbb-065c-4872-9c7b-136ad3b542df",
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>lunch group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "22c952dd-3a32-4a72-91e8-17d8e3b42495",
+      "date": "2026-06-25",
+      "minutes": 20,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "09f4c8be-672c-4d2f-a6ed-b3d8c2cef620",
+      "date": "2026-06-25",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "226e8335-de5d-413f-b0d3-a5d9aa541126",
+      "date": "2026-06-26",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64",
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1",
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>social skills group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "0eb80f08-c39e-43a1-b708-82dc9767534c",
+      "date": "2026-06-26",
+      "minutes": 20,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "583ee92d-21e1-40d1-9cba-15e70f5e595b",
+      "date": "2026-06-26",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "fb1c6531-69bf-4900-b18c-4ff64b38f6c1"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "46b9a080-a205-4931-a483-5fe28de37eae",
+      "date": "2026-06-26",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "f69ef3ad-5dcb-476d-b998-385c33f87b1b",
+      "date": "2026-06-24",
+      "minutes": 45,
+      "categoryId": "d141cb85-c659-45fa-9598-8c3e3fe9ea5c",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "note": "<p>IEP team meeting</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "3925b1fd-cb63-4f23-8621-98f28da40ef8",
+      "date": "2026-06-24",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "note": "<p>meeting prep + paperwork</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "889b3d48-b862-420c-beaa-7a0570a5975a",
+      "date": "2026-06-26",
+      "minutes": 90,
+      "categoryId": "55b1d9cd-8069-4802-b19f-400206674757",
+      "studentIds": [
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>re-eval</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "286e64ee-c81a-4c59-b71b-71b71ba9cdc3",
+      "date": "2026-06-29",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "c602db09-8e63-4aea-b766-d5371bb81e52",
+      "date": "2026-06-29",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "1bbbf7b7-de51-4a45-89e9-0fdf8d928e89",
+      "date": "2026-06-29",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "13a7654e-8f7e-486f-aaed-aebf8c536a78",
+      "date": "2026-06-29",
+      "minutes": 15,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "0c995227-3f24-4aa2-9a73-39ce7ac8a49e",
+      "date": "2026-06-29",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "7fe4b1ba-20f1-4efa-a21b-b35f183637ab",
+      "date": "2026-06-30",
+      "minutes": 45,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "94767416-4c72-45e4-93ea-c2cc61c9e362",
+      "date": "2026-06-30",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "55bc8de0-1a3b-41d8-8207-31c15f1b488f",
+      "date": "2026-06-30",
+      "minutes": 20,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "a65289f1-7b62-412b-b4b1-3068b70bae11",
+      "date": "2026-06-30",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "1adcf02a-89dc-4333-9f03-b90eb2537e51",
+      "date": "2026-06-30",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "57d3f42c-78b3-4db5-8d2d-ed57df6ab301",
+      "date": "2026-07-01",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "42bdaa4a-c1f5-4f82-a7c6-0c16268fb7b4",
+      "date": "2026-07-01",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "72c0d1ea-d6e8-44e5-88df-367cbd23e1f1",
+      "date": "2026-07-01",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "7915a959-5077-4314-ac0f-46ff63c0344d",
+      "date": "2026-07-02",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>2nd weekly session</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "986c79cc-fd25-4d15-accc-1d29735009f7",
+      "date": "2026-07-02",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f",
+        "f952bcbb-065c-4872-9c7b-136ad3b542df",
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>lunch group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "75940501-ec0a-44ce-a5b9-8c6731c4abbb",
+      "date": "2026-07-02",
+      "minutes": 20,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "514eb47e-2a0f-4cfb-8ca2-fb2842756efb",
+      "date": "2026-07-02",
+      "minutes": 15,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "e911ab0b-b0fa-4d1d-977a-89c526fde770",
+      "date": "2026-07-03",
+      "minutes": 15,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "3fee7e0d-32cd-473c-8d79-2a63a3503e62",
+      "date": "2026-07-03",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "09092694-5136-4e7e-8415-3d27db0421da",
+      "date": "2026-07-01",
+      "minutes": 60,
+      "categoryId": "d141cb85-c659-45fa-9598-8c3e3fe9ea5c",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>IEP team meeting</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "ee3a3cc2-a4bc-43ae-8292-aef53b032048",
+      "date": "2026-07-01",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>meeting prep + paperwork</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "3f6fce0d-4a55-4bb7-88de-89aecd27837e",
+      "date": "2026-07-06",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "39c6f1ae-8e7e-4db3-a435-47f8e3a37a9c",
+      "date": "2026-07-06",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "2f689266-6846-4ef8-9b65-b9b716ae23a3",
+      "date": "2026-07-06",
+      "minutes": 60,
+      "categoryId": "3539109f-d5f5-402b-8dd8-86a9b578dd85",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>escalation</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "b1934d17-9efb-4603-96bc-68c9951b8bd2",
+      "date": "2026-07-06",
+      "minutes": 20,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "ec8575d3-edb2-424e-8747-203749a94a6a",
+      "date": "2026-07-06",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "62202b31-29bd-42ae-ad33-96ab4ad0b76a",
+      "date": "2026-07-07",
+      "minutes": 45,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "37d25ba3-264b-42f8-bd92-6d6f6103933a",
+      "date": "2026-07-07",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "325654bf-6fd5-463d-bc05-c52d38535c78",
+      "date": "2026-07-07",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "8c785721-434b-4b90-b780-9f66c40ba643",
+      "date": "2026-07-07",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "39259bca-20fd-4643-b80a-277aa3c1df2f",
+      "date": "2026-07-07",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "6da786b0-96f6-42ab-9983-65206fb1aa20",
+      "date": "2026-07-08",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "dfa90236-096e-423c-88f1-370fdd9dc4a1",
+      "date": "2026-07-08",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "5fbe34bd-8673-4826-93f3-a1ee6057e63b",
+      "date": "2026-07-08",
+      "minutes": 15,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "38ad0397-c089-41f8-9045-549625d1902a",
+      "date": "2026-07-08",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "fb1c6531-69bf-4900-b18c-4ff64b38f6c1"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "4148f121-3b5a-47df-9cbb-bb8c97fb647a",
+      "date": "2026-07-08",
+      "minutes": 15,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "dc38b13f-8334-4c69-b670-cd146e6fb907",
+      "date": "2026-07-08",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "fb1c6531-69bf-4900-b18c-4ff64b38f6c1"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "246ca041-10d7-48af-9506-9114b3c5eb04",
+      "date": "2026-07-09",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>2nd weekly session</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "c70e9948-0332-4bdc-9a4a-d2283abc169e",
+      "date": "2026-07-09",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f",
+        "f952bcbb-065c-4872-9c7b-136ad3b542df",
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>lunch group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "4f77e302-2d34-42f1-bc2b-b32438b8667d",
+      "date": "2026-07-09",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "81887c03-e6f6-4fcd-b0dc-e7515229cfe5",
+      "date": "2026-07-09",
+      "minutes": 15,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "2fa50d23-8bc7-4e28-b4b1-dfb7de4fd8d1",
+      "date": "2026-07-10",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64",
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1",
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>social skills group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "b5e36451-f47c-4639-9e74-1b22b33dd3c9",
+      "date": "2026-07-10",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "1199ea51-81d0-4bc9-8345-a2886d26cc3f",
+      "date": "2026-07-10",
+      "minutes": 10,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "f366e90f-61c8-4239-b2aa-424ddb6ff950",
+      "date": "2026-07-10",
+      "minutes": 15,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "66a159fc-580f-4bc9-938e-71f35e368cb1",
+      "date": "2026-07-10",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "d7948289-a1a7-4b8a-91e9-4f6bef6758ea",
+      "date": "2026-07-08",
+      "minutes": 60,
+      "categoryId": "d141cb85-c659-45fa-9598-8c3e3fe9ea5c",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>IEP team meeting</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "12306443-b8a4-4c87-bcc8-fe8da3764183",
+      "date": "2026-07-08",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>meeting prep + paperwork</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "84ba15ae-3871-4575-ba6d-2f2dcb91b920",
+      "date": "2026-07-10",
+      "minutes": 90,
+      "categoryId": "55b1d9cd-8069-4802-b19f-400206674757",
+      "studentIds": [
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>re-eval</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "194d7859-0d5b-484e-9e17-bdaf0ab703f1",
+      "date": "2026-07-13",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "4e1521be-3da7-4cbb-b779-b43a135163e3",
+      "date": "2026-07-13",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "749f5237-6cfe-4b9e-879b-ff49146bec65",
+      "date": "2026-07-13",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "600e3659-2946-4b59-a85d-0e92442837f9",
+      "date": "2026-07-14",
+      "minutes": 45,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "ba5fd785-bd13-4eee-8f73-4753fd27319c",
+      "date": "2026-07-14",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "5404d799-f0e6-42e3-8ed1-32e541df99d4",
+      "date": "2026-07-14",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "e559c5f1-2c1f-4183-9067-fb58b86ed048",
+      "date": "2026-07-14",
+      "minutes": 45,
+      "categoryId": "3539109f-d5f5-402b-8dd8-86a9b578dd85",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>escalation</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "c13ac689-5c97-4bb8-ba4b-a63160c8703b",
+      "date": "2026-07-14",
+      "minutes": 20,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "d6fd6ac6-9b8b-4dff-afab-a3e76ff69b37",
+      "date": "2026-07-14",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "86481fe7-5aa1-4f36-9a5d-02580ed3557f",
+      "date": "2026-07-15",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "a4e32a68-d323-4916-8fcc-dfcb4ef7ed13",
+      "date": "2026-07-15",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "447fcfb8-0bd5-4008-a9a7-e871b492254e",
+      "date": "2026-07-15",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "847407be-2973-4287-a157-f96abfdc937f",
+      "date": "2026-07-15",
+      "minutes": 20,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "706199bc-5268-45e9-869a-be140f1bdfb7",
+      "date": "2026-07-15",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "fb1c6531-69bf-4900-b18c-4ff64b38f6c1"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "6183697f-177b-4a4f-b913-4fc8f2d41b37",
+      "date": "2026-07-16",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f",
+        "f952bcbb-065c-4872-9c7b-136ad3b542df",
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>lunch group</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "15fcc2cf-d55a-4210-8f27-a9790b899fcd",
+      "date": "2026-07-16",
+      "minutes": 90,
+      "categoryId": "3539109f-d5f5-402b-8dd8-86a9b578dd85",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>escalation</p>",
+      "createdAt": "2026-07-27T17:38:50.915Z"
+    },
+    {
+      "id": "0674e836-184e-4385-b965-2d57e5a4e8c4",
+      "date": "2026-07-16",
+      "minutes": 20,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.916Z"
+    },
+    {
+      "id": "2a2ab96d-86d8-45e5-80f0-8d46809283d7",
+      "date": "2026-07-16",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.916Z"
+    },
+    {
+      "id": "92d819f0-0461-4448-93dd-b36413c7ae05",
+      "date": "2026-07-17",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64",
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1",
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>social skills group</p>",
+      "createdAt": "2026-07-27T17:38:50.916Z"
+    },
+    {
+      "id": "4506ed34-2aa1-49de-84a1-2edd630e8cfe",
+      "date": "2026-07-17",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "e89a101c-e75c-4866-80e3-715b5fee65b0"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.916Z"
+    },
+    {
+      "id": "124275ec-ce6e-49c0-80b1-44de037eb8e2",
+      "date": "2026-07-15",
+      "minutes": 45,
+      "categoryId": "d141cb85-c659-45fa-9598-8c3e3fe9ea5c",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "note": "<p>IEP team meeting</p>",
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "c6ba5128-c82e-4218-acb5-4dd651d34832",
+      "date": "2026-07-15",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "note": "<p>meeting prep + paperwork</p>",
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "b5b75f8c-9d90-4ee5-999e-682e095255a3",
+      "date": "2026-07-20",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "8f7e2b44-695f-4235-809f-b42c94bacdf1",
+      "date": "2026-07-20",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "9aea547f-8cdd-4ee2-a998-67727cc8c4aa",
+      "date": "2026-07-20",
+      "minutes": 20,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "2c6686bd-e6d7-4c46-8937-2a57255855b3",
+      "date": "2026-07-20",
+      "minutes": 15,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "5c8c9da7-ca91-4bb5-aacf-6453d70d456e",
+      "date": "2026-07-20",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "fb1c6531-69bf-4900-b18c-4ff64b38f6c1"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "fc161d39-863a-4dfb-aa45-d3737b446045",
+      "date": "2026-07-21",
+      "minutes": 45,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "82a6e03b-e315-4605-9a9b-121a9fd3a400"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "42884b9f-15cb-43e7-a84c-8c41065bffec",
+      "date": "2026-07-21",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "ea5a4fe7-d8b7-4716-b38f-bb3f8c62eb42",
+      "date": "2026-07-21",
+      "minutes": 60,
+      "categoryId": "3539109f-d5f5-402b-8dd8-86a9b578dd85",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>escalation</p>",
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "fd14e610-c5cf-4837-b3f6-0a200d263400",
+      "date": "2026-07-21",
+      "minutes": 15,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "a37e3a28-cef6-4b3e-a854-8c4ca3f90599",
+      "date": "2026-07-21",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "ea94827a-4811-4743-936a-d506458c0ba4",
+      "date": "2026-07-21",
+      "minutes": 15,
+      "categoryId": "2725f74c-fe1e-4742-92b0-60f08edf03c3",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "fec49ecd-4e3d-42fe-9967-ebde61fc04b9",
+      "date": "2026-07-21",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "e0b23bf8-ded9-42ba-9f44-effae14083d1",
+      "date": "2026-07-22",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "55fafbea-86ed-44ce-b149-87c1bba47e18",
+      "date": "2026-07-22",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "5bdf2b75-387b-4cf8-94b4-d267f6b56a1e",
+      "date": "2026-07-22",
+      "minutes": 10,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "1d36fcd4-fec1-4e41-a81e-34b7d85d036e",
+      "date": "2026-07-22",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "5bed92d4-db98-4f3f-a4a6-a59db8a32211",
+      "date": "2026-07-23",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "note": "<p>2nd weekly session</p>",
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "f6193747-12a7-4c8d-8d87-9708dc0dc8b6",
+      "date": "2026-07-23",
+      "minutes": 30,
+      "categoryId": "fdaa7213-8c4e-41f5-9f1a-04d9f504a3dc",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f",
+        "f952bcbb-065c-4872-9c7b-136ad3b542df",
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>lunch group</p>",
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "6ba31ca4-dd25-44b5-81c6-557ec5c6e26f",
+      "date": "2026-07-23",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "f75a219b-38dd-4bf4-9c43-24a2132b435f",
+      "date": "2026-07-24",
+      "minutes": 45,
+      "categoryId": "3539109f-d5f5-402b-8dd8-86a9b578dd85",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>escalation</p>",
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "965ab970-f7d6-405b-83b6-be5cf6b36b53",
+      "date": "2026-07-24",
+      "minutes": 10,
+      "categoryId": "dda54f30-798a-45c4-a6fe-7e92a34e82fa",
+      "studentIds": [
+        "f952bcbb-065c-4872-9c7b-136ad3b542df"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "1a4e6460-8e75-4139-8f9f-e6af55a51bed",
+      "date": "2026-07-24",
+      "minutes": 15,
+      "categoryId": "5770778b-1ccb-457f-841d-292ecef32c21",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "ed6701fb-5f33-4237-9888-84ff33f39841",
+      "date": "2026-07-24",
+      "minutes": 30,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "6c3edb26-1d16-4e64-8fdf-799e1c0ce2ed",
+      "date": "2026-07-24",
+      "minutes": 90,
+      "categoryId": "55b1d9cd-8069-4802-b19f-400206674757",
+      "studentIds": [
+        "8b876920-8b65-47f7-8efb-98ab56be459c"
+      ],
+      "startTime": null,
+      "note": "<p>re-eval</p>",
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "8d5f9f8b-6111-4af5-bcb4-9c0b8c799765",
+      "date": "2026-07-27",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "ba3407e6-9288-4b7a-8c3d-d33d62452c1f"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "52017b1b-6766-4ff3-ba32-e138ea7ef3f1",
+      "date": "2026-07-27",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "dc718d83-3ced-4948-8571-579a8d03359d"
+      ],
+      "startTime": null,
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "067a3073-7d92-4dc4-bf67-d9608f56bf13",
+      "date": "2026-07-27",
+      "minutes": 20,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "a4d6bb7c-1b8d-4b43-8306-ef5589689df1"
+      ],
+      "startTime": null,
+      "note": "<p>check-in</p>",
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "id": "62a70eaf-7210-4650-8e41-262442768726",
+      "date": "2026-07-27",
+      "minutes": 20,
+      "categoryId": "8713ea93-ab6d-497c-a564-75486ee50751",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "note": "<p>session notes</p>",
+      "createdAt": "2026-07-27T17:38:50.917Z"
+    },
+    {
+      "date": "2026-07-27",
+      "minutes": 15,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "eb08992d-2c19-4995-bd1b-a92990bf1b31"
+      ],
+      "startTime": null,
+      "id": "944467e1-5699-4d88-8001-2094ecee84a5",
+      "createdAt": "2026-07-27T18:10:40.600Z"
+    },
+    {
+      "date": "2026-07-27",
+      "minutes": 30,
+      "categoryId": "e75228c7-31e2-4a26-b069-ad4a450b1072",
+      "studentIds": [
+        "7dea2ab6-0703-4af1-84f0-6cf05b749f64"
+      ],
+      "startTime": null,
+      "id": "5bbb4c53-eccc-4c91-aff6-3546b93b7881",
+      "createdAt": "2026-07-27T18:20:10.462Z"
+    }
+  ]
+}

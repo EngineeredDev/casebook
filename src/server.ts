@@ -12,13 +12,21 @@ const BASE_PORT = 4321;
  * The literal IP is used rather than "localhost" everywhere a connection is
  * made, because "localhost" resolves to ::1 first on some Windows setups and
  * would then miss an IPv4-only listener.
+ *
+ * The hosted demo is the one exception — a container has to answer its own
+ * network to be reachable at all. It opts in by setting PORT, and only the
+ * from-source build honours it: the compiled executable, the thing that lands
+ * on a clinician's machine, cannot be talked into binding wide by a stray
+ * environment variable.
  */
-const HOST = "127.0.0.1";
+const HOSTED_PORT = !isCompiled() && process.env.PORT ? Number(process.env.PORT) : null;
+const HOST = HOSTED_PORT === null ? "127.0.0.1" : "0.0.0.0";
 /**
- * Both loopback families are bound, because the browser is sent to
+ * The local build binds both loopback families, because the browser is sent to
  * DISPLAY_HOST, which resolves to ::1 ahead of 127.0.0.1 on macOS. A v4-only
  * listener would make every launch pay a failed IPv6 connect before the
- * browser's Happy Eyeballs fallback reached 127.0.0.1.
+ * browser's Happy Eyeballs fallback reached 127.0.0.1. Unused when hosted —
+ * 0.0.0.0 already covers the container's own v4 addresses.
  */
 const HOST_V6 = "::1";
 /**
@@ -145,48 +153,57 @@ async function yieldPort(port: number): Promise<void> {
 
 let server: ReturnType<typeof startServer> | null = null;
 let port = BASE_PORT;
-for (; port < BASE_PORT + 10; port++) {
-  // macOS doesn't reliably reject a second bind, so probe the port first.
-  // Both families are probed because the browser resolves DISPLAY_HOST to ::1
-  // first: a foreign app holding ::1 would capture the tab even with
-  // 127.0.0.1 free, so that port is no good to us either.
-  const [v4, v6] = await Promise.all([healthOf(port), healthOf(port, HOST_V6)]);
-  const existing = v4 ?? v6;
-  // A previous double-click left an instance up — just focus it.
-  if (existing?.app === APP_NAME) focusExisting(port);
-  if (existing) continue; // some other HTTP app owns this port
-  try {
-    server = startServer(port);
-  } catch {
-    // A real EADDRINUSE: someone bound between the probe and here.
+if (HOSTED_PORT !== null) {
+  // One app per container: nothing else can be holding the port, and the probe
+  // below would have to guess a routable address to talk to a 0.0.0.0 listener.
+  port = HOSTED_PORT;
+  server = startServer(port);
+} else {
+  for (; port < BASE_PORT + 10; port++) {
+    // macOS doesn't reliably reject a second bind, so probe the port first.
+    // Both families are probed because the browser resolves DISPLAY_HOST to ::1
+    // first: a foreign app holding ::1 would capture the tab even with
+    // 127.0.0.1 free, so that port is no good to us either.
+    const [v4, v6] = await Promise.all([healthOf(port), healthOf(port, HOST_V6)]);
+    const existing = v4 ?? v6;
+    // A previous double-click left an instance up — just focus it.
+    if (existing?.app === APP_NAME) focusExisting(port);
+    if (existing) continue; // some other HTTP app owns this port
+    try {
+      server = startServer(port);
+    } catch {
+      // A real EADDRINUSE: someone bound between the probe and here.
+      await yieldPort(port);
+      continue;
+    }
+    // Confirm this process actually receives traffic on the port it claims.
+    const mine = await healthOf(port);
+    if (mine?.instance === INSTANCE) break;
+    server.stop(true);
+    server = null;
     await yieldPort(port);
-    continue;
   }
-  // Confirm this process actually receives traffic on the port it claims.
-  const mine = await healthOf(port);
-  if (mine?.instance === INSTANCE) break;
-  server.stop(true);
-  server = null;
-  await yieldPort(port);
 }
 if (!server) {
   console.error(`No free port found (${BASE_PORT}-${BASE_PORT + 9}).`);
   process.exit(1);
 }
 
-// Best effort: the app is fully usable on v4 alone, and ::1 does not exist
-// where IPv6 is disabled. Verified like the v4 bind so a foreign listener
-// can't quietly answer for DISPLAY_HOST; if the claim fails, the browser
-// falls back to 127.0.0.1 and still lands here.
-try {
-  const v6 = startServer(port, HOST_V6);
-  const mine = await healthOf(port, HOST_V6);
-  if (mine?.instance !== INSTANCE) v6.stop(true);
-} catch {
-  // No IPv6 loopback on this machine; the v4 listener carries it.
+if (HOSTED_PORT === null) {
+  // Best effort: the app is fully usable on v4 alone, and ::1 does not exist
+  // where IPv6 is disabled. Verified like the v4 bind so a foreign listener
+  // can't quietly answer for DISPLAY_HOST; if the claim fails, the browser
+  // falls back to 127.0.0.1 and still lands here.
+  try {
+    const v6 = startServer(port, HOST_V6);
+    const mine = await healthOf(port, HOST_V6);
+    if (mine?.instance !== INSTANCE) v6.stop(true);
+  } catch {
+    // No IPv6 loopback on this machine; the v4 listener carries it.
+  }
 }
 
-const url = origin(DISPLAY_HOST, port);
+const url = origin(HOSTED_PORT === null ? DISPLAY_HOST : HOST, port);
 console.log(`Clinician Tracker running at ${url}`);
 console.log(`Data file: ${dataDir()}/data.json`);
 if (isCompiled()) openBrowser(url);

@@ -88,6 +88,39 @@ then switches back. Also available:
 - **Backup JSON** — the whole data file, timestamped. Contains notes; it's for
   restoring, not for handing to anyone.
 
+## Hosted demo
+
+For showing the app to someone without handing them a binary to run:
+<https://clinician-tracker-demo-production.up.railway.app>
+
+This is a demo, not a deployment of the product — the product is still the
+local executable above. Two things follow from that:
+
+- **The API is unauthenticated**, exactly as it is locally, so anyone with the
+  link can read *and* change what they see. Only ever point it at the seeded
+  caseload in `seed/demo-data.json` (invented students, placeholder notes).
+  Never a real one.
+- **Nothing entered there survives.** `seed/demo-data.json` is baked into the
+  image as `data.json`, so every container start — including a restart after a
+  visitor edits something — comes back up on the same known-good caseload.
+
+```sh
+docker build -t clinician-tracker:demo .
+docker run --rm -e PORT=8080 -p 8080:8080 clinician-tracker:demo
+railway up                    # redeploy after a change
+```
+
+`Dockerfile` runs the app from source under Bun rather than shipping a compiled
+binary, because `bun build --compile` embeds the frontend but also flips the app
+into executable mode — data next to the binary, browser auto-launch — neither of
+which a container wants. `railway.json` pins the Dockerfile builder and points
+the healthcheck at `/api/health`.
+
+The demo is the one place the server binds beyond loopback. It does so only when
+`PORT` is set *and* the process isn't a compiled binary, so the executable that
+lands on a clinician's machine cannot be talked into answering the network by a
+stray environment variable. See the comment on `HOST` in `src/server.ts`.
+
 ## Development
 
 Requires [mise](https://mise.jdx.dev) (pins Bun) — or any Bun ≥ 1.3.
