@@ -57,7 +57,7 @@ swap only — not built yet).
   - *Service minutes* — group time credited in full to each attendee. Matches
     how IEP service delivery is counted.
   - Overall totals always count each entry once (actual clock time).
-- **Categories** are grouped *direct* vs *indirect* — editable on the Students
+- **Categories** are grouped *direct* vs *indirect* — editable on the Categories
   tab; archived categories keep their history.
   - A category can also be marked **untimed** (the ⊘ button next to it). Picking
     an untimed category on the Log tab hides the duration picker and files the

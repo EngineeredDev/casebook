@@ -28,6 +28,7 @@ import {
   IconMoon,
   IconPencilPlus,
   IconSun,
+  IconTags,
   IconUsers,
 } from "@tabler/icons-react";
 import { theme } from "./theme.tsx";
@@ -37,12 +38,14 @@ import { LogPage } from "./components/LogPage.tsx";
 import { DashboardPage } from "./components/DashboardPage.tsx";
 import { StudentsPage } from "./components/StudentsPage.tsx";
 import { StudentPage } from "./components/StudentPage.tsx";
+import { CategoriesPage } from "./components/CategoriesPage.tsx";
 import { ReportsPage } from "./components/ReportsPage.tsx";
 
 const NAV: { path: string; label: string; icon: typeof IconPencilPlus; hint: string }[] = [
   { path: "/log", label: "Log", icon: IconPencilPlus, hint: "Record time" },
   { path: "/dashboard", label: "Dashboard", icon: IconChartBar, hint: "Charts and totals" },
-  { path: "/students", label: "Students", icon: IconUsers, hint: "Roster and categories" },
+  { path: "/students", label: "Students", icon: IconUsers, hint: "Roster and totals" },
+  { path: "/categories", label: "Categories", icon: IconTags, hint: "Edit and archive" },
   { path: "/reports", label: "Reports", icon: IconFileDescription, hint: "Print and export" },
 ];
 
@@ -159,6 +162,8 @@ function CurrentPage(): ReactNode {
       return <StudentsPage />;
     case "student":
       return <StudentPage studentId={route.studentId} />;
+    case "categories":
+      return <CategoriesPage />;
     case "reports":
       return <ReportsPage />;
     case "notFound":
