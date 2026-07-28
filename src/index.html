@@ -4,6 +4,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Casebook</title>
+    <!--
+      Inlined rather than served, so the icon survives both the bundler and the
+      compiled single-file binary with no extra route. Same two paths as <Logo>
+      in frontend/App.tsx, at the light-mode series colors — they read on a light
+      and a dark tab strip alike, and "#" has to be percent-escaped in a URI.
+    -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M14.7 9.4C12 6.6 8.2 5.4 4 5.8a1 1 0 0 0-.9 1v15.7a1 1 0 0 0 1.1 1c3.6-.3 7 .8 9.3 3 .5.5 1.2.1 1.2-.6z' fill='%232a78d6'/><path d='M17.3 9.4c2.7-2.8 6.5-4 10.7-3.6a1 1 0 0 1 .9 1v15.7a1 1 0 0 1-1.1 1c-3.6-.3-7 .8-9.3 3-.5.5-1.2.1-1.2-.6z' fill='%23eb6834'/></svg>"
+    />
     <script>
       // Stamp the stored color scheme before first paint so dark mode doesn't flash white.
       (function () {

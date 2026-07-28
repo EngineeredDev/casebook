@@ -4,7 +4,6 @@ import {
   Alert,
   AppShell,
   Badge,
-  Box,
   Burger,
   Button,
   Card,
@@ -51,6 +50,34 @@ const NAV: { path: string; label: string; icon: typeof IconPencilPlus; hint: str
   { path: "/categories", label: "Categories", icon: IconTags, hint: "Edit and archive" },
   { path: "/reports", label: "Reports", icon: IconFileDescription, hint: "Print and export" },
 ];
+
+/**
+ * The app mark: an open book whose two pages carry the direct and indirect
+ * series colors, so the logo can never drift from the charts. Decorative — the
+ * wordmark beside it already says "Casebook".
+ *
+ * The favicon in src/index.html inlines these same two paths; edit both.
+ */
+function Logo({ size = 20 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      aria-hidden="true"
+      style={{ display: "block", flex: "none" }}
+    >
+      <path
+        d="M14.7 9.4C12 6.6 8.2 5.4 4 5.8a1 1 0 0 0-.9 1v15.7a1 1 0 0 0 1.1 1c3.6-.3 7 .8 9.3 3 .5.5 1.2.1 1.2-.6z"
+        fill="var(--direct)"
+      />
+      <path
+        d="M17.3 9.4c2.7-2.8 6.5-4 10.7-3.6a1 1 0 0 1 .9 1v15.7a1 1 0 0 1-1.1 1c-3.6-.3-7 .8-9.3 3-.5.5-1.2.1-1.2-.6z"
+        fill="var(--indirect)"
+      />
+    </svg>
+  );
+}
 
 function SaveStatus() {
   const { saveState } = useStore();
@@ -258,7 +285,7 @@ function Shell() {
         <Group h="100%" px="md" gap="sm" wrap="nowrap">
           <Burger opened={mobileOpened} onClick={mobile.toggle} hiddenFrom="sm" size="sm" />
           <Burger opened={desktopOpened} onClick={desktop.toggle} visibleFrom="sm" size="sm" />
-          <Box w={10} h={10} bg="var(--direct)" style={{ borderRadius: "50%", flex: "none" }} />
+          <Logo />
           <Text fw={600} size="sm">
             Casebook
           </Text>
