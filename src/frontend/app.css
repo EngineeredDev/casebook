@@ -51,12 +51,6 @@
   border-radius: 2px;
 }
 
-/* ---------- Printed report ---------- */
-
-.report-sheet {
-  max-width: 900px;
-}
-
 /* Without this the editable area is only as tall as its text, so most of an
    empty note editor is dead space that ignores clicks — you click into the big
    box and nothing focuses.
@@ -100,7 +94,6 @@
     font-size: 12px;
   }
   .report-sheet {
-    max-width: none;
     border: none !important;
     padding: 0 !important;
   }
