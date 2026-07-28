@@ -70,6 +70,13 @@ function SaveStatus() {
       </Group>
     );
   }
+  if (saveState === "retrying") {
+    return (
+      <Badge color="yellow" variant="light" size="sm" leftSection={<IconAlertTriangle size={12} />}>
+        Retrying…
+      </Badge>
+    );
+  }
   return (
     <Badge color="red" variant="light" size="sm" leftSection={<IconAlertTriangle size={12} />}>
       {saveState === "conflict" ? "Conflict" : "Save failed"}
@@ -128,6 +135,36 @@ function ConflictAlert() {
         </Text>
         <Button size="xs" color="red" onClick={reload} style={{ flex: "none" }}>
           Reload data
+        </Button>
+      </Group>
+    </Alert>
+  );
+}
+
+/**
+ * Shown once the retries have stopped. The edits are still in the page and
+ * still get saved if a later attempt lands — but nothing will attempt again on
+ * its own, so this has to be the thing that says so and offers the retry.
+ */
+function SaveErrorAlert() {
+  const { saveState, retrySave } = useStore();
+  if (saveState !== "error") return null;
+  return (
+    <Alert
+      color="red"
+      variant="light"
+      icon={<IconAlertTriangle size={18} />}
+      title="Your changes aren't saved"
+      mb="md"
+      className="no-print"
+    >
+      <Group justify="space-between" wrap="nowrap" gap="md">
+        <Text size="sm">
+          The app couldn't reach the server. Your edits are still here — keep this tab open and try
+          again.
+        </Text>
+        <Button size="xs" color="red" onClick={retrySave} style={{ flex: "none" }}>
+          Try again
         </Button>
       </Group>
     </Alert>
@@ -247,6 +284,7 @@ function Shell() {
 
       <AppShell.Main>
         <ConflictAlert />
+        <SaveErrorAlert />
         <CurrentPage />
       </AppShell.Main>
     </AppShell>

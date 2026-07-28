@@ -22,6 +22,12 @@ COPY --chown=bun:bun src ./src
 # entered against this deployment is meant to survive.
 COPY --chown=bun:bun seed/demo-data.json ./data.json
 
+# COPY --chown sets ownership on the copied files, not on the WORKDIR holding
+# them — /app itself stays root-owned 755. Saving needs to *create* entries in
+# that directory (backups/, and the data.json.tmp of the atomic write), which
+# the bun user cannot do without owning it, so every write failed with EACCES.
+RUN chown bun:bun /app
+
 USER bun
 EXPOSE 4321
 CMD ["bun", "src/server.ts"]

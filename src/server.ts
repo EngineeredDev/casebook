@@ -89,9 +89,17 @@ function startServer(port: number, hostname = HOST) {
           if (candidate.rev !== doc.rev) {
             return json({ error: "Revision conflict", serverRev: doc.rev }, 409);
           }
-          backupIfNeeded();
           const next: DataDoc = { ...candidate, rev: doc.rev + 1 };
-          saveDoc(next);
+          try {
+            backupIfNeeded();
+            saveDoc(next);
+          } catch (err) {
+            // A write that failed must not advance the in-memory doc: leaving
+            // it ahead of the file would make the next PUT a phantom 409 and
+            // lose the client's edits to a conflict it cannot resolve.
+            console.error("Save failed:", err);
+            return json({ error: `Could not write data file: ${(err as Error).message}` }, 500);
+          }
           doc = next;
           return json({ ok: true, rev: next.rev });
         },
