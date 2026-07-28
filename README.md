@@ -12,11 +12,23 @@ and stores all data in a human-readable `data.json` next to the executable.
 
 ## Running it (for the clinician)
 
-1. Copy the folder for your platform out of `dist/` (e.g. `dist/mac-arm/`).
-2. Double-click `Casebook`. Your browser opens the app.
+1. Download the file for your computer from the
+   [latest build](https://github.com/EngineeredDev/casebook/releases/tag/latest):
+
+   | Your computer                     | Download                                                                                                                  |
+   | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+   | Mac, Apple silicon (M1 and later) | [`Casebook-mac-arm.zip`](https://github.com/EngineeredDev/casebook/releases/download/latest/Casebook-mac-arm.zip)         |
+   | Mac, Intel                        | [`Casebook-mac-intel.zip`](https://github.com/EngineeredDev/casebook/releases/download/latest/Casebook-mac-intel.zip)     |
+   | Windows                           | [`Casebook-windows-x64.zip`](https://github.com/EngineeredDev/casebook/releases/download/latest/Casebook-windows-x64.zip) |
+
+2. Unzip it and double-click `Casebook`. Your browser opens the app.
 3. That's it. Your data is the `data.json` file next to the app — copy that one
    file to back up everything. The app also keeps a rolling 30 days of daily
    snapshots in `backups/`.
+
+That build tracks `main`, so the links above always give you the current app and
+never change. Keep the app wherever you unzipped it — it writes its data beside
+itself, so moving it later means taking `data.json` and `backups/` along too.
 
 First-run notes:
 
@@ -31,7 +43,8 @@ just reopens the browser tab.
 
 ## Smoke test for a locked-down school machine
 
-Copy `dist/<platform>/Casebook` to the target machine and run it. If it
+Put `Casebook` on the target machine — either download above, or
+`dist/<platform>/Casebook` from a local build — and run it. If it
 prints `Casebook running at http://casebook.localhost:4321` and the
 page loads,
 you're clear. If IT policy blocks it, the fallback plan is repackaging the same
@@ -128,6 +141,13 @@ docker run --rm -e PORT=8080 -p 8080:8080 casebook:demo
 railway up                    # redeploy after a change
 ```
 
+Every push to `main` also publishes this image to GHCR (amd64 and arm64), so it
+can be run without a checkout:
+
+```sh
+docker run --rm -e PORT=8080 -p 8080:8080 ghcr.io/engineereddev/casebook:latest
+```
+
 `Dockerfile` runs the app from source under Bun rather than shipping a compiled
 binary, because `bun build --compile` embeds the frontend but also flips the app
 into executable mode — data next to the binary, browser auto-launch — neither of
@@ -158,6 +178,21 @@ bun run build:all    # dist/{mac-arm,mac-intel,windows}/
 Cross-compiles from any machine via `bun build --compile`. Each binary embeds
 the entire frontend; the only files it creates are `data.json` and `backups/`
 beside itself.
+
+### Releases
+
+`.github/workflows/release.yml` runs `bun run check` and then the same three
+builds on every push to `main`, and force-moves the `latest` prerelease onto
+that commit — so the download links above always serve the current build without
+ever changing. Push a `v*` tag to cut a permanent numbered release from the same
+steps.
+
+The Mac binaries build on a macOS runner because `scripts/sign-mac.sh` needs
+`codesign`, which exists nowhere else; one arm64 runner covers both Macs, since
+ad-hoc signing seals a Mach-O regardless of its architecture. Windows
+cross-compiles on Linux, having nothing to sign. Each binary is zipped before
+upload — GitHub's artifact packing drops the execute bit, which would leave the
+recipient with a file macOS won't run.
 
 ### Architecture
 
