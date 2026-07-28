@@ -32,7 +32,15 @@ import type { Entry } from "../../types.ts";
 
 export type { RangeSelection };
 
-export function StatTile({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
+export function StatTile({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+}) {
   return (
     <Paper withBorder p="sm">
       <Text size="xs" c="dimmed" fw={600} tt="uppercase" lts={0.4}>
@@ -359,7 +367,10 @@ export function LegendRow({
     <Group gap="md" mb="xs">
       {items.map((i) => (
         <Group key={i.label} gap={6} wrap="nowrap">
-          <span className={i.line ? "legend-line" : "legend-swatch"} style={{ background: i.color }} />
+          <span
+            className={i.line ? "legend-line" : "legend-swatch"}
+            style={{ background: i.color }}
+          />
           <Text size="xs" c="dimmed">
             {i.label}
           </Text>
@@ -409,7 +420,9 @@ export function ChartTooltip({
           <Group key={i} gap={6} wrap="nowrap">
             <span className="legend-swatch" style={{ background: item.color }} />
             <Text size="xs" fw={600} className="tnum">
-              {formatter && typeof item.value === "number" ? formatter(item.value) : String(item.value)}
+              {formatter && typeof item.value === "number"
+                ? formatter(item.value)
+                : String(item.value)}
             </Text>
             <Text size="xs" c="dimmed">
               {item.name}

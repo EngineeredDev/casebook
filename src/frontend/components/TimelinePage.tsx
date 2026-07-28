@@ -35,13 +35,7 @@ import {
 import { useStore } from "../store.tsx";
 import type { Entry } from "../../types.ts";
 import { buildIndex, matchEntry, parseQuery, type IndexedEntry } from "../lib/search.ts";
-import {
-  fmtDayHeading,
-  fmtDuration,
-  fmtMonthLabel,
-  monthStartYmd,
-  toHours,
-} from "../lib/time.ts";
+import { fmtDayHeading, fmtDuration, fmtMonthLabel, monthStartYmd, toHours } from "../lib/time.ts";
 import { Link, navigate, studentPath, useLocation } from "../lib/router.tsx";
 import {
   logEditPath,
@@ -396,8 +390,7 @@ export function TimelinePage() {
               ? `${rows.length} entries`
               : `${rows.length} of ${doc.entries.length} entries`}
             {" · "}
-            {toHours(totals.minutes)}h
-            {totals.untimed > 0 && ` · ${totals.untimed} untimed`}
+            {toHours(totals.minutes)}h{totals.untimed > 0 && ` · ${totals.untimed} untimed`}
             {totals.notes > 0 && ` · ${totals.notes} with notes`}
           </Text>
         </Stack>
@@ -481,8 +474,7 @@ export function TimelinePage() {
               <Group gap="xs">
                 <Loader size="xs" />
                 <Text size="xs" c="dimmed">
-                  {rows.length - limit} older{" "}
-                  {rows.length - limit === 1 ? "entry" : "entries"}
+                  {rows.length - limit} older {rows.length - limit === 1 ? "entry" : "entries"}
                 </Text>
               </Group>
             </Center>

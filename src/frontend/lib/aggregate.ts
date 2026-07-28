@@ -23,9 +23,10 @@ export function filterEntries(entries: Entry[], range: DateRange): Entry[] {
 
 /** Clamp an open-ended preset range to the span the data actually covers. */
 export function effectiveRange(entries: Entry[], range: DateRange): DateRange | null {
-  if (entries.length === 0) return null;
-  let min = entries[0].date;
-  let max = entries[0].date;
+  const first = entries[0];
+  if (!first) return null;
+  let min = first.date;
+  let max = first.date;
   for (const e of entries) {
     if (e.date < min) min = e.date;
     if (e.date > max) max = e.date;
@@ -81,7 +82,11 @@ export interface WeekGroupRow {
 }
 
 /** Weekly clock minutes split direct/indirect, zero-filled across the range's weeks. */
-export function weeklyByGroup(entries: Entry[], categories: Category[], range: DateRange): WeekGroupRow[] {
+export function weeklyByGroup(
+  entries: Entry[],
+  categories: Category[],
+  range: DateRange,
+): WeekGroupRow[] {
   const eff = effectiveRange(entries, range);
   if (!eff) return [];
   const rows = new Map<string, WeekGroupRow>();
@@ -263,7 +268,9 @@ export function weeklySummaryRows(
   students: Student[],
   categories: Category[],
   attribution: Attribution,
-  range: DateRange,
+  // Unused: rows are derived from `entries`, which the caller has already
+  // filtered to the range. Kept so the signature matches its sibling exports.
+  _range: DateRange,
 ): WeeklySummaryRow[] {
   const key = (w: string, sid: string) => `${w}|${sid}`;
   const acc = new Map<string, WeeklySummaryRow>();

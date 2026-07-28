@@ -43,8 +43,7 @@ function dayStamp(): string {
  * become breaks, matching how the old textarea rendered.
  */
 function plainToHtml(text: string): string {
-  const esc = (s: string) =>
-    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   return text
     .split(/\n{2,}/)
     .map((para) => `<p>${esc(para).replace(/\n/g, "<br>")}</p>`)

@@ -72,10 +72,7 @@ export function ReportsPage() {
     () => perCategoryTotals(entries, doc.categories),
     [entries, doc.categories],
   );
-  const untimed = useMemo(
-    () => untimedCount(entries, doc.categories),
-    [entries, doc.categories],
-  );
+  const untimed = useMemo(() => untimedCount(entries, doc.categories), [entries, doc.categories]);
   const weekly = useMemo(
     () =>
       weeklyByGroup(entries, doc.categories, range.range).map((r) => ({
@@ -412,7 +409,9 @@ export function ReportsPage() {
                         : "Indirect"}
                   </Table.Td>
                   <Table.Td className="num">{c.count}</Table.Td>
-                  <Table.Td className="num">{c.category.untimed ? "—" : `${toHours(c.minutes)}h`}</Table.Td>
+                  <Table.Td className="num">
+                    {c.category.untimed ? "—" : `${toHours(c.minutes)}h`}
+                  </Table.Td>
                   <Table.Td className="num">
                     {c.category.untimed
                       ? "—"
@@ -431,8 +430,8 @@ export function ReportsPage() {
         </Box>
 
         <Text size="xs" c="dimmed">
-          Produced with Casebook. Total time counts each entry once (actual clock time);
-          per-student numbers follow the selected attribution method. {note}
+          Produced with Casebook. Total time counts each entry once (actual clock time); per-student
+          numbers follow the selected attribution method. {note}
         </Text>
       </Paper>
     </Stack>

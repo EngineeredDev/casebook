@@ -63,7 +63,10 @@ export function StudentsPage() {
     reversed: false,
   });
 
-  const last4 = { from: addDaysYmd(weekStartYmd(todayYmd()), -21), to: todayYmd() };
+  // Memoized on the date string so the range keeps a stable identity across
+  // renders — otherwise a fresh object literal would defeat the memo below.
+  const today = todayYmd();
+  const last4 = useMemo(() => ({ from: addDaysYmd(weekStartYmd(today), -21), to: today }), [today]);
   const recent = useMemo(
     () =>
       new Map(
@@ -75,7 +78,7 @@ export function StudentsPage() {
           last4,
         ).map((r) => [r.student.id, r]),
       ),
-    [doc],
+    [doc, last4],
   );
   const allTime = useMemo(
     () =>
@@ -222,7 +225,9 @@ export function StudentsPage() {
                     </Group>
                   </Table.Td>
                   <Table.Td className="num">
-                    {s.iep && s.mandatedMinutesPerWeek ? fmtDuration(s.mandatedMinutesPerWeek) : "—"}
+                    {s.iep && s.mandatedMinutesPerWeek
+                      ? fmtDuration(s.mandatedMinutesPerWeek)
+                      : "—"}
                   </Table.Td>
                   <Table.Td className="num">
                     {recent.get(s.id)?.total ? `${toHours(recent.get(s.id)!.avgPerWeek)}h/wk` : "—"}

@@ -70,19 +70,19 @@ swap only — not built yet).
     has-a-note sit above the list, and all of it lives in the URL — a search
     worth keeping is a bookmark.
 - **Attribution** (toggle on Dashboard/Reports):
-  - *Workload share* — group time is split evenly among attendees. True cost
+  - _Workload share_ — group time is split evenly among attendees. True cost
     view; per-student numbers sum to real clock time.
-  - *Service minutes* — group time credited in full to each attendee. Matches
+  - _Service minutes_ — group time credited in full to each attendee. Matches
     how IEP service delivery is counted.
   - Overall totals always count each entry once (actual clock time).
-- **Categories** are grouped *direct* vs *indirect* — editable on the Categories
+- **Categories** are grouped _direct_ vs _indirect_ — editable on the Categories
   tab; archived categories keep their history.
   - A category can also be marked **untimed** (the ⊘ button next to it). Picking
     an untimed category on the Log tab hides the duration picker and files the
     entry at 0 minutes — for no-shows and cancellations, which are worth
     recording as events but take no time. They never move an hours total; they
-    show up as counts: the day header on the Log tab, an *Untimed* tile and an
-    *Entries* column on Dashboard/Reports, and a column in both CSVs. Most
+    show up as counts: the day header on the Log tab, an _Untimed_ tile and an
+    _Entries_ column on Dashboard/Reports, and a column in both CSVs. Most
     setups need one such category, or none.
 - **Students** carry an IEP flag and optional mandated minutes/week, which
   powers the mandate-vs-actual view (always computed with service minutes).
@@ -100,8 +100,8 @@ temporarily switches the app to light mode so charts print legibly on paper,
 then switches back. Also available:
 
 - **CSV · weekly** — one row per student per week (pivot-table friendly), with
-  an *Untimed events* count column
-- **CSV · raw** — every entry as a row, notes excluded; an *Untimed* Y/N column
+  an _Untimed events_ count column
+- **CSV · raw** — every entry as a row, notes excluded; an _Untimed_ Y/N column
   separates a deliberate no-time event from a genuine zero
 - **Backup JSON** — the whole data file, timestamped. Contains notes; it's for
   restoring, not for handing to anyone.
@@ -115,7 +115,7 @@ This is a demo, not a deployment of the product — the product is still the
 local executable above. Two things follow from that:
 
 - **The API is unauthenticated**, exactly as it is locally, so anyone with the
-  link can read *and* change what they see. Only ever point it at the seeded
+  link can read _and_ change what they see. Only ever point it at the seeded
   caseload in `seed/demo-data.json` (invented students, placeholder notes).
   Never a real one.
 - **Nothing entered there survives.** `seed/demo-data.json` is baked into the
@@ -135,7 +135,7 @@ which a container wants. `railway.json` pins the Dockerfile builder and points
 the healthcheck at `/api/health`.
 
 The demo is the one place the server binds beyond loopback. It does so only when
-`PORT` is set *and* the process isn't a compiled binary, so the executable that
+`PORT` is set _and_ the process isn't a compiled binary, so the executable that
 lands on a clinician's machine cannot be talked into answering the network by a
 stray environment variable. See the comment on `HOST` in `src/server.ts`.
 
@@ -195,14 +195,14 @@ beside itself.
   `"quoted"` syntax. Deliberately not fuzzy — newest-first order is the point of
   the page, and relevance ranking would have to fight it.
 
-| Route | |
-|---|---|
-| `/log` | `?date=YYYY-MM-DD` `?edit=<entryId>` |
-| `/timeline` | `?q=<search>` `?range` `?students=<ids>` `?cats=<ids>` `?group=direct\|indirect` `?notes=1` |
-| `/dashboard` | `?range=<key>` `?attr=share\|service` |
-| `/students` | |
-| `/students/:id` | `?range` `?attr` `?notes=1` |
-| `/reports` | `?range` `?attr` |
+| Route           |                                                                                             |
+| --------------- | ------------------------------------------------------------------------------------------- |
+| `/log`          | `?date=YYYY-MM-DD` `?edit=<entryId>`                                                        |
+| `/timeline`     | `?q=<search>` `?range` `?students=<ids>` `?cats=<ids>` `?group=direct\|indirect` `?notes=1` |
+| `/dashboard`    | `?range=<key>` `?attr=share\|service`                                                       |
+| `/students`     |                                                                                             |
+| `/students/:id` | `?range` `?attr` `?notes=1`                                                                 |
+| `/reports`      | `?range` `?attr`                                                                            |
 
 Mantine needs no PostCSS here — its prebuilt stylesheets are imported in
 `index.tsx` and Bun bundles them directly.

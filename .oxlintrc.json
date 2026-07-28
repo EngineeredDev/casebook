@@ -1,0 +1,40 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "react", "import"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "env": {
+    "builtin": true,
+    "browser": true
+  },
+  "ignorePatterns": ["dist/", "backups/", "seed/", "data.json"],
+  "rules": {
+    // The automatic JSX runtime ("jsx": "react-jsx") means React never has to
+    // be in scope.
+    "react/react-in-jsx-scope": "off",
+
+    // `import "./app.css"` and the Mantine style imports are side-effect
+    // imports by design.
+    "import/no-unassigned-import": "off",
+
+    // @tiptap/starter-kit's default export really is the thing we want.
+    "import/no-named-as-default": "off",
+
+    // server.ts probes ports one at a time on purpose — each attempt depends
+    // on the previous one having failed.
+    "no-await-in-loop": "off",
+
+    // Small helpers defined next to their only caller read better here than
+    // hoisted to module scope.
+    "unicorn/consistent-function-scoping": "off"
+  },
+  "overrides": [
+    {
+      "files": ["src/server.ts", "src/storage.ts", "scripts/**"],
+      "env": { "browser": false }
+    }
+  ]
+}

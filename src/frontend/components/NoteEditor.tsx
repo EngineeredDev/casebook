@@ -1,15 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ActionIcon,
-  Box,
-  Button,
-  Flex,
-  Group,
-  Modal,
-  Stack,
-  Text,
-  Tooltip,
-} from "@mantine/core";
+import { ActionIcon, Box, Button, Flex, Group, Modal, Stack, Text, Tooltip } from "@mantine/core";
 import { RichTextEditor } from "@mantine/tiptap";
 import { useEditor } from "@tiptap/react";
 import { IconArrowsDiagonal, IconArrowsDiagonalMinimize2 } from "@tabler/icons-react";
@@ -42,9 +32,7 @@ function PastNotes({
             !!e.note &&
             e.studentIds.some((id) => studentIds.includes(id)),
         )
-        .sort(
-          (a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt),
-        )
+        .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
         .slice(0, 12),
     [doc.entries, studentIds, excludeEntryId],
   );
@@ -140,10 +128,7 @@ export function NoteEditor({
   };
 
   const editor = useEditor({
-    extensions: [
-      ...noteExtensions,
-      SubmitShortcut.configure({ onSubmit: submitAndCollapse }),
-    ],
+    extensions: [...noteExtensions, SubmitShortcut.configure({ onSubmit: submitAndCollapse })],
     content: value,
     onUpdate: ({ editor }) => onChange(editor.isEmpty ? "" : editor.getHTML()),
   });
@@ -173,9 +158,7 @@ export function NoteEditor({
          so the writing surface uses the height rather than the toolbar floating
          above a short box. */
       style={
-        expanded
-          ? { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }
-          : undefined
+        expanded ? { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" } : undefined
       }
     >
       <RichTextEditor.Toolbar>
@@ -207,11 +190,7 @@ export function NoteEditor({
         className="note-body note-surface"
         mih={expanded ? undefined : 96}
         mah={expanded ? undefined : 300}
-        style={
-          expanded
-            ? { flex: 1, minHeight: 0, overflowY: "auto" }
-            : { overflowY: "auto" }
-        }
+        style={expanded ? { flex: 1, minHeight: 0, overflowY: "auto" } : { overflowY: "auto" }}
       />
     </RichTextEditor>
   );

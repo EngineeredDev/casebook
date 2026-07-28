@@ -29,7 +29,9 @@ export function parseRoute(pathname: string): Route {
   const [head, second] = pathname.split("/").filter(Boolean);
   if (!head) return { page: "log" };
   if (head === "students") {
-    return second ? { page: "student", studentId: decodeURIComponent(second) } : { page: "students" };
+    return second
+      ? { page: "student", studentId: decodeURIComponent(second) }
+      : { page: "students" };
   }
   if (
     head === "log" ||

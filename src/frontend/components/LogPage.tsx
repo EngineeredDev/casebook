@@ -424,7 +424,8 @@ export function LogPage() {
                 {untimed ? (
                   <Alert variant="light" color="gray" p="xs" icon={<IconClockOff size={16} />}>
                     <Text size="xs">
-                      Untimed category — logged as an event, with no minutes counted toward your day.
+                      Untimed category — logged as an event, with no minutes counted toward your
+                      day.
                     </Text>
                   </Alert>
                 ) : (
@@ -471,16 +472,10 @@ export function LogPage() {
                   inputRef={studentInputRef}
                 />
                 {studentIds.length > 1 && (
-                  <Alert
-                    variant="light"
-                    color="gray"
-                    mt="xs"
-                    p="xs"
-                    icon={<IconUsers size={16} />}
-                  >
+                  <Alert variant="light" color="gray" mt="xs" p="xs" icon={<IconUsers size={16} />}>
                     <Text size="xs">
-                      Group session — the time counts once toward your day, and per-student views can
-                      show it in full or split.
+                      Group session — the time counts once toward your day, and per-student views
+                      can show it in full or split.
                     </Text>
                   </Alert>
                 )}

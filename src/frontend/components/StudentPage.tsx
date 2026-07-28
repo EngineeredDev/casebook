@@ -301,7 +301,11 @@ export function StudentPage({ studentId }: { studentId: string }) {
       </Group>
 
       <SimpleGrid cols={{ base: 2, sm: totals.untimed ? 5 : 4 }} spacing="sm">
-        <StatTile label="Total time" value={`${toHours(totals.total)}h`} sub={range.label.toLowerCase()} />
+        <StatTile
+          label="Total time"
+          value={`${toHours(totals.total)}h`}
+          sub={range.label.toLowerCase()}
+        />
         <StatTile label="Avg per week" value={`${toHours(totals.avgPerWeek)}h`} />
         <StatTile
           label="Direct time"
@@ -482,7 +486,13 @@ function EntryRow({
               {peers.map((id, i) => (
                 <span key={id}>
                   {i > 0 && ", "}
-                  <Anchor component={Link} to={studentPath(id)} size="xs" c="dimmed" underline="always">
+                  <Anchor
+                    component={Link}
+                    to={studentPath(id)}
+                    size="xs"
+                    c="dimmed"
+                    underline="always"
+                  >
                     {doc.students.find((s) => s.id === id)?.name ?? "(deleted)"}
                   </Anchor>
                 </span>

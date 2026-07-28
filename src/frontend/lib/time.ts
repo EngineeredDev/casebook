@@ -5,8 +5,10 @@ export function ymd(d: Date): string {
 }
 
 export function parseYmd(s: string): Date {
-  const [y, m, d] = s.split("-").map(Number);
-  return new Date(y, m - 1, d);
+  const [y, m, d] = s.split("-");
+  // Number(undefined) is NaN, so a malformed string still yields an Invalid
+  // Date rather than silently landing on a real one.
+  return new Date(Number(y), Number(m) - 1, Number(d));
 }
 
 export function todayYmd(): string {

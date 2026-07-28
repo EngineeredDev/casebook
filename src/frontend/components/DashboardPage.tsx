@@ -62,7 +62,13 @@ export function DashboardPage() {
   const withTime = students.filter((s) => s.total > 0);
 
   const iepShare = useMemo(() => {
-    const shareTotals = perStudentTotals(entries, doc.students, doc.categories, "share", range.range);
+    const shareTotals = perStudentTotals(
+      entries,
+      doc.students,
+      doc.categories,
+      "share",
+      range.range,
+    );
     const total = shareTotals.reduce((s, r) => s + r.total, 0);
     if (!total) return null;
     const iep = shareTotals.filter((r) => r.student.iep).reduce((s, r) => s + r.total, 0);
@@ -130,7 +136,11 @@ export function DashboardPage() {
       </Group>
 
       <SimpleGrid cols={{ base: 2, sm: 3, lg: untimed ? 6 : 5 }} spacing="sm">
-        <StatTile label="Total time" value={`${toHours(totals.total)}h`} sub={range.label.toLowerCase()} />
+        <StatTile
+          label="Total time"
+          value={`${toHours(totals.total)}h`}
+          sub={range.label.toLowerCase()}
+        />
         <StatTile
           label="Avg per week"
           value={weeks ? `${toHours(totals.total / weeks)}h` : "—"}
@@ -151,9 +161,7 @@ export function DashboardPage() {
           value={iepShare == null ? "—" : `${iepShare}%`}
           sub="share of tracked time"
         />
-        {untimed > 0 && (
-          <StatTile label="Untimed" value={untimed} sub="no-shows and the like" />
-        )}
+        {untimed > 0 && <StatTile label="Untimed" value={untimed} sub="no-shows and the like" />}
       </SimpleGrid>
 
       {entries.length === 0 ? (
@@ -178,7 +186,6 @@ export function DashboardPage() {
           </Grid.Col>
           <Grid.Col span={12}>
             <TrendChart
-              doc={doc}
               entries={entries}
               attribution={attribution}
               range={range.range}
@@ -400,14 +407,12 @@ function MandateChart({
 }
 
 function TrendChart({
-  doc,
   entries,
   attribution,
   range,
   palette,
   topStudents,
 }: {
-  doc: ReturnType<typeof useStore>["doc"];
   entries: ReturnType<typeof filterEntries>;
   attribution: Attribution;
   range: { from: string; to: string };
