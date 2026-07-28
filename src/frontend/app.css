@@ -72,6 +72,20 @@
   flex: 1 0 auto;
 }
 
+/* The timeline's month rule stays put while that month scrolls past, so you
+   always know where in time you are. It has to clear the fixed app header,
+   whose height Mantine publishes as --app-shell-header-offset, and it needs an
+   opaque background or the rows scroll through it. */
+.timeline-month {
+  position: sticky;
+  top: var(--app-shell-header-offset, 52px);
+  z-index: 2;
+  background: var(--mantine-color-body);
+  padding: 8px 0 6px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
 @media print {
   /* Clinical notes never print. The report sheet doesn't render them, so this
      only matters if a page is printed directly with the browser's own command,
@@ -100,5 +114,10 @@
   /* Keep a section and its heading on the same page where possible. */
   .report-section {
     break-inside: avoid;
+  }
+  /* A sticky heading has nothing to stick to on paper — printing it as-is
+     repeats the month on every page it overlaps. */
+  .timeline-month {
+    position: static;
   }
 }

@@ -7,6 +7,7 @@ import {
   Card,
   Group,
   Menu,
+  Modal,
   Paper,
   SegmentedControl,
   Stack,
@@ -26,6 +27,8 @@ import {
 import { fmtDuration, rangePresets, type RangeSelection } from "../lib/time.ts";
 import type { Attribution } from "../lib/aggregate.ts";
 import type { ChartPalette } from "../lib/palette.ts";
+import { noteExcerpt } from "../lib/notes.ts";
+import type { Entry } from "../../types.ts";
 
 export type { RangeSelection };
 
@@ -212,6 +215,43 @@ export function MandateBar({
         )}
       </Text>
     </Group>
+  );
+}
+
+/**
+ * Deleting an entry that carries a clinical note destroys the note with it, so
+ * every history view asks first. Shared rather than copied per page: the whole
+ * point is that the confirmation is not something a new list view can forget.
+ * Rendering is driven by `entry` — null means closed.
+ */
+export function DeleteEntryModal({
+  entry,
+  onCancel,
+  onConfirm,
+}: {
+  entry: Entry | null;
+  onCancel: () => void;
+  onConfirm: (entry: Entry) => void;
+}) {
+  return (
+    <Modal opened={!!entry} onClose={onCancel} title="Delete this entry?" size="md">
+      <Text size="sm">
+        This entry has a clinical note. Deleting it removes the note too, and that can't be undone.
+      </Text>
+      {entry?.note && (
+        <Text size="sm" c="dimmed" mt="xs" lineClamp={3}>
+          {noteExcerpt(entry.note, 220)}
+        </Text>
+      )}
+      <Group justify="flex-end" mt="lg" gap="xs">
+        <Button variant="default" onClick={onCancel}>
+          Keep it
+        </Button>
+        <Button color="red" onClick={() => entry && onConfirm(entry)}>
+          Delete entry and note
+        </Button>
+      </Group>
+    </Modal>
   );
 }
 

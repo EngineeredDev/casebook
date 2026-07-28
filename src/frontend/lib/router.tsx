@@ -1,5 +1,5 @@
 /**
- * A router for seven routes and one dynamic segment.
+ * A router for eight routes and one dynamic segment.
  *
  * Deliberately not react-router: everything that library adds beyond this file
  * — nested layouts, loaders, lazy routes, navigation blocking, scroll
@@ -17,6 +17,7 @@ import { useCallback, useMemo, useSyncExternalStore, type ComponentPropsWithoutR
  */
 export type Route =
   | { page: "log" }
+  | { page: "timeline" }
   | { page: "dashboard" }
   | { page: "students" }
   | { page: "student"; studentId: string }
@@ -30,7 +31,13 @@ export function parseRoute(pathname: string): Route {
   if (head === "students") {
     return second ? { page: "student", studentId: decodeURIComponent(second) } : { page: "students" };
   }
-  if (head === "log" || head === "dashboard" || head === "categories" || head === "reports") {
+  if (
+    head === "log" ||
+    head === "timeline" ||
+    head === "dashboard" ||
+    head === "categories" ||
+    head === "reports"
+  ) {
     return { page: head };
   }
   return { page: "notFound" };

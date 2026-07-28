@@ -9,7 +9,6 @@ import {
   Collapse,
   Grid,
   Group,
-  Modal,
   NumberInput,
   SimpleGrid,
   Stack,
@@ -57,6 +56,7 @@ import {
   ATTRIBUTION_OPTIONS,
   ChartCard,
   ChartTooltip,
+  DeleteEntryModal,
   IepBadge,
   MandateBar,
   RangePicker,
@@ -418,30 +418,11 @@ export function StudentPage({ studentId }: { studentId: string }) {
         )}
       </Card>
 
-      <Modal
-        opened={!!pendingDelete}
-        onClose={() => setPendingDelete(null)}
-        title="Delete this entry?"
-        size="md"
-      >
-        <Text size="sm">
-          This entry has a clinical note. Deleting it removes the note too, and that can't be
-          undone.
-        </Text>
-        {pendingDelete?.note && (
-          <Text size="sm" c="dimmed" mt="xs" lineClamp={3}>
-            {noteExcerpt(pendingDelete.note, 220)}
-          </Text>
-        )}
-        <Group justify="flex-end" mt="lg" gap="xs">
-          <Button variant="default" onClick={() => setPendingDelete(null)}>
-            Keep it
-          </Button>
-          <Button color="red" onClick={() => pendingDelete && remove(pendingDelete)}>
-            Delete entry and note
-          </Button>
-        </Group>
-      </Modal>
+      <DeleteEntryModal
+        entry={pendingDelete}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={remove}
+      />
     </Stack>
   );
 }

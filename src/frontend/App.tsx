@@ -29,12 +29,14 @@ import {
   IconPencilPlus,
   IconSun,
   IconTags,
+  IconTimeline,
   IconUsers,
 } from "@tabler/icons-react";
 import { theme } from "./theme.tsx";
 import { StoreProvider, useStore } from "./store.tsx";
 import { Link, navigate, useIsActive, useLocation, useRoute } from "./lib/router.tsx";
 import { LogPage } from "./components/LogPage.tsx";
+import { TimelinePage } from "./components/TimelinePage.tsx";
 import { DashboardPage } from "./components/DashboardPage.tsx";
 import { StudentsPage } from "./components/StudentsPage.tsx";
 import { StudentPage } from "./components/StudentPage.tsx";
@@ -43,6 +45,7 @@ import { ReportsPage } from "./components/ReportsPage.tsx";
 
 const NAV: { path: string; label: string; icon: typeof IconPencilPlus; hint: string }[] = [
   { path: "/log", label: "Log", icon: IconPencilPlus, hint: "Record time" },
+  { path: "/timeline", label: "Timeline", icon: IconTimeline, hint: "Search all history" },
   { path: "/dashboard", label: "Dashboard", icon: IconChartBar, hint: "Charts and totals" },
   { path: "/students", label: "Students", icon: IconUsers, hint: "Roster and totals" },
   { path: "/categories", label: "Categories", icon: IconTags, hint: "Edit and archive" },
@@ -156,6 +159,8 @@ function CurrentPage(): ReactNode {
   switch (route.page) {
     case "log":
       return <LogPage />;
+    case "timeline":
+      return <TimelinePage />;
     case "dashboard":
       return <DashboardPage />;
     case "students":

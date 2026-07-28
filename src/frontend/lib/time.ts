@@ -41,9 +41,43 @@ export function listWeeks(from: string, to: string): string[] {
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+const MONTHS_FULL = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 export function fmtDayLabel(s: string): string {
   const d = parseYmd(s);
   return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+}
+
+/** "July 2026" — the timeline's sticky section rule. */
+export function fmtMonthLabel(s: string): string {
+  const d = parseYmd(s);
+  return `${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** "Fri, Jul 24" — a day heading sitting under a month that already has the year. */
+export function fmtDayHeading(s: string): string {
+  const d = parseYmd(s);
+  return `${DAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
+}
+
+/** The first of the month containing the given date — the timeline's section key. */
+export function monthStartYmd(s: string): string {
+  return `${s.slice(0, 7)}-01`;
 }
 
 export function fmtWeekLabel(weekYmd: string): string {
@@ -52,7 +86,6 @@ export function fmtWeekLabel(weekYmd: string): string {
 
 export function fmtFullDate(s: string): string {
   const d = parseYmd(s);
-  const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   return `${DAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 

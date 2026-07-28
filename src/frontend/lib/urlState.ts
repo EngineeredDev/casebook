@@ -9,7 +9,7 @@
  * never white-screen the app.
  */
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useSearchParams } from "./router.tsx";
 import { defaultRange, presetRange, todayYmd, YMD_RE, type RangeSelection } from "./time.ts";
 import type { Attribution } from "./aggregate.ts";
@@ -87,6 +87,75 @@ export function useFlagParam(name: string): [boolean, (next: boolean) => void] {
     [setParams, name],
   );
   return [params.get(name) === "1", set];
+}
+
+/**
+ * Free text in the query string — the timeline's search box.
+ *
+ * Written on every keystroke rather than debounced, like every other filter on
+ * the page: `useSearchParams` replaces rather than pushes, so this costs one
+ * `replaceState` per character and never grows the back stack. Reload and
+ * "copy link" then reproduce a search exactly.
+ */
+export function useTextParam(name: string): [string, (next: string) => void] {
+  const [params, setParams] = useSearchParams();
+  const set = useCallback(
+    (next: string) => {
+      setParams((p) => {
+        const trimmed = next.trim();
+        if (trimmed) p.set(name, next);
+        else p.delete(name);
+      });
+    },
+    [setParams, name],
+  );
+  return [params.get(name) ?? "", set];
+}
+
+/**
+ * A set of ids as one comma-separated param. Memoized on the raw string so the
+ * array identity only changes when the selection does, and callers can use it
+ * as a dependency without recomputing on every render.
+ */
+export function useIdsParam(name: string): [string[], (next: string[]) => void] {
+  const [params, setParams] = useSearchParams();
+  const raw = params.get(name) ?? "";
+  const value = useMemo(() => (raw ? raw.split(",").filter(Boolean) : []), [raw]);
+
+  const set = useCallback(
+    (next: string[]) => {
+      setParams((p) => {
+        if (next.length) p.set(name, next.join(","));
+        else p.delete(name);
+      });
+    },
+    [setParams, name],
+  );
+
+  return [value, set];
+}
+
+/** One of a fixed set of values; anything else in the URL reads as the default. */
+export function useEnumParam<T extends string>(
+  name: string,
+  allowed: readonly T[],
+  fallback: T,
+): [T, (next: T) => void] {
+  const [params, setParams] = useSearchParams();
+  const raw = params.get(name) as T | null;
+  const value = raw && allowed.includes(raw) ? raw : fallback;
+
+  const set = useCallback(
+    (next: T) => {
+      setParams((p) => {
+        if (next === fallback) p.delete(name);
+        else p.set(name, next);
+      });
+    },
+    [setParams, name, fallback],
+  );
+
+  return [value, set];
 }
 
 /** The Log page's day. Absent means today, which is what it means to open the app. */

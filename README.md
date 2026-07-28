@@ -51,6 +51,24 @@ swap only — not built yet).
     otherwise restoring it would lose every note — and it says so in the menu.
   - They are stored as HTML in `data.json`, in plain text on disk. Anyone with
     the computer can read them.
+- **Timeline** is every entry ever logged, newest day first, on one page you
+  keep scrolling — months stick to the top as they pass, and each day carries
+  its own total. Notes stay **collapsed** here: the list reads as a schedule,
+  and a note only opens when you click it.
+  - The search box matches the note text, the students, and the category at
+    once, and understands a few narrowing prefixes — `student:casey`,
+    `cat:iep`, `note:guardian`, `has:note`, `is:group`, `is:untimed`, `is:iep`,
+    `before:` / `after:` / `on:`, `"exact phrase"`, and a leading `-` to
+    exclude. Every term has to match; the `?` button next to the box lists them
+    all.
+  - Dates take a full day, a month, or a year — `on:2026-06` is all of June.
+    `after:` includes its day and `before:` excludes it, so
+    `after:2026-05-01 before:2026-06-01` is exactly May.
+  - When a search matches inside a note, the row says so rather than opening
+    it, so a hit is never something you didn't ask to see on screen.
+  - Filters for date range, students, categories, direct/indirect, and
+    has-a-note sit above the list, and all of it lives in the URL — a search
+    worth keeping is a bookmark.
 - **Attribution** (toggle on Dashboard/Reports):
   - *Workload share* — group time is split evenly among attendees. True cost
     view; per-student numbers sum to real clock time.
@@ -164,17 +182,23 @@ beside itself.
   chart palette (light + dark), and `theme.tsx` ties Mantine's primary color to
   the same blue the charts use. `app.css` carries only what Mantine doesn't:
   the two series colors, number formatting, and the print rules.
-- `src/frontend/lib/router.tsx` — ~130 lines of router, no dependency. Six routes
-  and one dynamic segment don't need a path matcher, they need a union type, so
-  the page switch is exhaustiveness-checked and `studentId` is a `string` rather
-  than `string | undefined`. `lib/urlState.ts` puts view state in the query
-  string (`?range` `?attr` `?date` `?edit` `?notes`), omitting each param when it
-  holds its default and falling back rather than throwing on a bad value.
+- `src/frontend/lib/router.tsx` — ~130 lines of router, no dependency. Seven
+  routes and one dynamic segment don't need a path matcher, they need a union
+  type, so the page switch is exhaustiveness-checked and `studentId` is a
+  `string` rather than `string | undefined`. `lib/urlState.ts` puts view state in
+  the query string, omitting each param when it holds its default and falling
+  back rather than throwing on a bad value.
   Why not react-router: `docs/routing-and-student-page.md` §4.
+- `src/frontend/lib/search.ts` — the Timeline's query language: an index built
+  once per document (parsing note HTML is the expensive part, so it does not
+  happen per keystroke) and a parser for the `field:value` / `-negated` /
+  `"quoted"` syntax. Deliberately not fuzzy — newest-first order is the point of
+  the page, and relevance ranking would have to fight it.
 
 | Route | |
 |---|---|
 | `/log` | `?date=YYYY-MM-DD` `?edit=<entryId>` |
+| `/timeline` | `?q=<search>` `?range` `?students=<ids>` `?cats=<ids>` `?group=direct\|indirect` `?notes=1` |
 | `/dashboard` | `?range=<key>` `?attr=share\|service` |
 | `/students` | |
 | `/students/:id` | `?range` `?attr` `?notes=1` |
