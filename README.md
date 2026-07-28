@@ -7,7 +7,7 @@ rest — so caseload conversations can happen with numbers instead of vibes.
 
 Everything lives in one folder. No accounts, no cloud, no install. The app is a
 single compiled executable that serves a browser UI at
-`http://clinician.localhost:4321`
+`http://casebook.localhost:4321`
 and stores all data in a human-readable `data.json` next to the executable.
 
 ## Running it (for the clinician)
@@ -145,7 +145,7 @@ Requires [mise](https://mise.jdx.dev) (pins Bun) — or any Bun ≥ 1.3.
 
 ```sh
 bun install
-bun run dev          # http://clinician.localhost:4321, hot reload
+bun run dev          # http://casebook.localhost:4321, hot reload
 ```
 
 Dev mode stores `data.json` in the repo root (gitignored). Delete it to reset.
@@ -165,7 +165,7 @@ beside itself.
   (`GET/PUT /api/data`, `GET /api/health`). Whole-document saves with a
   revision counter; concurrent-window conflicts return 409. Bound to `127.0.0.1`
   and `[::1]` — the API is unauthenticated, so it must not answer the network.
-  The browser is pointed at `clinician.localhost`, which RFC 6761 reserves for
+  The browser is pointed at `casebook.localhost`, which RFC 6761 reserves for
   loopback: no hosts-file entry, no admin rights, and unlike mDNS nothing is
   advertised to the network. Both loopback families are bound because that name
   resolves to `::1` before `127.0.0.1` on macOS.
