@@ -41,7 +41,8 @@ swap only — not built yet).
 ## Concepts
 
 - **Entry**: date + minutes + category + one or more students, with optional
-  start time and note. Entries with multiple students are **group sessions**.
+  start time and note. Entries with multiple students are **group sessions**;
+  entries in an untimed category carry 0 minutes (see Categories below).
 - **Notes** are formatted clinical notes (bold, italic, underline, lists,
   headings). The ⤢ button opens a full-height editor alongside that student's
   earlier notes. ⌘/Ctrl+Enter saves.
@@ -58,6 +59,13 @@ swap only — not built yet).
   - Overall totals always count each entry once (actual clock time).
 - **Categories** are grouped *direct* vs *indirect* — editable on the Students
   tab; archived categories keep their history.
+  - A category can also be marked **untimed** (the ⊘ button next to it). Picking
+    an untimed category on the Log tab hides the duration picker and files the
+    entry at 0 minutes — for no-shows and cancellations, which are worth
+    recording as events but take no time. They never move an hours total; they
+    show up as counts: the day header on the Log tab, an *Untimed* tile and an
+    *Entries* column on Dashboard/Reports, and a column in both CSVs. Most
+    setups need one such category, or none.
 - **Students** carry an IEP flag and optional mandated minutes/week, which
   powers the mandate-vs-actual view (always computed with service minutes).
 - Weeks start Monday. "School year to date" rolls over in August.
@@ -68,8 +76,10 @@ The Reports tab renders a print-ready sheet. The Print / Save PDF button
 temporarily switches the app to light mode so charts print legibly on paper,
 then switches back. Also available:
 
-- **CSV · weekly** — one row per student per week (pivot-table friendly)
-- **CSV · raw** — every entry as a row, notes excluded
+- **CSV · weekly** — one row per student per week (pivot-table friendly), with
+  an *Untimed events* count column
+- **CSV · raw** — every entry as a row, notes excluded; an *Untimed* Y/N column
+  separates a deliberate no-time event from a genuine zero
 - **Backup JSON** — the whole data file, timestamped. Contains notes; it's for
   restoring, not for handing to anyone.
 

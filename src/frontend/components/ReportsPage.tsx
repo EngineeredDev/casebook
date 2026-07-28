@@ -25,6 +25,7 @@ import {
   mandateComparison,
   perCategoryTotals,
   perStudentTotals,
+  untimedCount,
   weekCount,
   weeklyByGroup,
   weeklySummaryRows,
@@ -68,6 +69,10 @@ export function ReportsPage() {
   );
   const catTotals = useMemo(
     () => perCategoryTotals(entries, doc.categories),
+    [entries, doc.categories],
+  );
+  const untimed = useMemo(
+    () => untimedCount(entries, doc.categories),
     [entries, doc.categories],
   );
   const weekly = useMemo(
@@ -116,7 +121,16 @@ export function ReportsPage() {
   const exportWeeklyCsv = () => {
     const rows = weeklySummaryRows(entries, doc.students, doc.categories, attribution, range.range);
     downloadCsv(`weekly-summary-${todayYmd()}.csv`, [
-      ["Week of", "Student", "IEP", "Direct min", "Indirect min", "Total min", "Total hours"],
+      [
+        "Week of",
+        "Student",
+        "IEP",
+        "Direct min",
+        "Indirect min",
+        "Total min",
+        "Total hours",
+        "Untimed events",
+      ],
       ...rows.map((r) => [
         r.week,
         r.student.name,
@@ -125,6 +139,7 @@ export function ReportsPage() {
         Math.round(r.indirect),
         Math.round(r.total),
         toHours(r.total),
+        r.untimed,
       ]),
     ]);
   };
@@ -133,7 +148,16 @@ export function ReportsPage() {
   const exportRawCsv = () => {
     const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
     downloadCsv(`raw-entries-${todayYmd()}.csv`, [
-      ["Date", "Start", "Students", "Group size", "Category", "Direct/Indirect", "Minutes"],
+      [
+        "Date",
+        "Start",
+        "Students",
+        "Group size",
+        "Category",
+        "Direct/Indirect",
+        "Minutes",
+        "Untimed",
+      ],
       ...sorted.map((e) => [
         e.date,
         e.startTime ?? "",
@@ -144,6 +168,9 @@ export function ReportsPage() {
         categoryName(doc, e.categoryId),
         doc.categories.find((c) => c.id === e.categoryId)?.group ?? "",
         e.minutes,
+        // Distinguishes a deliberate no-time event from a genuine zero, which
+        // the Minutes column alone can't do.
+        doc.categories.find((c) => c.id === e.categoryId)?.untimed ? "Y" : "N",
       ]),
     ]);
   };
@@ -216,7 +243,9 @@ export function ReportsPage() {
           {range.label} · generated {generated}
         </Text>
 
-        <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm" mb="lg">
+        {/* The untimed tile only appears once there is something to report, so a
+            clinician who never uses untimed categories keeps the tidy four. */}
+        <SimpleGrid cols={{ base: 2, sm: untimed ? 5 : 4 }} spacing="sm" mb="lg">
           <StatTile label="Total time" value={`${toHours(totals.total)}h`} />
           <StatTile
             label="Avg per week"
@@ -233,6 +262,7 @@ export function ReportsPage() {
                 : "—"
             }
           />
+          {untimed > 0 && <StatTile label="Untimed" value={untimed} sub="events logged" />}
         </SimpleGrid>
 
         <Box className="report-section" mb="lg">
@@ -353,6 +383,7 @@ export function ReportsPage() {
               <Table.Tr>
                 <Table.Th>Category</Table.Th>
                 <Table.Th>Type</Table.Th>
+                <Table.Th className="num">Entries</Table.Th>
                 <Table.Th className="num">Hours</Table.Th>
                 <Table.Th className="num">Share</Table.Th>
               </Table.Tr>
@@ -361,15 +392,30 @@ export function ReportsPage() {
               {catTotals.map((c) => (
                 <Table.Tr key={c.category.id}>
                   <Table.Td>{c.category.name}</Table.Td>
-                  <Table.Td>{c.category.group === "direct" ? "Direct" : "Indirect"}</Table.Td>
-                  <Table.Td className="num">{toHours(c.minutes)}h</Table.Td>
+                  <Table.Td>
+                    {c.category.untimed
+                      ? "Untimed"
+                      : c.category.group === "direct"
+                        ? "Direct"
+                        : "Indirect"}
+                  </Table.Td>
+                  <Table.Td className="num">{c.count}</Table.Td>
+                  <Table.Td className="num">{c.category.untimed ? "—" : `${toHours(c.minutes)}h`}</Table.Td>
                   <Table.Td className="num">
-                    {totals.total ? Math.round((c.minutes / totals.total) * 100) : 0}%
+                    {c.category.untimed
+                      ? "—"
+                      : `${totals.total ? Math.round((c.minutes / totals.total) * 100) : 0}%`}
                   </Table.Td>
                 </Table.Tr>
               ))}
             </Table.Tbody>
           </Table>
+          {untimed > 0 && (
+            <Text size="xs" c="dimmed" mt={6}>
+              Untimed categories record that something happened — a no-show, a cancellation —
+              without adding minutes, so they carry a count instead of hours.
+            </Text>
+          )}
         </Box>
 
         <Text size="xs" c="dimmed">

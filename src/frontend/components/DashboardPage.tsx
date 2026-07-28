@@ -11,6 +11,7 @@ import {
   perCategoryTotals,
   perStudentTotals,
   studentWeekMatrix,
+  untimedCount,
   weekCount,
   weeklyByGroup,
   type Attribution,
@@ -77,14 +78,19 @@ export function DashboardPage() {
     [entries, doc.categories, range],
   );
 
+  /** Untimed categories are dropped here — an hours chart has no bar to draw for them. */
   const categoryRows = useMemo(
     () =>
-      perCategoryTotals(entries, doc.categories).map((r) => ({
-        name: r.category.name,
-        hours: toHours(r.minutes),
-      })),
+      perCategoryTotals(entries, doc.categories)
+        .filter((r) => r.minutes > 0)
+        .map((r) => ({
+          name: r.category.name,
+          hours: toHours(r.minutes),
+        })),
     [entries, doc.categories],
   );
+
+  const untimed = useMemo(() => untimedCount(entries, doc.categories), [entries, doc.categories]);
 
   const mandates = useMemo(
     () => mandateComparison(entries, doc.students, doc.categories, range.range),
@@ -122,7 +128,7 @@ export function DashboardPage() {
         </Text>
       </Group>
 
-      <SimpleGrid cols={{ base: 2, sm: 3, lg: 5 }} spacing="sm">
+      <SimpleGrid cols={{ base: 2, sm: 3, lg: untimed ? 6 : 5 }} spacing="sm">
         <StatTile label="Total time" value={`${toHours(totals.total)}h`} sub={range.label.toLowerCase()} />
         <StatTile
           label="Avg per week"
@@ -144,6 +150,9 @@ export function DashboardPage() {
           value={iepShare == null ? "—" : `${iepShare}%`}
           sub="share of tracked time"
         />
+        {untimed > 0 && (
+          <StatTile label="Untimed" value={untimed} sub="no-shows and the like" />
+        )}
       </SimpleGrid>
 
       {entries.length === 0 ? (

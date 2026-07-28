@@ -4,6 +4,13 @@ export interface Category {
   id: string;
   name: string;
   group: CategoryGroup;
+  /**
+   * Records that something happened without recording time — a no-show, a
+   * cancellation. Entries in an untimed category are always 0 minutes, so they
+   * count toward event tallies but never toward hours. Rare: the exception, not
+   * the rule, hence optional and absent by default.
+   */
+  untimed?: boolean;
   archived?: boolean;
 }
 
@@ -61,6 +68,9 @@ export const SEED_CATEGORIES: Omit<Category, "id">[] = [
   { name: "Direct service — group", group: "direct" },
   { name: "Crisis response", group: "direct" },
   { name: "Assessment / evaluation", group: "direct" },
+  // Grouped with direct service because that's the slot it replaces; the group
+  // is cosmetic for untimed categories, which contribute no minutes either way.
+  { name: "No-show / cancellation", group: "direct", untimed: true },
   { name: "IEP meeting", group: "indirect" },
   { name: "Parent contact", group: "indirect" },
   { name: "Teacher / staff consultation", group: "indirect" },

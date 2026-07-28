@@ -26,6 +26,7 @@ import {
   IconArchiveOff,
   IconChevronDown,
   IconChevronUp,
+  IconClockOff,
   IconSearch,
   IconSelector,
 } from "@tabler/icons-react";
@@ -273,7 +274,9 @@ export function StudentsPage() {
           <Card>
             <Text fw={600}>Categories</Text>
             <Text size="xs" c="dimmed" mt={2} mb="sm">
-              Rename, regroup, or archive. Archived categories keep their history.
+              Rename, regroup, or archive. Archived categories keep their history. Mark a category{" "}
+              <strong>untimed</strong> to log it as an event with no minutes — for no-shows and
+              cancellations. Entries already logged keep the time they have.
             </Text>
             <Stack gap={6}>
               {doc.categories.map((c) => (
@@ -296,6 +299,17 @@ export function StudentsPage() {
                     value={c.group}
                     onChange={(v) => updateCategory(c.id, { group: v as CategoryGroup })}
                   />
+                  <Tooltip label={c.untimed ? "Untimed — give it a duration" : "Make untimed"}>
+                    <ActionIcon
+                      variant={c.untimed ? "light" : "subtle"}
+                      color={c.untimed ? "ember" : "gray"}
+                      aria-label={c.untimed ? "Make category timed" : "Make category untimed"}
+                      aria-pressed={!!c.untimed}
+                      onClick={() => updateCategory(c.id, { untimed: !c.untimed })}
+                    >
+                      <IconClockOff size={16} />
+                    </ActionIcon>
+                  </Tooltip>
                   <Tooltip label={c.archived ? "Restore" : "Archive"}>
                     <ActionIcon
                       variant="subtle"

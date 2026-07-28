@@ -52,6 +52,18 @@ export function categoryGroupOf(categoryId: string, categories: Category[]): "di
   return categories.find((c) => c.id === categoryId)?.group ?? "indirect";
 }
 
+export function isUntimed(categoryId: string, categories: Category[]): boolean {
+  return !!categories.find((c) => c.id === categoryId)?.untimed;
+}
+
+/**
+ * Entries that carry no minutes by design. Counted rather than summed — they are
+ * invisible to every hours-based rollup, so this is the only place they surface.
+ */
+export function untimedCount(entries: Entry[], categories: Category[]): number {
+  return entries.filter((e) => isUntimed(e.categoryId, categories)).length;
+}
+
 /** True clock-time totals for the range (each entry counted once, not per student). */
 export function clockTotals(entries: Entry[], categories: Category[]): GroupTotals {
   const t: GroupTotals = { direct: 0, indirect: 0, total: 0 };
@@ -88,6 +100,12 @@ export interface StudentTotals {
   total: number;
   avgPerWeek: number;
   entryCount: number;
+  /**
+   * How many of `entryCount` carry no minutes by design. Subtract to count
+   * sessions — a no-show is an event, not a session, and it is invisible to
+   * every minutes-based field above.
+   */
+  untimed: number;
 }
 
 export function perStudentTotals(
@@ -100,17 +118,27 @@ export function perStudentTotals(
   const weeks = weekCount(entries, range) || 1;
   const map = new Map<string, StudentTotals>();
   for (const s of students) {
-    map.set(s.id, { student: s, direct: 0, indirect: 0, total: 0, avgPerWeek: 0, entryCount: 0 });
+    map.set(s.id, {
+      student: s,
+      direct: 0,
+      indirect: 0,
+      total: 0,
+      avgPerWeek: 0,
+      entryCount: 0,
+      untimed: 0,
+    });
   }
   for (const e of entries) {
     const per = minutesForStudent(e, attribution);
     const group = categoryGroupOf(e.categoryId, categories);
+    const untimed = isUntimed(e.categoryId, categories);
     for (const sid of e.studentIds) {
       const row = map.get(sid);
       if (!row) continue;
       row.total += per;
       row[group] += per;
       row.entryCount += 1;
+      if (untimed) row.untimed += 1;
     }
   }
   const out = [...map.values()].filter((r) => r.entryCount > 0 || r.student.active);
@@ -121,15 +149,26 @@ export function perStudentTotals(
 export interface CategoryTotal {
   category: Category;
   minutes: number;
+  count: number;
 }
 
+/**
+ * Kept on entry count rather than minutes so untimed categories survive — for
+ * those, the count is the whole story. Callers plotting hours should drop rows
+ * with no minutes themselves.
+ */
 export function perCategoryTotals(entries: Entry[], categories: Category[]): CategoryTotal[] {
-  const map = new Map<string, number>();
-  for (const e of entries) map.set(e.categoryId, (map.get(e.categoryId) ?? 0) + e.minutes);
+  const map = new Map<string, { minutes: number; count: number }>();
+  for (const e of entries) {
+    const row = map.get(e.categoryId) ?? { minutes: 0, count: 0 };
+    row.minutes += e.minutes;
+    row.count += 1;
+    map.set(e.categoryId, row);
+  }
   return categories
-    .map((category) => ({ category, minutes: map.get(category.id) ?? 0 }))
-    .filter((r) => r.minutes > 0)
-    .sort((a, b) => b.minutes - a.minutes);
+    .map((category) => ({ category, ...(map.get(category.id) ?? { minutes: 0, count: 0 }) }))
+    .filter((r) => r.count > 0)
+    .sort((a, b) => b.minutes - a.minutes || b.count - a.count);
 }
 
 /** week -> studentId -> minutes, zero-filled weeks; for trend lines and the weekly CSV. */
@@ -182,6 +221,8 @@ export interface WeeklySummaryRow {
   direct: number;
   indirect: number;
   total: number;
+  /** Untimed events (no-shows and the like) — a count, not minutes. */
+  untimed: number;
 }
 
 /** One row per student per week (weeks with time only) — the pivot-table-friendly export. */
@@ -199,13 +240,18 @@ export function weeklySummaryRows(
     const w = weekStartYmd(e.date);
     const per = minutesForStudent(e, attribution);
     const group = categoryGroupOf(e.categoryId, categories);
+    const untimed = isUntimed(e.categoryId, categories);
     for (const sid of e.studentIds) {
       const student = byId.get(sid);
       if (!student) continue;
       let row = acc.get(key(w, sid));
       if (!row) {
-        row = { week: w, student, direct: 0, indirect: 0, total: 0 };
+        row = { week: w, student, direct: 0, indirect: 0, total: 0, untimed: 0 };
         acc.set(key(w, sid), row);
+      }
+      if (untimed) {
+        row.untimed += 1;
+        continue;
       }
       row[group] += per;
       row.total += per;

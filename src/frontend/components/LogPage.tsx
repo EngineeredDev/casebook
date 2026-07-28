@@ -24,6 +24,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconClock,
+  IconClockOff,
   IconPencil,
   IconTrash,
   IconUsers,
@@ -193,13 +194,16 @@ export function LogPage({ focusSignal = 0 }: { focusSignal?: number }) {
   const directCats = categories.filter((c) => c.group === "direct");
   const indirectCats = categories.filter((c) => c.group === "indirect");
 
-  const effectiveMinutes = customMinutes === "" ? minutes : Number(customMinutes);
+  // Untimed categories (no-shows, cancellations) force the duration to zero. The
+  // duration state is left untouched rather than reset, so switching back to a
+  // timed category restores whatever was picked before.
+  const untimed = !!doc.categories.find((c) => c.id === categoryId)?.untimed;
+  const pickedMinutes = customMinutes === "" ? minutes : Number(customMinutes);
+  const effectiveMinutes = untimed ? 0 : pickedMinutes;
   const valid =
     studentIds.length > 0 &&
     !!categoryId &&
-    !!effectiveMinutes &&
-    effectiveMinutes > 0 &&
-    Number.isFinite(effectiveMinutes);
+    (untimed || (!!pickedMinutes && pickedMinutes > 0 && Number.isFinite(pickedMinutes)));
 
   const dayEntries = useMemo(
     () =>
@@ -213,6 +217,9 @@ export function LogPage({ focusSignal = 0 }: { focusSignal?: number }) {
     [doc.entries, date],
   );
   const dayTotal = dayEntries.reduce((sum, e) => sum + e.minutes, 0);
+  const dayUntimed = dayEntries.filter(
+    (e) => doc.categories.find((c) => c.id === e.categoryId)?.untimed,
+  ).length;
 
   const resetForm = () => {
     setStudentIds([]);
@@ -250,8 +257,10 @@ export function LogPage({ focusSignal = 0 }: { focusSignal?: number }) {
     setDate(entry.date);
     setStartTime(entry.startTime ?? "");
     setNote(entry.note ?? "");
-    if (DURATION_PRESETS.includes(entry.minutes)) {
-      setMinutes(entry.minutes);
+    // A zero-minute entry has no duration to restore; leave the picker on its
+    // default so it reads sensibly if the category is switched to a timed one.
+    if (entry.minutes === 0 || DURATION_PRESETS.includes(entry.minutes)) {
+      setMinutes(entry.minutes || 30);
       setCustomMinutes("");
     } else {
       setMinutes(null);
@@ -263,16 +272,23 @@ export function LogPage({ focusSignal = 0 }: { focusSignal?: number }) {
     deleteEntry(entry.id);
     if (editingId === entry.id) resetForm();
     notifications.show({
-      message: `Deleted ${fmtDuration(entry.minutes)} entry`,
+      message: entry.minutes ? `Deleted ${fmtDuration(entry.minutes)} entry` : "Deleted entry",
       color: "gray",
     });
   };
 
-  const catChip = (id: string, name: string, group: "direct" | "indirect") => (
-    <Chip key={id} value={id} size="sm" variant="outline" color={group === "direct" ? "clinical" : "ember"}>
+  const catChip = (c: (typeof categories)[number]) => (
+    <Chip
+      key={c.id}
+      value={c.id}
+      size="sm"
+      variant="outline"
+      color={c.group === "direct" ? "clinical" : "ember"}
+    >
       <Group gap={6} wrap="nowrap" component="span">
-        <span className={`cat-dot ${group}`} />
-        {name}
+        <span className={`cat-dot ${c.group}`} />
+        {c.name}
+        {c.untimed && <IconClockOff size={13} stroke={1.6} opacity={0.7} />}
       </Group>
     </Chip>
   );
@@ -332,36 +348,44 @@ export function LogPage({ focusSignal = 0 }: { focusSignal?: number }) {
               <Text component="label" size="sm" fw={500} display="block" mb={6}>
                 Duration
               </Text>
-              <Group gap={6} align="center">
-                <Chip.Group
-                  multiple={false}
-                  value={customMinutes === "" && minutes ? String(minutes) : ""}
-                  onChange={(v) => {
-                    setMinutes(Number(v));
-                    setCustomMinutes("");
-                  }}
-                >
-                  <Group gap={6}>
-                    {DURATION_PRESETS.map((m) => (
-                      <Chip key={m} value={String(m)} size="sm" variant="outline">
-                        {m}m
-                      </Chip>
-                    ))}
-                  </Group>
-                </Chip.Group>
-                <NumberInput
-                  size="xs"
-                  w={110}
-                  min={1}
-                  placeholder="Custom"
-                  suffix=" min"
-                  value={customMinutes}
-                  onChange={(v) => {
-                    setCustomMinutes(v === "" ? "" : Number(v));
-                    if (v !== "") setMinutes(null);
-                  }}
-                />
-              </Group>
+              {untimed ? (
+                <Alert variant="light" color="gray" p="xs" icon={<IconClockOff size={16} />}>
+                  <Text size="xs">
+                    Untimed category — logged as an event, with no minutes counted toward your day.
+                  </Text>
+                </Alert>
+              ) : (
+                <Group gap={6} align="center">
+                  <Chip.Group
+                    multiple={false}
+                    value={customMinutes === "" && minutes ? String(minutes) : ""}
+                    onChange={(v) => {
+                      setMinutes(Number(v));
+                      setCustomMinutes("");
+                    }}
+                  >
+                    <Group gap={6}>
+                      {DURATION_PRESETS.map((m) => (
+                        <Chip key={m} value={String(m)} size="sm" variant="outline">
+                          {m}m
+                        </Chip>
+                      ))}
+                    </Group>
+                  </Chip.Group>
+                  <NumberInput
+                    size="xs"
+                    w={110}
+                    min={1}
+                    placeholder="Custom"
+                    suffix=" min"
+                    value={customMinutes}
+                    onChange={(v) => {
+                      setCustomMinutes(v === "" ? "" : Number(v));
+                      if (v !== "") setMinutes(null);
+                    }}
+                  />
+                </Group>
+              )}
             </Box>
 
             <Box>
@@ -398,12 +422,12 @@ export function LogPage({ focusSignal = 0 }: { focusSignal?: number }) {
                   Direct time
                 </Text>
                 <Group gap={6} mb="xs">
-                  {directCats.map((c) => catChip(c.id, c.name, "direct"))}
+                  {directCats.map(catChip)}
                 </Group>
                 <Text size="xs" c="dimmed" mb={4}>
                   Indirect time
                 </Text>
-                <Group gap={6}>{indirectCats.map((c) => catChip(c.id, c.name, "indirect"))}</Group>
+                <Group gap={6}>{indirectCats.map(catChip)}</Group>
               </Chip.Group>
             </Box>
 
@@ -438,11 +462,18 @@ export function LogPage({ focusSignal = 0 }: { focusSignal?: number }) {
             <Text fw={600} size="sm">
               {fmtFullDate(date)}
             </Text>
-            {dayTotal > 0 && (
-              <Badge variant="light" color="gray">
-                {fmtDuration(dayTotal)}
-              </Badge>
-            )}
+            <Group gap={6} wrap="nowrap">
+              {dayUntimed > 0 && (
+                <Badge variant="default" leftSection={<IconClockOff size={11} />}>
+                  {dayUntimed}
+                </Badge>
+              )}
+              {dayTotal > 0 && (
+                <Badge variant="light" color="gray">
+                  {fmtDuration(dayTotal)}
+                </Badge>
+              )}
+            </Group>
           </Group>
 
           {dayEntries.length === 0 ? (
@@ -464,8 +495,15 @@ export function LogPage({ focusSignal = 0 }: { focusSignal?: number }) {
                     py={6}
                     style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
                   >
-                    <Text size="sm" fw={600} w={58} className="tnum" style={{ flex: "none" }}>
-                      {fmtDuration(e.minutes)}
+                    <Text
+                      size="sm"
+                      fw={600}
+                      w={58}
+                      c={cat?.untimed ? "dimmed" : undefined}
+                      className="tnum"
+                      style={{ flex: "none" }}
+                    >
+                      {cat?.untimed ? "—" : fmtDuration(e.minutes)}
                     </Text>
                     <span className={`cat-dot ${cat?.group ?? "indirect"}`} />
                     <Box style={{ flex: 1, minWidth: 0 }}>
