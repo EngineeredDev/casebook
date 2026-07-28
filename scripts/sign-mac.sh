@@ -9,7 +9,7 @@
 # "unidentified developer" prompt, where right-click -> Open works.
 #
 # Still not notarization: a downloaded copy stays quarantined until the
-# recipient clears it (`xattr -c ClinicianTracker`) or opens it via right-click.
+# recipient clears it (`xattr -c Casebook`) or opens it via right-click.
 set -e
 
 target="$1"

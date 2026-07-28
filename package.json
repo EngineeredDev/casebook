@@ -1,5 +1,5 @@
 {
-  "name": "school-clinician-tracker",
+  "name": "casebook",
   "version": "1.0.0",
   "description": "Local-first time tracking for school-based clinicians",
   "type": "module",
@@ -7,9 +7,9 @@
   "scripts": {
     "dev": "bun --hot src/server.ts",
     "start": "NODE_ENV=production bun src/server.ts",
-    "build:mac-arm": "bun build --compile --minify --target=bun-darwin-arm64 src/server.ts --outfile dist/mac-arm/ClinicianTracker && bun run sign:mac dist/mac-arm/ClinicianTracker",
-    "build:mac-intel": "bun build --compile --minify --target=bun-darwin-x64 src/server.ts --outfile dist/mac-intel/ClinicianTracker && bun run sign:mac dist/mac-intel/ClinicianTracker",
-    "build:windows": "bun build --compile --minify --target=bun-windows-x64 src/server.ts --outfile dist/windows/ClinicianTracker",
+    "build:mac-arm": "bun build --compile --minify --target=bun-darwin-arm64 src/server.ts --outfile dist/mac-arm/Casebook && bun run sign:mac dist/mac-arm/Casebook",
+    "build:mac-intel": "bun build --compile --minify --target=bun-darwin-x64 src/server.ts --outfile dist/mac-intel/Casebook && bun run sign:mac dist/mac-intel/Casebook",
+    "build:windows": "bun build --compile --minify --target=bun-windows-x64 src/server.ts --outfile dist/windows/Casebook",
     "build:all": "bun run build:mac-arm && bun run build:mac-intel && bun run build:windows",
     "sign:mac": "sh scripts/sign-mac.sh"
   },

@@ -178,7 +178,7 @@ export function ReportsPage() {
 
   const exportBackup = () => {
     downloadFile(
-      `clinician-tracker-backup-${todayYmd()}.json`,
+      `casebook-backup-${todayYmd()}.json`,
       JSON.stringify(doc, null, 2),
       "application/json",
     );
@@ -431,7 +431,7 @@ export function ReportsPage() {
         </Box>
 
         <Text size="xs" c="dimmed">
-          Produced with Clinician Tracker. Total time counts each entry once (actual clock time);
+          Produced with Casebook. Total time counts each entry once (actual clock time);
           per-student numbers follow the selected attribution method. {note}
         </Text>
       </Paper>

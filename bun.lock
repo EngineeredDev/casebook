@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "school-clinician-tracker",
+      "name": "casebook",
       "dependencies": {
         "@mantine/charts": "^9.5.0",
         "@mantine/core": "^9.5.0",

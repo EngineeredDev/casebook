@@ -213,7 +213,7 @@ function Shell() {
           <Burger opened={desktopOpened} onClick={desktop.toggle} visibleFrom="sm" size="sm" />
           <Box w={10} h={10} bg="var(--direct)" style={{ borderRadius: "50%", flex: "none" }} />
           <Text fw={600} size="sm">
-            Clinician Tracker
+            Casebook
           </Text>
           <Group ml="auto" gap="sm" wrap="nowrap">
             <SaveStatus />

@@ -1,4 +1,4 @@
-# Clinician Tracker
+# Casebook
 
 Local-first time tracking for a school-based clinician. Answers the question
 **"how many hours per week does this student actually take?"** — across direct
@@ -13,7 +13,7 @@ and stores all data in a human-readable `data.json` next to the executable.
 ## Running it (for the clinician)
 
 1. Copy the folder for your platform out of `dist/` (e.g. `dist/mac-arm/`).
-2. Double-click `ClinicianTracker`. Your browser opens the app.
+2. Double-click `Casebook`. Your browser opens the app.
 3. That's it. Your data is the `data.json` file next to the app — copy that one
    file to back up everything. The app also keeps a rolling 30 days of daily
    snapshots in `backups/`.
@@ -21,7 +21,7 @@ and stores all data in a human-readable `data.json` next to the executable.
 First-run notes:
 
 - **macOS**: unsigned app — right-click → Open the first time (or
-  `xattr -d com.apple.quarantine ClinicianTracker` if it was downloaded).
+  `xattr -d com.apple.quarantine Casebook` if it was downloaded).
 - **Windows**: SmartScreen will warn — "More info" → "Run anyway".
 - If the machine is district-managed and blocks unsigned executables, that's a
   known risk; test this **before** relying on it (see Smoke test below).
@@ -31,8 +31,8 @@ just reopens the browser tab.
 
 ## Smoke test for a locked-down school machine
 
-Copy `dist/<platform>/ClinicianTracker` to the target machine and run it. If it
-prints `Clinician Tracker running at http://clinician.localhost:4321` and the
+Copy `dist/<platform>/Casebook` to the target machine and run it. If it
+prints `Casebook running at http://casebook.localhost:4321` and the
 page loads,
 you're clear. If IT policy blocks it, the fallback plan is repackaging the same
 frontend as a single HTML file using the File System Access API (storage layer
@@ -91,7 +91,7 @@ then switches back. Also available:
 ## Hosted demo
 
 For showing the app to someone without handing them a binary to run:
-<https://clinician-tracker-demo-production.up.railway.app>
+<https://casebook-demo-production.up.railway.app>
 
 This is a demo, not a deployment of the product — the product is still the
 local executable above. Two things follow from that:
@@ -105,8 +105,8 @@ local executable above. Two things follow from that:
   visitor edits something — comes back up on the same known-good caseload.
 
 ```sh
-docker build -t clinician-tracker:demo .
-docker run --rm -e PORT=8080 -p 8080:8080 clinician-tracker:demo
+docker build -t casebook:demo .
+docker run --rm -e PORT=8080 -p 8080:8080 casebook:demo
 railway up                    # redeploy after a change
 ```
 

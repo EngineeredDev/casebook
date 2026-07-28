@@ -2,7 +2,7 @@ import index from "./index.html";
 import { loadDoc, saveDoc, backupIfNeeded, isCompiled, dataDir } from "./storage.ts";
 import { DATA_VERSION, type DataDoc } from "./types.ts";
 
-const APP_NAME = "school-clinician-tracker";
+const APP_NAME = "casebook";
 const BASE_PORT = 4321;
 /**
  * Loopback only. Bun.serve defaults to 0.0.0.0, which put the whole document —
@@ -39,7 +39,7 @@ const HOST_V6 = "::1";
  * This is a display name over the same loopback bind, not mDNS: resolution
  * never leaves the machine and nothing is advertised to the network.
  */
-const DISPLAY_HOST = "clinician.localhost";
+const DISPLAY_HOST = "casebook.localhost";
 /** Distinguishes this process in health checks — macOS lets two sockets "bind" the same port. */
 const INSTANCE = crypto.randomUUID();
 
@@ -204,6 +204,6 @@ if (HOSTED_PORT === null) {
 }
 
 const url = origin(HOSTED_PORT === null ? DISPLAY_HOST : HOST, port);
-console.log(`Clinician Tracker running at ${url}`);
+console.log(`Casebook running at ${url}`);
 console.log(`Data file: ${dataDir()}/data.json`);
 if (isCompiled()) openBrowser(url);
