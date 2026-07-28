@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Box, Card, Chip, Grid, Group, SimpleGrid, Stack, Text } from "@mantine/core";
-import { BarChart, BulletChart, LineChart } from "@mantine/charts";
+import { Card, Chip, Grid, Group, SimpleGrid, Stack, Text } from "@mantine/core";
+import { BarChart, LineChart } from "@mantine/charts";
 import { useStore } from "../store.tsx";
 import { useChartPalette } from "../theme.tsx";
 import type { ChartPalette } from "../lib/palette.ts";
@@ -17,14 +17,15 @@ import {
   type Attribution,
 } from "../lib/aggregate.ts";
 import { fmtDuration, fmtWeekLabel, toHours } from "../lib/time.ts";
+import { useAttributionParam, useRangeParam } from "../lib/urlState.ts";
 import {
   ATTRIBUTION_OPTIONS,
   ChartCard,
   ChartTooltip,
+  MandateBar,
   RangePicker,
   Seg,
   StatTile,
-  defaultRange,
 } from "./ui.tsx";
 
 const fmtH = (v: number) => `${v}h`;
@@ -48,8 +49,8 @@ const GRID = "0";
 export function DashboardPage() {
   const { doc } = useStore();
   const palette = useChartPalette();
-  const [range, setRange] = useState(() => defaultRange(doc.settings.schoolYearStartMonth));
-  const [attribution, setAttribution] = useState<Attribution>("share");
+  const [range, setRange] = useRangeParam(doc.settings.schoolYearStartMonth);
+  const [attribution, setAttribution] = useAttributionParam();
 
   const entries = useMemo(() => filterEntries(doc.entries, range.range), [doc.entries, range]);
   const weeks = weekCount(entries, range.range);
@@ -382,47 +383,16 @@ function MandateChart({
         </Text>
       ) : (
         <Stack gap={6}>
-          {mandates.map((m) => {
-            const diff = m.actualPerWeek - m.mandated;
-            const under = diff < -1;
-            return (
-              <Group key={m.student.id} gap="sm" wrap="nowrap">
-                <Text size="xs" w={120} truncate style={{ flex: "none" }}>
-                  {m.student.name}
-                </Text>
-                <Box style={{ flex: 1, minWidth: 0 }}>
-                  <BulletChart
-                    value={m.actualPerWeek}
-                    target={m.mandated}
-                    ranges={[{ value: max, color: palette.gridline }]}
-                    barColor={palette.direct}
-                    targetColor={palette.textPrimary}
-                    size={20}
-                    barSize={12}
-                    /* Built-in labels print raw floats and duplicate the
-                       formatted column to the right of each row. */
-                    styles={{
-                      rangeLabel: { display: "none" },
-                      barLabel: { display: "none" },
-                      targetLabel: { display: "none" },
-                    }}
-                  />
-                </Box>
-                <Text size="xs" w={190} ta="right" className="tnum" style={{ flex: "none" }}>
-                  {fmtDuration(m.actualPerWeek)} vs {fmtDuration(m.mandated)} ·{" "}
-                  {under ? (
-                    <Text span size="xs" c="red" fw={600}>
-                      {fmtDuration(Math.abs(diff))} under
-                    </Text>
-                  ) : (
-                    <Text span size="xs" c="dimmed">
-                      +{fmtDuration(Math.max(0, diff))} over
-                    </Text>
-                  )}
-                </Text>
-              </Group>
-            );
-          })}
+          {mandates.map((m) => (
+            <MandateBar
+              key={m.student.id}
+              name={m.student.name}
+              mandated={m.mandated}
+              actualPerWeek={m.actualPerWeek}
+              max={max}
+              palette={palette}
+            />
+          ))}
         </Stack>
       )}
     </ChartCard>

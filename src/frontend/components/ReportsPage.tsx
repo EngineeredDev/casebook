@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
+  Anchor,
   Box,
   Button,
   Group,
@@ -29,10 +30,11 @@ import {
   weekCount,
   weeklyByGroup,
   weeklySummaryRows,
-  type Attribution,
 } from "../lib/aggregate.ts";
 import { downloadCsv, downloadFile } from "../lib/csv.ts";
 import { fmtDuration, fmtWeekLabel, toHours, todayYmd } from "../lib/time.ts";
+import { useAttributionParam, useRangeParam } from "../lib/urlState.ts";
+import { Link, studentPath } from "../lib/router.tsx";
 import {
   ATTRIBUTION_OPTIONS,
   ChartTooltip,
@@ -40,7 +42,6 @@ import {
   Seg,
   StatTile,
   attributionNote,
-  defaultRange,
 } from "./ui.tsx";
 
 const fmtH = (v: number) => `${v}h`;
@@ -50,8 +51,8 @@ export function ReportsPage() {
   const palette = useChartPalette();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const computed = useComputedColorScheme("light");
-  const [range, setRange] = useState(() => defaultRange(doc.settings.schoolYearStartMonth));
-  const [attribution, setAttribution] = useState<Attribution>("share");
+  const [range, setRange] = useRangeParam(doc.settings.schoolYearStartMonth);
+  const [attribution, setAttribution] = useAttributionParam();
 
   const entries = useMemo(() => filterEntries(doc.entries, range.range), [doc.entries, range]);
   const weeks = weekCount(entries, range.range);
@@ -314,7 +315,18 @@ export function ReportsPage() {
             <Table.Tbody>
               {students.map((s) => (
                 <Table.Tr key={s.student.id}>
-                  <Table.Td fw={500}>{s.student.name}</Table.Td>
+                  <Table.Td fw={500}>
+                    {/* Prints as plain text; on screen it opens the student's page. */}
+                    <Anchor
+                      component={Link}
+                      to={studentPath(s.student.id)}
+                      c="inherit"
+                      underline="hover"
+                      inherit
+                    >
+                      {s.student.name}
+                    </Anchor>
+                  </Table.Td>
                   <Table.Td>{s.student.iep ? "Yes" : "—"}</Table.Td>
                   <Table.Td className="num">
                     {s.student.iep && s.student.mandatedMinutesPerWeek

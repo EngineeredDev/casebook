@@ -91,6 +91,25 @@ export function schoolYearStart(startMonth: number): string {
   return `${year}-${String(startMonth).padStart(2, "0")}-01`;
 }
 
+/** A chosen range plus how to describe it — `key` is what round-trips through the URL. */
+export interface RangeSelection {
+  key: string;
+  label: string;
+  range: DateRange;
+}
+
+export const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Resolve a preset key to a selection; null when the key isn't one we know. */
+export function presetRange(key: string, schoolYearStartMonth: number): RangeSelection | null {
+  const preset = rangePresets(schoolYearStartMonth).find((p) => p.key === key);
+  return preset ? { key: preset.key, label: preset.label, range: preset.range() } : null;
+}
+
+export function defaultRange(schoolYearStartMonth: number, key = "12-weeks"): RangeSelection {
+  return presetRange(key, schoolYearStartMonth) ?? presetRange("12-weeks", schoolYearStartMonth)!;
+}
+
 export function rangePresets(schoolYearStartMonth: number): RangePreset[] {
   return [
     {

@@ -68,6 +68,11 @@ swap only — not built yet).
     setups need one such category, or none.
 - **Students** carry an IEP flag and optional mandated minutes/week, which
   powers the mandate-vs-actual view (always computed with service minutes).
+  - Clicking a student on the Students tab opens their own page: totals, hours
+    per week, mandate vs actual, and every entry they appear in with its note
+    readable in place. **Notes only** filters the list to entries that have one
+    and opens them for reading. Editing an entry from there hands off to the Log
+    tab and returns you when you save, so there is one place entries are written.
 - Weeks start Monday. "School year to date" rolls over in August.
 
 ## Reports & exports
@@ -115,6 +120,9 @@ beside itself.
   resolves to `::1` before `127.0.0.1` on macOS.
   A second launch does not start a second instance — it probes `/api/health`,
   finds the running copy, re-opens its tab and exits.
+  The page route is a catch-all (`"/*"`) so a reload on a client-side route like
+  `/students/<id>` returns the app rather than a 404; Bun matches
+  most-specific-first, so `/api/*` and the bundled assets are unaffected.
 - `src/storage.ts` — atomic writes (temp file + rename), daily rotating backups,
   and the data-version migration (v1 → v2 turned plain-text notes into HTML,
   snapshotting the old file to `backups/data-pre-v2-<date>.json`).
@@ -123,6 +131,21 @@ beside itself.
   chart palette (light + dark), and `theme.tsx` ties Mantine's primary color to
   the same blue the charts use. `app.css` carries only what Mantine doesn't:
   the two series colors, number formatting, and the print rules.
+- `src/frontend/lib/router.tsx` — ~130 lines of router, no dependency. Six routes
+  and one dynamic segment don't need a path matcher, they need a union type, so
+  the page switch is exhaustiveness-checked and `studentId` is a `string` rather
+  than `string | undefined`. `lib/urlState.ts` puts view state in the query
+  string (`?range` `?attr` `?date` `?edit` `?notes`), omitting each param when it
+  holds its default and falling back rather than throwing on a bad value.
+  Why not react-router: `docs/routing-and-student-page.md` §4.
+
+| Route | |
+|---|---|
+| `/log` | `?date=YYYY-MM-DD` `?edit=<entryId>` |
+| `/dashboard` | `?range=<key>` `?attr=share\|service` |
+| `/students` | |
+| `/students/:id` | `?range` `?attr` `?notes=1` |
+| `/reports` | `?range` `?attr` |
 
 Mantine needs no PostCSS here — its prebuilt stylesheets are imported in
 `index.tsx` and Bun bundles them directly.

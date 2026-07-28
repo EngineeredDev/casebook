@@ -15,6 +15,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
+import { BulletChart } from "@mantine/charts";
 import {
   IconCalendar,
   IconCheck,
@@ -22,8 +23,11 @@ import {
   IconChevronDown,
   IconTable,
 } from "@tabler/icons-react";
-import { rangePresets, type DateRange } from "../lib/time.ts";
+import { fmtDuration, rangePresets, type RangeSelection } from "../lib/time.ts";
 import type { Attribution } from "../lib/aggregate.ts";
+import type { ChartPalette } from "../lib/palette.ts";
+
+export type { RangeSelection };
 
 export function StatTile({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
   return (
@@ -71,17 +75,6 @@ export function attributionNote(attribution: Attribution): string {
   return attribution === "share"
     ? "Group sessions are split evenly among attendees (workload view)."
     : "Group sessions are credited in full to each attendee (service-minutes view).";
-}
-
-export interface RangeSelection {
-  key: string;
-  label: string;
-  range: DateRange;
-}
-
-export function defaultRange(schoolYearStartMonth: number): RangeSelection {
-  const preset = rangePresets(schoolYearStartMonth).find((p) => p.key === "12-weeks")!;
-  return { key: preset.key, label: preset.label, range: preset.range() };
 }
 
 export function RangePicker({
@@ -155,6 +148,70 @@ export function RangePicker({
         </Box>
       </Menu.Dropdown>
     </Menu>
+  );
+}
+
+/**
+ * One student's actual service minutes per week against their mandate.
+ *
+ * Always a service-minutes comparison regardless of any attribution toggle on
+ * the page around it — a mandate is written in per-student service minutes, so
+ * splitting group time would compare two different units.
+ */
+export function MandateBar({
+  name,
+  mandated,
+  actualPerWeek,
+  max,
+  palette,
+}: {
+  /** Omitted on a page that is already about one student. */
+  name?: string;
+  mandated: number;
+  actualPerWeek: number;
+  max: number;
+  palette: ChartPalette;
+}) {
+  const diff = actualPerWeek - mandated;
+  const under = diff < -1;
+  return (
+    <Group gap="sm" wrap="nowrap">
+      {name && (
+        <Text size="xs" w={120} truncate style={{ flex: "none" }}>
+          {name}
+        </Text>
+      )}
+      <Box style={{ flex: 1, minWidth: 0 }}>
+        <BulletChart
+          value={actualPerWeek}
+          target={mandated}
+          ranges={[{ value: max, color: palette.gridline }]}
+          barColor={palette.direct}
+          targetColor={palette.textPrimary}
+          size={20}
+          barSize={12}
+          /* Built-in labels print raw floats and duplicate the formatted column
+             to the right of each row. */
+          styles={{
+            rangeLabel: { display: "none" },
+            barLabel: { display: "none" },
+            targetLabel: { display: "none" },
+          }}
+        />
+      </Box>
+      <Text size="xs" w={190} ta="right" className="tnum" style={{ flex: "none" }}>
+        {fmtDuration(actualPerWeek)} vs {fmtDuration(mandated)} ·{" "}
+        {under ? (
+          <Text span size="xs" c="red" fw={600}>
+            {fmtDuration(Math.abs(diff))} under
+          </Text>
+        ) : (
+          <Text span size="xs" c="dimmed">
+            +{fmtDuration(Math.max(0, diff))} over
+          </Text>
+        )}
+      </Text>
+    </Group>
   );
 }
 

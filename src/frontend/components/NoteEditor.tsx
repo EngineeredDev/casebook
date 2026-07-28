@@ -9,30 +9,15 @@ import {
   Stack,
   Text,
   Tooltip,
-  Typography,
 } from "@mantine/core";
 import { RichTextEditor } from "@mantine/tiptap";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { useEditor } from "@tiptap/react";
 import { IconArrowsDiagonal, IconArrowsDiagonalMinimize2 } from "@tabler/icons-react";
 import { useStore } from "../store.tsx";
 import { categoryName } from "../lib/aggregate.ts";
 import { fmtDayLabel, fmtFullDate } from "../lib/time.ts";
 import { noteExtensions, noteExcerpt, SubmitShortcut } from "../lib/notes.ts";
-
-/**
- * A previous note, rendered read-only. Content is re-parsed through the editor
- * schema rather than injected as HTML, so only known nodes and marks survive.
- * Mounted lazily — one editor instance per note the clinician actually opens.
- */
-function ReadOnlyNote({ html }: { html: string }) {
-  const editor = useEditor({ extensions: noteExtensions, content: html, editable: false });
-  if (!editor) return null;
-  return (
-    <Typography p={0}>
-      <EditorContent editor={editor} />
-    </Typography>
-  );
-}
+import { ReadOnlyNote } from "./NoteView.tsx";
 
 /**
  * Earlier notes for the same students — the reason the expanded view exists.

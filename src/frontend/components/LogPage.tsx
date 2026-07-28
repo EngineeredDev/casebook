@@ -32,6 +32,8 @@ import {
 import { useStore } from "../store.tsx";
 import type { Entry, Student } from "../../types.ts";
 import { addDaysYmd, fmtDuration, fmtFullDate, todayYmd } from "../lib/time.ts";
+import { navigate, useLocation, useSearchParams } from "../lib/router.tsx";
+import { useDateParam, type LogNavState } from "../lib/urlState.ts";
 import { IepBadge } from "./ui.tsx";
 import { NoteEditor } from "./NoteEditor.tsx";
 import { isBlankNote, noteExcerpt } from "../lib/notes.ts";
@@ -174,21 +176,37 @@ function StudentPicker({
   );
 }
 
-export function LogPage({ focusSignal = 0 }: { focusSignal?: number }) {
+export function LogPage() {
   const { doc, addEntry, updateEntry, deleteEntry } = useStore();
+  const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  const [date, setDate] = useDateParam();
   const [studentIds, setStudentIds] = useState<string[]>([]);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [minutes, setMinutes] = useState<number | null>(30);
   const [customMinutes, setCustomMinutes] = useState<number | "">("");
-  const [date, setDate] = useState(todayYmd());
   const [startTime, setStartTime] = useState("");
   const [note, setNote] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
   const studentInputRef = useRef<HTMLInputElement>(null);
 
+  /** The entry under edit lives in the URL, so an edit link is shareable and survives reload. */
+  const editingId = params.get("edit");
+  const editingEntry = editingId ? (doc.entries.find((e) => e.id === editingId) ?? null) : null;
+  const editingMissing = !!editingId && !editingEntry;
+  const { returnTo, focus, student: seedStudent } = (location.state ?? {}) as LogNavState;
+
+  // Keyed on location.key, not on `focus`, so pressing "Log time" while already
+  // here refocuses rather than doing nothing.
   useEffect(() => {
-    if (focusSignal > 0) studentInputRef.current?.focus();
-  }, [focusSignal]);
+    if (focus) studentInputRef.current?.focus();
+  }, [location.key, focus]);
+
+  // Same reasoning for the seed: arriving from a second student's page while
+  // still on /log has to re-seed. An edit link wins over a seed — it fills every
+  // field below, including the students, and must not be half-overwritten.
+  useEffect(() => {
+    if (seedStudent && !editingId) setStudentIds([seedStudent]);
+  }, [location.key, seedStudent, editingId]);
 
   const categories = doc.categories.filter((c) => !c.archived);
   const directCats = categories.filter((c) => c.group === "direct");
@@ -221,15 +239,44 @@ export function LogPage({ focusSignal = 0 }: { focusSignal?: number }) {
     (e) => doc.categories.find((c) => c.id === e.categoryId)?.untimed,
   ).length;
 
-  const resetForm = () => {
+  const clearFields = () => {
     setStudentIds([]);
     setCategoryId(null);
     setMinutes(30);
     setCustomMinutes("");
     setStartTime("");
     setNote("");
-    setEditingId(null);
   };
+
+  const resetForm = () => {
+    clearFields();
+    setParams((p) => p.delete("edit"));
+  };
+
+  /**
+   * Fill the form from whichever entry the URL names. Keyed on the id alone and
+   * deliberately not on `doc`: the store saves on a 500ms debounce, so
+   * re-running on every document change would overwrite what is being typed.
+   */
+  useEffect(() => {
+    if (!editingId) return;
+    const entry = doc.entries.find((e) => e.id === editingId);
+    if (!entry) return;
+    setStudentIds(entry.studentIds);
+    setCategoryId(entry.categoryId);
+    setStartTime(entry.startTime ?? "");
+    setNote(entry.note ?? "");
+    // A zero-minute entry has no duration to restore; leave the picker on its
+    // default so it reads sensibly if the category is switched to a timed one.
+    if (entry.minutes === 0 || DURATION_PRESETS.includes(entry.minutes)) {
+      setMinutes(entry.minutes || 30);
+      setCustomMinutes("");
+    } else {
+      setMinutes(null);
+      setCustomMinutes(entry.minutes);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingId]);
 
   /** Returns whether an entry was actually written, so callers can react to it. */
   const submit = (): boolean => {
@@ -245,27 +292,33 @@ export function LogPage({ focusSignal = 0 }: { focusSignal?: number }) {
     };
     if (editingId) updateEntry(editingId, payload);
     else addEntry(payload);
+    // An edit that arrived from a student page goes back there, so the round
+    // trip lands where it started with that page's filters intact.
+    if (editingId && returnTo) {
+      clearFields();
+      navigate(returnTo);
+      return true;
+    }
     resetForm();
     studentInputRef.current?.focus();
     return true;
   };
 
-  const startEdit = (entry: Entry) => {
-    setEditingId(entry.id);
-    setStudentIds(entry.studentIds);
-    setCategoryId(entry.categoryId);
-    setDate(entry.date);
-    setStartTime(entry.startTime ?? "");
-    setNote(entry.note ?? "");
-    // A zero-minute entry has no duration to restore; leave the picker on its
-    // default so it reads sensibly if the category is switched to a timed one.
-    if (entry.minutes === 0 || DURATION_PRESETS.includes(entry.minutes)) {
-      setMinutes(entry.minutes || 30);
-      setCustomMinutes("");
-    } else {
-      setMinutes(null);
-      setCustomMinutes(entry.minutes);
+  const cancelEdit = () => {
+    if (returnTo) {
+      clearFields();
+      navigate(returnTo);
+      return;
     }
+    resetForm();
+  };
+
+  const startEdit = (entry: Entry) => {
+    setParams((p) => {
+      p.set("edit", entry.id);
+      if (entry.date === todayYmd()) p.delete("date");
+      else p.set("date", entry.date);
+    });
   };
 
   const removeEntry = (entry: Entry) => {
@@ -300,6 +353,17 @@ export function LogPage({ focusSignal = 0 }: { focusSignal?: number }) {
           <Text fw={600} mb="md">
             {editingId ? "Edit entry" : "Log time"}
           </Text>
+
+          {editingMissing && (
+            <Alert variant="light" color="gray" mb="md" p="xs">
+              <Group justify="space-between" wrap="nowrap" gap="sm">
+                <Text size="xs">That entry no longer exists — it may have been deleted.</Text>
+                <Button size="compact-xs" variant="default" onClick={cancelEdit}>
+                  Dismiss
+                </Button>
+              </Group>
+            </Alert>
+          )}
 
           <Stack gap="md">
             <Group grow align="flex-start">
@@ -447,8 +511,8 @@ export function LogPage({ focusSignal = 0 }: { focusSignal?: number }) {
                 {editingId ? "Save changes" : "Log entry"}
               </Button>
               {editingId && (
-                <Button variant="default" onClick={resetForm}>
-                  Cancel edit
+                <Button variant="default" onClick={cancelEdit}>
+                  {returnTo ? "Cancel" : "Cancel edit"}
                 </Button>
               )}
             </Group>

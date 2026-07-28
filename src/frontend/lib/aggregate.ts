@@ -190,6 +190,38 @@ export function studentWeekMatrix(
   return { weeks, byWeek };
 }
 
+/**
+ * One student's weekly direct/indirect split, zero-filled across the range.
+ * Distinct from `weeklyByGroup`, which sums raw clock time for the whole
+ * caseload: a single-student chart has to credit group sessions through the
+ * selected attribution, or every group hour would show up here in full.
+ */
+export function studentWeeklyByGroup(
+  entries: Entry[],
+  categories: Category[],
+  studentId: string,
+  attribution: Attribution,
+  range: DateRange,
+): WeekGroupRow[] {
+  const mine = entries.filter((e) => e.studentIds.includes(studentId));
+  const eff = effectiveRange(mine, range);
+  if (!eff) return [];
+  const rows = new Map<string, WeekGroupRow>();
+  for (const w of listWeeks(eff.from, eff.to)) rows.set(w, { week: w, direct: 0, indirect: 0 });
+  for (const e of mine) {
+    const row = rows.get(weekStartYmd(e.date));
+    if (row) row[categoryGroupOf(e.categoryId, categories)] += minutesForStudent(e, attribution);
+  }
+  return [...rows.values()];
+}
+
+/** Every entry the student attended, newest first. */
+export function studentEntries(entries: Entry[], studentId: string): Entry[] {
+  return entries
+    .filter((e) => e.studentIds.includes(studentId))
+    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+}
+
 export interface MandateRow {
   student: Student;
   mandated: number;

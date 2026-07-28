@@ -1,15 +1,13 @@
 import { useMemo, useState } from "react";
 import {
   ActionIcon,
+  Anchor,
   Badge,
-  Box,
   Button,
   Card,
   Checkbox,
-  Drawer,
   Grid,
   Group,
-  NumberInput,
   Select,
   Stack,
   Switch,
@@ -19,8 +17,6 @@ import {
   Tooltip,
   UnstyledButton,
 } from "@mantine/core";
-import { Sparkline } from "@mantine/charts";
-import { useDisclosure } from "@mantine/hooks";
 import {
   IconArchive,
   IconArchiveOff,
@@ -31,12 +27,11 @@ import {
   IconSelector,
 } from "@tabler/icons-react";
 import { useStore } from "../store.tsx";
-import { useChartPalette } from "../theme.tsx";
 import type { CategoryGroup } from "../../types.ts";
-import { categoryName, filterEntries, perStudentTotals, studentWeekMatrix } from "../lib/aggregate.ts";
-import { addDaysYmd, fmtDayLabel, fmtDuration, todayYmd, toHours, weekStartYmd } from "../lib/time.ts";
+import { filterEntries, perStudentTotals } from "../lib/aggregate.ts";
+import { addDaysYmd, fmtDuration, todayYmd, toHours, weekStartYmd } from "../lib/time.ts";
+import { Link, navigate, studentPath } from "../lib/router.tsx";
 import { IepBadge } from "./ui.tsx";
-import { noteExcerpt } from "../lib/notes.ts";
 
 const ALL_TIME = { from: "0000-01-01", to: "9999-12-31" };
 
@@ -73,8 +68,6 @@ function Th({
 
 export function StudentsPage() {
   const { doc, addStudent, addCategory, updateCategory } = useStore();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [drawerOpened, drawer] = useDisclosure(false);
   const [query, setQuery] = useState("");
   const [newName, setNewName] = useState("");
   const [newIep, setNewIep] = useState(false);
@@ -139,20 +132,13 @@ export function StudentsPage() {
   const onSort = (key: SortKey) =>
     setSort((s) => ({ key, reversed: s.key === key ? !s.reversed : false }));
 
-  const open = (id: string) => {
-    setSelectedId(id);
-    drawer.open();
-  };
-
   const create = () => {
     if (!newName.trim()) return;
     const s = addStudent({ name: newName, iep: newIep });
     setNewName("");
     setNewIep(false);
-    open(s.id);
+    navigate(studentPath(s.id));
   };
-
-  const selected = doc.students.find((s) => s.id === selectedId) ?? null;
 
   return (
     <>
@@ -228,14 +214,24 @@ export function StudentsPage() {
                     {roster.map((s) => (
                       <Table.Tr
                         key={s.id}
-                        onClick={() => open(s.id)}
+                        onClick={() => navigate(studentPath(s.id))}
                         style={{ cursor: "pointer" }}
                       >
                         <Table.Td>
                           <Group gap={6} wrap="nowrap">
-                            <Text size="sm" fw={500}>
+                            {/* A real anchor inside the clickable row, so the name
+                                is keyboard-reachable and "open in new tab" works. */}
+                            <Anchor
+                              component={Link}
+                              to={studentPath(s.id)}
+                              size="sm"
+                              fw={500}
+                              c="inherit"
+                              underline="hover"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               {s.name}
-                            </Text>
+                            </Anchor>
                             <IepBadge iep={s.iep} />
                             {!s.active && (
                               <Badge size="xs" variant="default">
@@ -264,8 +260,8 @@ export function StudentsPage() {
               </Table.ScrollContainer>
             )}
             <Text size="xs" c="dimmed" mt="xs">
-              Averages use workload share (group time split among attendees). Select a row for
-              details.
+              Averages use workload share (group time split among attendees). Open a student for
+              their full history and notes.
             </Text>
           </Card>
         </Grid.Col>
@@ -358,148 +354,6 @@ export function StudentsPage() {
           </Card>
         </Grid.Col>
       </Grid>
-
-      <Drawer
-        opened={drawerOpened}
-        onClose={drawer.close}
-        position="right"
-        size="md"
-        title={
-          selected && (
-            <Group gap="xs">
-              <Text fw={600}>{selected.name}</Text>
-              <IepBadge iep={selected.iep} />
-            </Group>
-          )
-        }
-      >
-        {selected && <StudentDetail key={selected.id} studentId={selected.id} />}
-      </Drawer>
     </>
-  );
-}
-
-function StudentDetail({ studentId }: { studentId: string }) {
-  const { doc, updateStudent } = useStore();
-  const palette = useChartPalette();
-  const student = doc.students.find((s) => s.id === studentId)!;
-
-  const trendRange = { from: addDaysYmd(weekStartYmd(todayYmd()), -77), to: todayYmd() };
-  const matrix = useMemo(
-    () => studentWeekMatrix(filterEntries(doc.entries, trendRange), "share", trendRange),
-    [doc.entries],
-  );
-  const spark = matrix.weeks.map((w) => toHours(matrix.byWeek.get(w)?.get(studentId) ?? 0));
-
-  const all = useMemo(
-    () =>
-      perStudentTotals(doc.entries, doc.students, doc.categories, "share", ALL_TIME).find(
-        (r) => r.student.id === studentId,
-      ),
-    [doc, studentId],
-  );
-
-  const recentEntries = doc.entries
-    .filter((e) => e.studentIds.includes(studentId))
-    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
-    .slice(0, 8);
-
-  return (
-    <Stack gap="md">
-      <Box>
-        <Text size="sm" c="dimmed">
-          {all && all.total > 0
-            ? `${toHours(all.total)}h all time · ${Math.round((all.direct / all.total) * 100)}% direct`
-            : "No time logged yet."}
-        </Text>
-        {spark.length >= 2 && (
-          <>
-            <Sparkline
-              h={44}
-              mt="xs"
-              data={spark}
-              color={palette.series[0]}
-              curveType="monotone"
-              fillOpacity={0.25}
-            />
-            <Text size="xs" c="dimmed">
-              Hours per week, last 12 weeks (workload share)
-            </Text>
-          </>
-        )}
-      </Box>
-
-      <TextInput
-        label="Name"
-        value={student.name}
-        onChange={(e) => updateStudent(student.id, { name: e.currentTarget.value })}
-      />
-
-      <Switch
-        label="IEP student"
-        checked={student.iep}
-        onChange={(e) => updateStudent(student.id, { iep: e.currentTarget.checked })}
-      />
-
-      <Group grow align="flex-start">
-        <NumberInput
-          label="Mandated min/week"
-          min={0}
-          disabled={!student.iep}
-          placeholder={student.iep ? "e.g. 30" : "IEP only"}
-          value={student.mandatedMinutesPerWeek ?? ""}
-          onChange={(v) =>
-            updateStudent(student.id, {
-              mandatedMinutesPerWeek: v === "" ? null : Number(v),
-            })
-          }
-        />
-        <TextInput
-          label="Grade"
-          placeholder="e.g. 4"
-          value={student.grade ?? ""}
-          onChange={(e) => updateStudent(student.id, { grade: e.currentTarget.value || undefined })}
-        />
-      </Group>
-
-      <Button
-        variant="default"
-        onClick={() => updateStudent(student.id, { active: !student.active })}
-      >
-        {student.active ? "Mark inactive (left caseload)" : "Reactivate"}
-      </Button>
-
-      <Box>
-        <Text fw={600} size="sm" mb="xs">
-          Recent entries
-        </Text>
-        {recentEntries.length === 0 ? (
-          <Text size="sm" c="dimmed">
-            None yet.
-          </Text>
-        ) : (
-          <Stack gap={4}>
-            {recentEntries.map((e) => (
-              <Group
-                key={e.id}
-                gap="xs"
-                wrap="nowrap"
-                py={4}
-                style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
-              >
-                <Text size="sm" fw={600} w={54} className="tnum" style={{ flex: "none" }}>
-                  {fmtDuration(e.minutes)}
-                </Text>
-                <Text size="xs" c="dimmed" truncate>
-                  {fmtDayLabel(e.date)} · {categoryName(doc, e.categoryId)}
-                  {e.studentIds.length > 1 ? ` · group of ${e.studentIds.length}` : ""}
-                  {e.note ? ` · ${noteExcerpt(e.note, 60)}` : ""}
-                </Text>
-              </Group>
-            ))}
-          </Stack>
-        )}
-      </Box>
-    </Stack>
   );
 }

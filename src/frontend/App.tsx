@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, type ReactNode } from "react";
 import {
   ActionIcon,
   Alert,
@@ -7,10 +7,12 @@ import {
   Box,
   Burger,
   Button,
+  Card,
   Group,
   Loader,
   MantineProvider,
   NavLink,
+  Stack,
   Text,
   Tooltip,
   useComputedColorScheme,
@@ -30,18 +32,18 @@ import {
 } from "@tabler/icons-react";
 import { theme } from "./theme.tsx";
 import { StoreProvider, useStore } from "./store.tsx";
+import { Link, navigate, useIsActive, useLocation, useRoute } from "./lib/router.tsx";
 import { LogPage } from "./components/LogPage.tsx";
 import { DashboardPage } from "./components/DashboardPage.tsx";
 import { StudentsPage } from "./components/StudentsPage.tsx";
+import { StudentPage } from "./components/StudentPage.tsx";
 import { ReportsPage } from "./components/ReportsPage.tsx";
 
-type Page = "log" | "dashboard" | "students" | "reports";
-
-const NAV: { key: Page; label: string; icon: typeof IconPencilPlus; hint: string }[] = [
-  { key: "log", label: "Log", icon: IconPencilPlus, hint: "Record time" },
-  { key: "dashboard", label: "Dashboard", icon: IconChartBar, hint: "Charts and totals" },
-  { key: "students", label: "Students", icon: IconUsers, hint: "Roster and categories" },
-  { key: "reports", label: "Reports", icon: IconFileDescription, hint: "Print and export" },
+const NAV: { path: string; label: string; icon: typeof IconPencilPlus; hint: string }[] = [
+  { path: "/log", label: "Log", icon: IconPencilPlus, hint: "Record time" },
+  { path: "/dashboard", label: "Dashboard", icon: IconChartBar, hint: "Charts and totals" },
+  { path: "/students", label: "Students", icon: IconUsers, hint: "Roster and categories" },
+  { path: "/reports", label: "Reports", icon: IconFileDescription, hint: "Print and export" },
 ];
 
 function SaveStatus() {
@@ -126,17 +128,74 @@ function ConflictAlert() {
   );
 }
 
+function NotFound() {
+  return (
+    <Card>
+      <Stack align="center" gap="xs" py="xl">
+        <Text fw={600}>Page not found</Text>
+        <Text size="sm" c="dimmed">
+          That address doesn't match anything in the app.
+        </Text>
+        <Button component={Link} to="/log" variant="default" mt="xs">
+          Go to Log
+        </Button>
+      </Stack>
+    </Card>
+  );
+}
+
+/**
+ * Exhaustive by construction — the union in router.tsx has no default case, so
+ * adding a route is a compile error until it is rendered somewhere.
+ */
+function CurrentPage(): ReactNode {
+  const route = useRoute();
+  switch (route.page) {
+    case "log":
+      return <LogPage />;
+    case "dashboard":
+      return <DashboardPage />;
+    case "students":
+      return <StudentsPage />;
+    case "student":
+      return <StudentPage studentId={route.studentId} />;
+    case "reports":
+      return <ReportsPage />;
+    case "notFound":
+      return <NotFound />;
+  }
+}
+
+function NavItem({ item }: { item: (typeof NAV)[number] }) {
+  const active = useIsActive(item.path);
+  return (
+    <NavLink
+      component={Link}
+      to={item.path}
+      active={active}
+      label={item.label}
+      description={item.hint}
+      leftSection={<item.icon size={18} stroke={1.6} />}
+      variant="light"
+      mb={2}
+    />
+  );
+}
+
 function Shell() {
-  const [page, setPage] = useState<Page>("log");
+  const { pathname } = useLocation();
   const [mobileOpened, mobile] = useDisclosure(false);
   const [desktopOpened, desktop] = useDisclosure(true);
-  /** Bumped by "Log time" so the Log page knows to refocus the student field. */
-  const [quickAdd, setQuickAdd] = useState(0);
 
-  const go = (next: Page) => {
-    setPage(next);
+  useEffect(() => {
+    // "/" is the URL the compiled binary opens; give it a real route so the nav
+    // highlight and any later deep link agree on where we are.
+    if (pathname === "/") navigate("/log", { replace: true });
     mobile.close();
-  };
+    window.scrollTo(0, 0);
+    // `mobile` is a stable disclosure handle; re-running on it would fight the burger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   return (
     <AppShell
@@ -166,30 +225,11 @@ function Shell() {
       <AppShell.Navbar p="sm" className="no-print">
         <AppShell.Section grow>
           {NAV.map((item) => (
-            <NavLink
-              key={item.key}
-              active={page === item.key}
-              label={item.label}
-              description={item.hint}
-              leftSection={<item.icon size={18} stroke={1.6} />}
-              onClick={() => go(item.key)}
-              variant="light"
-              mb={2}
-            />
+            <NavItem key={item.path} item={item} />
           ))}
         </AppShell.Section>
         <AppShell.Section>
-          <Button
-            fullWidth
-            leftSection={<IconPencilPlus size={16} />}
-            onClick={() => {
-              go("log");
-              setQuickAdd((n) => n + 1);
-            }}
-          >
-            Log time
-          </Button>
-          <Text size="xs" c="dimmed" ta="center" mt="xs">
+          <Text size="xs" c="dimmed" ta="center">
             Saved locally on this computer
           </Text>
         </AppShell.Section>
@@ -197,10 +237,7 @@ function Shell() {
 
       <AppShell.Main>
         <ConflictAlert />
-        {page === "log" && <LogPage focusSignal={quickAdd} />}
-        {page === "dashboard" && <DashboardPage />}
-        {page === "students" && <StudentsPage />}
-        {page === "reports" && <ReportsPage />}
+        <CurrentPage />
       </AppShell.Main>
     </AppShell>
   );

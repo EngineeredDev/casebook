@@ -68,7 +68,10 @@ function startServer(port: number, hostname = HOST) {
     hostname,
     development: !isCompiled() && process.env.NODE_ENV !== "production",
     routes: {
-      "/": index,
+      // Catch-all so client-side routes survive a reload: /students/<id> has to
+      // return the app shell, not a 404. Bun matches most-specific-first, so the
+      // /api routes below and the bundler's own /_bun/* assets are unaffected.
+      "/*": index,
       "/api/health": () => json({ app: APP_NAME, ok: true, instance: INSTANCE }),
       "/api/data": {
         GET: () => json(doc),
