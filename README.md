@@ -6,7 +6,8 @@ therapy, IEP meetings, parent contact, documentation, crisis response, and the
 rest — so caseload conversations can happen with numbers instead of vibes.
 
 Everything lives in one folder. No accounts, no cloud, no install. The app is a
-single compiled executable that serves a browser UI at `http://localhost:4321`
+single compiled executable that serves a browser UI at
+`http://clinician.localhost:4321`
 and stores all data in a human-readable `data.json` next to the executable.
 
 ## Running it (for the clinician)
@@ -31,7 +32,8 @@ just reopens the browser tab.
 ## Smoke test for a locked-down school machine
 
 Copy `dist/<platform>/ClinicianTracker` to the target machine and run it. If it
-prints `Clinician Tracker running at http://localhost:4321` and the page loads,
+prints `Clinician Tracker running at http://clinician.localhost:4321` and the
+page loads,
 you're clear. If IT policy blocks it, the fallback plan is repackaging the same
 frontend as a single HTML file using the File System Access API (storage layer
 swap only — not built yet).
@@ -77,7 +79,7 @@ Requires [mise](https://mise.jdx.dev) (pins Bun) — or any Bun ≥ 1.3.
 
 ```sh
 bun install
-bun run dev          # http://localhost:4321, hot reload
+bun run dev          # http://clinician.localhost:4321, hot reload
 ```
 
 Dev mode stores `data.json` in the repo root (gitignored). Delete it to reset.
@@ -95,8 +97,14 @@ beside itself.
 
 - `src/server.ts` — Bun.serve: static frontend via HTML imports + a 3-route API
   (`GET/PUT /api/data`, `GET /api/health`). Whole-document saves with a
-  revision counter; concurrent-window conflicts return 409. Bound to
-  `127.0.0.1` — the API is unauthenticated, so it must not answer the network.
+  revision counter; concurrent-window conflicts return 409. Bound to `127.0.0.1`
+  and `[::1]` — the API is unauthenticated, so it must not answer the network.
+  The browser is pointed at `clinician.localhost`, which RFC 6761 reserves for
+  loopback: no hosts-file entry, no admin rights, and unlike mDNS nothing is
+  advertised to the network. Both loopback families are bound because that name
+  resolves to `::1` before `127.0.0.1` on macOS.
+  A second launch does not start a second instance — it probes `/api/health`,
+  finds the running copy, re-opens its tab and exits.
 - `src/storage.ts` — atomic writes (temp file + rename), daily rotating backups,
   and the data-version migration (v1 → v2 turned plain-text notes into HTML,
   snapshotting the old file to `backups/data-pre-v2-<date>.json`).

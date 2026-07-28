@@ -14,8 +14,31 @@ const BASE_PORT = 4321;
  * would then miss an IPv4-only listener.
  */
 const HOST = "127.0.0.1";
+/**
+ * Both loopback families are bound, because the browser is sent to
+ * DISPLAY_HOST, which resolves to ::1 ahead of 127.0.0.1 on macOS. A v4-only
+ * listener would make every launch pay a failed IPv6 connect before the
+ * browser's Happy Eyeballs fallback reached 127.0.0.1.
+ */
+const HOST_V6 = "::1";
+/**
+ * RFC 6761 reserves "localhost" and its subdomains for loopback, so this needs
+ * no hosts-file entry and no admin rights — which matters on a school-managed
+ * device. Chrome, Edge and Firefox additionally map *.localhost to loopback
+ * internally, which covers Windows, where the OS resolver only knows the bare
+ * name and would fail on a subdomain.
+ *
+ * This is a display name over the same loopback bind, not mDNS: resolution
+ * never leaves the machine and nothing is advertised to the network.
+ */
+const DISPLAY_HOST = "clinician.localhost";
 /** Distinguishes this process in health checks — macOS lets two sockets "bind" the same port. */
 const INSTANCE = crypto.randomUUID();
+
+/** Bracket-wraps IPv6 literals so the host can go in a URL. */
+function origin(host: string, port: number): string {
+  return `http://${host.includes(":") ? `[${host}]` : host}:${port}`;
+}
 
 let doc: DataDoc = loadDoc();
 
@@ -39,10 +62,10 @@ function validateDoc(candidate: unknown): candidate is DataDoc {
   );
 }
 
-function startServer(port: number) {
+function startServer(port: number, hostname = HOST) {
   return Bun.serve({
     port,
-    hostname: HOST,
+    hostname,
     development: !isCompiled() && process.env.NODE_ENV !== "production",
     routes: {
       "/": index,
@@ -66,9 +89,12 @@ function startServer(port: number) {
   });
 }
 
-async function healthOf(port: number): Promise<{ app?: string; instance?: string } | null> {
+async function healthOf(
+  port: number,
+  host = HOST,
+): Promise<{ app?: string; instance?: string } | null> {
   try {
-    const res = await fetch(`http://${HOST}:${port}/api/health`, {
+    const res = await fetch(`${origin(host, port)}/api/health`, {
       signal: AbortSignal.timeout(1000),
     });
     return (await res.json()) as { app?: string; instance?: string };
@@ -91,21 +117,46 @@ function openBrowser(url: string) {
   }
 }
 
+/**
+ * Another copy of this app already owns the port. Re-open its tab and leave,
+ * so a second double-click focuses the running instance instead of starting a
+ * rival one that would write the same data.json from a stale in-memory doc.
+ */
+function focusExisting(port: number): never {
+  const running = origin(DISPLAY_HOST, port);
+  console.log(`Already running at ${running}`);
+  openBrowser(running);
+  process.exit(0);
+}
+
+/**
+ * Called after failing to take a port we had just probed as free — two launches
+ * landing together. Re-probes now that our own listener is gone, so the answer
+ * comes from whoever actually holds it. If that is another copy of us, focus it;
+ * advancing to the next port instead is what leaves two instances live.
+ */
+async function yieldPort(port: number): Promise<void> {
+  const winner = (await healthOf(port)) ?? (await healthOf(port, HOST_V6));
+  if (winner?.app === APP_NAME) focusExisting(port);
+}
+
 let server: ReturnType<typeof startServer> | null = null;
 let port = BASE_PORT;
 for (; port < BASE_PORT + 10; port++) {
   // macOS doesn't reliably reject a second bind, so probe the port first.
-  const existing = await healthOf(port);
-  if (existing?.app === APP_NAME) {
-    // A previous double-click left an instance up — just focus it.
-    console.log(`Already running at http://${HOST}:${port}`);
-    openBrowser(`http://${HOST}:${port}`);
-    process.exit(0);
-  }
+  // Both families are probed because the browser resolves DISPLAY_HOST to ::1
+  // first: a foreign app holding ::1 would capture the tab even with
+  // 127.0.0.1 free, so that port is no good to us either.
+  const [v4, v6] = await Promise.all([healthOf(port), healthOf(port, HOST_V6)]);
+  const existing = v4 ?? v6;
+  // A previous double-click left an instance up — just focus it.
+  if (existing?.app === APP_NAME) focusExisting(port);
   if (existing) continue; // some other HTTP app owns this port
   try {
     server = startServer(port);
   } catch {
+    // A real EADDRINUSE: someone bound between the probe and here.
+    await yieldPort(port);
     continue;
   }
   // Confirm this process actually receives traffic on the port it claims.
@@ -113,13 +164,26 @@ for (; port < BASE_PORT + 10; port++) {
   if (mine?.instance === INSTANCE) break;
   server.stop(true);
   server = null;
+  await yieldPort(port);
 }
 if (!server) {
   console.error(`No free port found (${BASE_PORT}-${BASE_PORT + 9}).`);
   process.exit(1);
 }
 
-const url = `http://${HOST}:${port}`;
+// Best effort: the app is fully usable on v4 alone, and ::1 does not exist
+// where IPv6 is disabled. Verified like the v4 bind so a foreign listener
+// can't quietly answer for DISPLAY_HOST; if the claim fails, the browser
+// falls back to 127.0.0.1 and still lands here.
+try {
+  const v6 = startServer(port, HOST_V6);
+  const mine = await healthOf(port, HOST_V6);
+  if (mine?.instance !== INSTANCE) v6.stop(true);
+} catch {
+  // No IPv6 loopback on this machine; the v4 listener carries it.
+}
+
+const url = origin(DISPLAY_HOST, port);
 console.log(`Clinician Tracker running at ${url}`);
 console.log(`Data file: ${dataDir()}/data.json`);
 if (isCompiled()) openBrowser(url);
