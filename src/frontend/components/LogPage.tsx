@@ -6,6 +6,7 @@ import {
   Box,
   Button,
   Card,
+  Checkbox,
   Chip,
   Combobox,
   Grid,
@@ -187,6 +188,9 @@ export function LogPage() {
   const [customMinutes, setCustomMinutes] = useState<number | "">("");
   const [startTime, setStartTime] = useState("");
   const [note, setNote] = useState("");
+  /** Backfilling a student's history means logging a run of entries for the same
+   *  student, so their selection survives the reset that follows each save. */
+  const [keepStudents, setKeepStudents] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Entry | null>(null);
   const studentInputRef = useRef<HTMLInputElement>(null);
 
@@ -240,8 +244,8 @@ export function LogPage() {
     (e) => doc.categories.find((c) => c.id === e.categoryId)?.untimed,
   ).length;
 
-  const clearFields = () => {
-    setStudentIds([]);
+  const clearFields = ({ keep = false } = {}) => {
+    if (!keep) setStudentIds([]);
     setCategoryId(null);
     setMinutes(30);
     setCustomMinutes("");
@@ -249,8 +253,8 @@ export function LogPage() {
     setNote("");
   };
 
-  const resetForm = () => {
-    clearFields();
+  const resetForm = (opts?: { keep?: boolean }) => {
+    clearFields(opts);
     setParams((p) => p.delete("edit"));
   };
 
@@ -300,8 +304,13 @@ export function LogPage() {
       navigate(returnTo);
       return true;
     }
-    resetForm();
-    studentInputRef.current?.focus();
+    // Only a brand-new entry chains: finishing an edit hands the form back empty
+    // either way, so the checkbox stays out of that path.
+    const keep = keepStudents && !editingId;
+    resetForm({ keep });
+    // Holding the students means the category is the next field to fill, so
+    // refocusing the picker would only reopen its dropdown over the form.
+    if (!keep) studentInputRef.current?.focus();
     return true;
   };
 
@@ -510,14 +519,25 @@ export function LogPage() {
                 date={date}
               />
 
-              <Group>
-                <Button disabled={!valid} onClick={submit}>
-                  {editingId ? "Save changes" : "Log entry"}
-                </Button>
-                {editingId && (
-                  <Button variant="default" onClick={cancelEdit}>
-                    {returnTo ? "Cancel" : "Cancel edit"}
+              <Group justify="space-between" gap="sm">
+                <Group>
+                  <Button disabled={!valid} onClick={submit}>
+                    {editingId ? "Save changes" : "Log entry"}
                   </Button>
+                  {editingId && (
+                    <Button variant="default" onClick={cancelEdit}>
+                      {returnTo ? "Cancel" : "Cancel edit"}
+                    </Button>
+                  )}
+                </Group>
+                {!editingId && (
+                  <Checkbox
+                    size="sm"
+                    label="Create another entry"
+                    description="Keeps the student, clears the rest"
+                    checked={keepStudents}
+                    onChange={(e) => setKeepStudents(e.currentTarget.checked)}
+                  />
                 )}
               </Group>
             </Stack>
