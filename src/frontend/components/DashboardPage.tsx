@@ -17,7 +17,7 @@ import {
   type Attribution,
 } from "../lib/aggregate.ts";
 import { fmtDuration, fmtWeekLabel, toHours } from "../lib/time.ts";
-import { useAttributionParam, useRangeParam } from "../lib/urlState.ts";
+import { timelinePath, useAttributionParam, useRangeParam } from "../lib/urlState.ts";
 import {
   ATTRIBUTION_OPTIONS,
   ChartCard,
@@ -72,7 +72,10 @@ export function DashboardPage() {
     const total = shareTotals.reduce((s, r) => s + r.total, 0);
     if (!total) return null;
     const iep = shareTotals.filter((r) => r.student.iep).reduce((s, r) => s + r.total, 0);
-    return Math.round((iep / total) * 100);
+    // `minutes` rather than the rounded percentage decides whether the tile
+    // links: a caseload with a sliver of IEP time rounds to 0% but still has
+    // entries to show.
+    return { pct: Math.round((iep / total) * 100), minutes: iep };
   }, [entries, doc.students, doc.categories, range]);
 
   const weekly = useMemo(
@@ -135,11 +138,15 @@ export function DashboardPage() {
         </Text>
       </Group>
 
+      {/* Tiles that stand for a set of entries open that set on the Timeline,
+          filtered and dated to match. "Avg per week" and "Students seen" don't:
+          neither is a list of entries, so neither has a list to open. */}
       <SimpleGrid cols={{ base: 2, sm: 3, lg: untimed ? 6 : 5 }} spacing="sm">
         <StatTile
           label="Total time"
           value={`${toHours(totals.total)}h`}
           sub={range.label.toLowerCase()}
+          to={entries.length ? timelinePath(range) : undefined}
         />
         <StatTile
           label="Avg per week"
@@ -155,13 +162,22 @@ export function DashboardPage() {
           label="Direct time"
           value={`${directPct}%`}
           sub={`${toHours(totals.direct)}h of ${toHours(totals.total)}h`}
+          to={totals.direct ? timelinePath(range, { group: "direct" }) : undefined}
         />
         <StatTile
           label="IEP workload"
-          value={iepShare == null ? "—" : `${iepShare}%`}
+          value={iepShare == null ? "—" : `${iepShare.pct}%`}
           sub="share of tracked time"
+          to={iepShare?.minutes ? timelinePath(range, { q: "is:iep" }) : undefined}
         />
-        {untimed > 0 && <StatTile label="Untimed" value={untimed} sub="no-shows and the like" />}
+        {untimed > 0 && (
+          <StatTile
+            label="Untimed"
+            value={untimed}
+            sub="no-shows and the like"
+            to={timelinePath(range, { q: "is:untimed" })}
+          />
+        )}
       </SimpleGrid>
 
       {entries.length === 0 ? (

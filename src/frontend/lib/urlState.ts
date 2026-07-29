@@ -178,6 +178,35 @@ export function useDateParam(): [string, (next: string) => void] {
 }
 
 /**
+ * A link into the Timeline that reproduces a filter exactly — what a stat tile
+ * points at when you click the number to see the entries behind it.
+ *
+ * The range is always written out rather than left to the default, which is the
+ * one thing here that isn't optional. Every other page omits `range` while it
+ * holds *its* default, and those defaults differ: the Dashboard's is 12 weeks,
+ * the Timeline's is all time. A link that only carried the params it could see
+ * would land on a list of every untimed entry ever logged, which is not the
+ * number that was clicked.
+ */
+export function timelinePath(
+  range: RangeSelection,
+  filters: { q?: string; students?: string[]; group?: "direct" | "indirect" } = {},
+): string {
+  const p = new URLSearchParams();
+  if (range.key === "custom") {
+    p.set("range", "custom");
+    p.set("from", range.range.from);
+    p.set("to", range.range.to);
+  } else {
+    p.set("range", range.key);
+  }
+  if (filters.students?.length) p.set("students", filters.students.join(","));
+  if (filters.group) p.set("group", filters.group);
+  if (filters.q) p.set("q", filters.q);
+  return `/timeline?${p.toString()}`;
+}
+
+/**
  * How the Log page was arrived at: where to return to after an edit that came
  * from elsewhere, whether to focus the form, and any student to seed it with.
  *

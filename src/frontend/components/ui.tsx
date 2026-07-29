@@ -18,12 +18,14 @@ import {
 import { DatePickerInput } from "@mantine/dates";
 import { BulletChart } from "@mantine/charts";
 import {
+  IconArrowNarrowRight,
   IconCalendar,
   IconCheck,
   IconChartBar,
   IconChevronDown,
   IconTable,
 } from "@tabler/icons-react";
+import { Link } from "../lib/router.tsx";
 import { fmtDuration, rangePresets, type RangeSelection } from "../lib/time.ts";
 import type { Attribution } from "../lib/aggregate.ts";
 import type { ChartPalette } from "../lib/palette.ts";
@@ -32,20 +34,38 @@ import type { Entry } from "../../types.ts";
 
 export type { RangeSelection };
 
+/**
+ * A headline number, optionally a link to the entries behind it.
+ *
+ * `to` is left off wherever the list would come back empty — a tile reading 0%
+ * that opens an empty page is worse than one that simply doesn't invite the
+ * click. The arrow is what says the rest of them are clickable at all.
+ */
 export function StatTile({
   label,
   value,
   sub,
+  to,
 }: {
   label: string;
   value: ReactNode;
   sub?: ReactNode;
+  to?: string;
 }) {
-  return (
-    <Paper withBorder p="sm">
-      <Text size="xs" c="dimmed" fw={600} tt="uppercase" lts={0.4}>
-        {label}
-      </Text>
+  const body = (
+    <>
+      <Group justify="space-between" wrap="nowrap" gap={4}>
+        <Text size="xs" c="dimmed" fw={600} tt="uppercase" lts={0.4}>
+          {label}
+        </Text>
+        {to && (
+          <IconArrowNarrowRight
+            size={15}
+            className="stat-tile-arrow no-print"
+            style={{ flex: "none" }}
+          />
+        )}
+      </Group>
       <Text fz={26} fw={600} lh={1.2} mt={4} className="tnum">
         {value}
       </Text>
@@ -54,6 +74,19 @@ export function StatTile({
           {sub}
         </Text>
       )}
+    </>
+  );
+
+  if (!to) {
+    return (
+      <Paper withBorder p="sm">
+        {body}
+      </Paper>
+    );
+  }
+  return (
+    <Paper withBorder p="sm" component={Link} to={to} className="stat-tile-link">
+      {body}
     </Paper>
   );
 }

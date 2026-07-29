@@ -45,6 +45,7 @@ import { fmtDayLabel, fmtDuration, fmtWeekLabel, toHours } from "../lib/time.ts"
 import { Link, navigate, studentPath, useLocation } from "../lib/router.tsx";
 import {
   logEditPath,
+  timelinePath,
   useAttributionParam,
   useFlagParam,
   useRangeParam,
@@ -314,7 +315,14 @@ export function StudentPage({ studentId }: { studentId: string }) {
         />
         <StatTile label="Sessions" value={sessions} sub="entries with time" />
         {totals.untimed > 0 && (
-          <StatTile label="Untimed" value={totals.untimed} sub="no-shows and the like" />
+          <StatTile
+            label="Untimed"
+            value={totals.untimed}
+            sub="no-shows and the like"
+            /* The list below this is every entry for the student; the Timeline is
+               where it can be narrowed to just the ones that didn't happen. */
+            to={timelinePath(range, { students: [studentId], q: "is:untimed" })}
+          />
         )}
       </SimpleGrid>
 
