@@ -534,7 +534,6 @@ export function LogPage() {
                   <Checkbox
                     size="sm"
                     label="Create another entry"
-                    description="Keeps the student, clears the rest"
                     checked={keepStudents}
                     onChange={(e) => setKeepStudents(e.currentTarget.checked)}
                   />
