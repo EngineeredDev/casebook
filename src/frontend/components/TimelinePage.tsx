@@ -127,9 +127,7 @@ export function TimelinePage() {
   const { doc, deleteEntry } = useStore();
   const location = useLocation();
 
-  /* All time by default: the page exists to scroll back through history, and a
-     12-week window would hide most of it before you started. */
-  const [range, setRange] = useRangeParam(doc.settings.schoolYearStartMonth, "all");
+  const [range, setRange] = useRangeParam(doc.settings.schoolYearStartMonth);
   const [query, setQuery] = useTextParam("q");
   const [studentIds, setStudentIds] = useIdsParam("students");
   const [categoryIds, setCategoryIds] = useIdsParam("cats");

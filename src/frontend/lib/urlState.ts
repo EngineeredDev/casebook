@@ -11,7 +11,14 @@
 
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "./router.tsx";
-import { defaultRange, presetRange, todayYmd, YMD_RE, type RangeSelection } from "./time.ts";
+import {
+  defaultRange,
+  DEFAULT_RANGE_KEY,
+  presetRange,
+  todayYmd,
+  YMD_RE,
+  type RangeSelection,
+} from "./time.ts";
 import type { Attribution } from "./aggregate.ts";
 
 const DEFAULT_ATTRIBUTION: Attribution = "share";
@@ -43,7 +50,7 @@ export function useRangeParam(
           p.set("range", "custom");
           p.set("from", next.range.from);
           p.set("to", next.range.to);
-        } else if (next.key === defaultKey || (!defaultKey && next.key === "12-weeks")) {
+        } else if (next.key === (defaultKey ?? DEFAULT_RANGE_KEY)) {
           p.delete("range");
         } else {
           p.set("range", next.key);
@@ -183,10 +190,10 @@ export function useDateParam(): [string, (next: string) => void] {
  *
  * The range is always written out rather than left to the default, which is the
  * one thing here that isn't optional. Every other page omits `range` while it
- * holds *its* default, and those defaults differ: the Dashboard's is 12 weeks,
- * the Timeline's is all time. A link that only carried the params it could see
- * would land on a list of every untimed entry ever logged, which is not the
- * number that was clicked.
+ * holds *its* default, and those defaults differ: the Student page's is all
+ * time, everyone else's is the school year to date. A link that only carried the
+ * params it could see would land on a window other than the one whose number was
+ * clicked.
  */
 export function timelinePath(
   range: RangeSelection,

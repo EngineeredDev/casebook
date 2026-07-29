@@ -141,8 +141,16 @@ export function presetRange(key: string, schoolYearStartMonth: number): RangeSel
   return preset ? { key: preset.key, label: preset.label, range: preset.range() } : null;
 }
 
-export function defaultRange(schoolYearStartMonth: number, key = "12-weeks"): RangeSelection {
-  return presetRange(key, schoolYearStartMonth) ?? presetRange("12-weeks", schoolYearStartMonth)!;
+/** The range a page shows when nothing in the URL says otherwise. */
+export const DEFAULT_RANGE_KEY = "school-year";
+
+export function defaultRange(
+  schoolYearStartMonth: number,
+  key = DEFAULT_RANGE_KEY,
+): RangeSelection {
+  return (
+    presetRange(key, schoolYearStartMonth) ?? presetRange(DEFAULT_RANGE_KEY, schoolYearStartMonth)!
+  );
 }
 
 export function rangePresets(schoolYearStartMonth: number): RangePreset[] {
