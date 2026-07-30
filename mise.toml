@@ -1,4 +1,2 @@
 [tools]
 node = "latest"
-pnpm = "latest"
-bun = "latest"

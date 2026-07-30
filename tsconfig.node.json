@@ -1,0 +1,11 @@
+{
+  // The Node side: main process, preload, and the build config that describes
+  // them. No DOM lib — a `document` reference in the main process is a crash,
+  // not a type error to discover at runtime.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "types": ["node"]
+  },
+  "include": ["src/main", "src/preload", "src/shared", "electron.vite.config.ts"]
+}

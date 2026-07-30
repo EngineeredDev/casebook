@@ -1,4 +1,6 @@
 node_modules/
+# electron-vite's build output; dist/ is electron-builder's.
+out/
 dist/
 # Implementation specs — kept locally, not published.
 docs/

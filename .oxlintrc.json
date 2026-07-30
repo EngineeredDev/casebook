@@ -10,7 +10,7 @@
     "builtin": true,
     "browser": true
   },
-  "ignorePatterns": ["dist/", "backups/", "seed/", "data.json"],
+  "ignorePatterns": ["out/", "dist/", "backups/", "seed/", "data.json"],
   "rules": {
     // Ships in `pedantic` rather than `correctness`, so it is off under the
     // categories above — but a hook called behind an early return corrupts hook
@@ -27,10 +27,6 @@
 
     // @tiptap/starter-kit's default export really is the thing we want.
     "import/no-named-as-default": "off",
-
-    // server.ts probes ports one at a time on purpose — each attempt depends
-    // on the previous one having failed.
-    "no-await-in-loop": "off",
 
     // Small helpers defined next to their only caller read better here than
     // hoisted to module scope.
@@ -51,8 +47,11 @@
   },
   "overrides": [
     {
-      "files": ["src/server.ts", "src/storage.ts", "scripts/**"],
-      "env": { "browser": false }
+      // The Node side has no DOM. Linting it as a browser would accept a stray
+      // `document` or `localStorage` in the main process, which the tsconfig
+      // split (see tsconfig.json) exists to reject.
+      "files": ["src/main/**", "src/preload/**", "electron.vite.config.ts", "scripts/**"],
+      "env": { "browser": false, "node": true }
     }
   ]
 }

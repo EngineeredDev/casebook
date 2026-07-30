@@ -12,7 +12,7 @@ import {
 } from "@mantine/core";
 import { IconArchive, IconArchiveOff, IconClockOff } from "@tabler/icons-react";
 import { useStore } from "../store.tsx";
-import type { CategoryGroup } from "../../types.ts";
+import type { CategoryGroup } from "../../shared/types.ts";
 
 const GROUPS = [
   { value: "direct", label: "Direct" },

@@ -33,7 +33,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { useStore } from "../store.tsx";
-import type { Entry } from "../../types.ts";
+import type { Entry } from "../../shared/types.ts";
 import { buildIndex, matchEntry, parseQuery, type IndexedEntry } from "../lib/search.ts";
 import { fmtDayHeading, fmtDuration, fmtMonthLabel, monthStartYmd, toHours } from "../lib/time.ts";
 import { Link, navigate, studentPath, useLocation } from "../lib/router.tsx";

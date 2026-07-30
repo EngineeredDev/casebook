@@ -1,4 +1,4 @@
-import type { Category, DataDoc, Entry, Student } from "../../types.ts";
+import type { Category, DataDoc, Entry, Student } from "../../shared/types.ts";
 import { listWeeks, weekStartYmd, type DateRange } from "./time.ts";
 
 /**

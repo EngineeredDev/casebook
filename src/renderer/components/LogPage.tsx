@@ -31,7 +31,7 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 import { useStore } from "../store.tsx";
-import type { Entry, Student } from "../../types.ts";
+import type { Entry, Student } from "../../shared/types.ts";
 import { addDaysYmd, fmtDuration, fmtFullDate, todayYmd } from "../lib/time.ts";
 import { navigate, useLocation, useSearchParams } from "../lib/router.tsx";
 import { useDateParam, type LogNavState } from "../lib/urlState.ts";

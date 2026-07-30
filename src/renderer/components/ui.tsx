@@ -30,7 +30,7 @@ import { fmtDuration, rangePresets, type RangeSelection } from "../lib/time.ts";
 import type { Attribution } from "../lib/aggregate.ts";
 import type { ChartPalette } from "../lib/palette.ts";
 import { noteExcerpt } from "../lib/notes.ts";
-import type { Entry } from "../../types.ts";
+import type { Entry } from "../../shared/types.ts";
 
 export type { RangeSelection };
 

@@ -1,0 +1,34 @@
+# Packaging. Release targets, the DMG, and CI arrive with the distribution
+# work; what is here now is the identity that must never change and the fuses,
+# which are worth having from the first build rather than retrofitted.
+appId: com.engineereddev.casebook
+productName: Casebook
+copyright: Copyright © EngineeredDev
+
+directories:
+  output: dist
+
+# The renderer is bundled into out/ and the package has no runtime
+# dependencies, so this is the whole app.
+files:
+  - out/**
+  - package.json
+
+mac:
+  category: public.app-category.productivity
+  # Ad-hoc. There is no Apple Developer certificate behind this project and
+  # there is not going to be one; an unsigned arm64 binary is killed on exec, so
+  # "-" is the floor, not a preference. Hardened runtime buys nothing without
+  # notarization and electron-builder mis-signs when it is combined with an
+  # ad-hoc identity.
+  identity: "-"
+  hardenedRuntime: false
+
+# Compiled into the binary at package time, and irreversible from outside it.
+# The first two close the "run this app as a plain Node process" hole; the
+# third stops a debugger being attached to the main process by anyone who can
+# set an environment variable.
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false

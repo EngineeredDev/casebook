@@ -1,0 +1,13 @@
+{
+  // The renderer: DOM libs, JSX, and no Node types. `"types": []` is load
+  // bearing — without it every @types package in node_modules is ambient, which
+  // is how `node:fs` and `process` quietly typecheck inside a sandboxed
+  // renderer that has neither.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": []
+  },
+  "include": ["src/renderer", "src/shared"]
+}

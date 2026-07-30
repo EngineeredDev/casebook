@@ -9,7 +9,8 @@ import {
   type ReactNode,
 } from "react";
 import { Alert, Button, Center, Loader, Stack } from "@mantine/core";
-import type { Category, DataDoc, Entry, Student } from "../types.ts";
+import type { Category, DataDoc, Entry, Student } from "../shared/types.ts";
+import { api } from "./lib/api.ts";
 
 export type SaveState = "saved" | "saving" | "retrying" | "error" | "conflict";
 
@@ -61,9 +62,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const load = useCallback(async () => {
     setLoadError(null);
     try {
-      const res = await fetch("/api/data");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const fresh = (await res.json()) as DataDoc;
+      const fresh = await api().getDoc();
       dirtyRef.current = false;
       failingRef.current = false;
       attemptsRef.current = 0;
@@ -86,37 +85,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     dirtyRef.current = false;
     setSaveState("saving");
     // Null means nothing more is scheduled: the attempt either succeeded with
-    // nothing left to send, or failed in a way another request won't mend.
+    // nothing left to send, or failed in a way another attempt won't mend.
     let nextAttemptMs: number | null = null;
     try {
-      const res = await fetch("/api/data", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(current),
-      });
-      if (res.status === 409) {
+      const result = await api().saveDoc(current);
+      if ("conflict" in result) {
         setSaveState("conflict");
         return;
       }
-      // The server rejected the document itself. Re-sending the same bytes
-      // gets the same answer, so this ends the run rather than spending the
-      // retry budget proving it.
-      if (res.status >= 400 && res.status < 500) {
-        dirtyRef.current = true;
-        failingRef.current = true;
-        setSaveState("error");
-        return;
+      if ("error" in result) {
+        // Something the main process refuses to write — a malformed document —
+        // is refused identically forever, so this ends the run rather than
+        // spending the retry budget proving it. A failed disk write is the
+        // other kind and is thrown into the retry path below.
+        if (!result.retryable) {
+          dirtyRef.current = true;
+          failingRef.current = true;
+          setSaveState("error");
+          return;
+        }
+        throw new Error(result.error);
       }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const { rev } = (await res.json()) as { rev: number };
       failingRef.current = false;
       attemptsRef.current = 0;
-      setDoc((d) => (d ? { ...d, rev } : d));
+      setDoc((d) => (d ? { ...d, rev: result.rev } : d));
       setSaveState(dirtyRef.current ? "saving" : "saved");
       if (dirtyRef.current) nextAttemptMs = SAVE_DEBOUNCE_MS;
     } catch {
-      // Network failure or a 5xx — both plausibly transient, both worth a
-      // bounded number of retries on a widening interval.
+      // A write that failed on disk, or a bridge call that didn't come back at
+      // all — both plausibly transient, both worth a bounded number of retries
+      // on a widening interval.
       dirtyRef.current = true;
       failingRef.current = true;
       attemptsRef.current += 1;
@@ -163,21 +161,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [flush],
   );
 
-  // Retry failed saves when the tab regains focus; warn before closing with unsaved edits.
+  // Retry failed saves when the window regains focus.
   useEffect(() => {
     const onFocus = () => {
       retrySave();
     };
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (dirtyRef.current || inFlightRef.current) e.preventDefault();
-    };
     window.addEventListener("focus", onFocus);
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      window.removeEventListener("beforeunload", onBeforeUnload);
-    };
+    return () => window.removeEventListener("focus", onFocus);
   }, [retrySave]);
+
+  /**
+   * Keep the main process told whether anything is still on its way to disk, so
+   * that closing the window can ask first. `beforeunload` did this in the
+   * browser and does not translate: Electron honours the cancellation but shows
+   * no dialog, so the window would simply refuse to close and never say why.
+   *
+   * Every moment either fact can change is a render that changed `doc` or
+   * `saveState`, so those are the dependencies.
+   */
+  useEffect(() => {
+    if (!doc) return;
+    void api().setUnsaved(dirtyRef.current || inFlightRef.current || saveState !== "saved");
+  }, [doc, saveState]);
 
   const addStudent = useCallback(
     (partial: { name: string; iep: boolean }): Student => {

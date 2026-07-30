@@ -31,7 +31,7 @@ import {
 } from "@tabler/icons-react";
 import { useStore } from "../store.tsx";
 import { useChartPalette } from "../theme.tsx";
-import type { Entry } from "../../types.ts";
+import type { Entry } from "../../shared/types.ts";
 import {
   categoryName,
   filterEntries,

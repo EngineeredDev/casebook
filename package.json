@@ -4,23 +4,21 @@
   "private": true,
   "description": "Local-first time tracking for school-based clinicians",
   "license": "MIT",
-  "type": "module",
+  "author": "EngineeredDev",
+  "main": "out/main/index.js",
   "scripts": {
-    "dev": "bun --hot src/server.ts",
-    "start": "NODE_ENV=production bun src/server.ts",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
-    "typecheck": "tsc --noEmit",
-    "check": "bun run typecheck && bun run lint && bun run format:check",
-    "build:mac-arm": "bun build --compile --minify --target=bun-darwin-arm64 src/server.ts --outfile dist/mac-arm/Casebook && bun run sign:mac dist/mac-arm/Casebook",
-    "build:mac-intel": "bun build --compile --minify --target=bun-darwin-x64 src/server.ts --outfile dist/mac-intel/Casebook && bun run sign:mac dist/mac-intel/Casebook",
-    "build:windows": "bun build --compile --minify --target=bun-windows-x64 src/server.ts --outfile dist/windows/Casebook",
-    "build:all": "bun run build:mac-arm && bun run build:mac-intel && bun run build:windows",
-    "sign:mac": "sh scripts/sign-mac.sh"
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "check": "npm run typecheck && npm run lint && npm run format:check"
   },
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
     "@mantine/charts": "^9.5.0",
     "@mantine/core": "^9.5.0",
     "@mantine/dates": "^9.5.0",
@@ -32,17 +30,20 @@
     "@tiptap/pm": "^3.29.1",
     "@tiptap/react": "^3.29.1",
     "@tiptap/starter-kit": "^3.29.1",
-    "dayjs": "^1.11.21",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "recharts": "^3"
-  },
-  "devDependencies": {
-    "@types/bun": "^1.3.14",
+    "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "dayjs": "^1.11.21",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
     "oxfmt": "^0.61.0",
     "oxlint": "^1.76.0",
-    "typescript": "^7.0.2"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^3",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.6"
   }
 }

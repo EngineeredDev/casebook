@@ -1,0 +1,27 @@
+{
+  // Everything the two programs agree on. Only `lib`, `types`, `jsx` and
+  // `include` differ between them — see the comment in tsconfig.json.
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleDetection": "force",
+
+    // Bundler mode: electron-vite compiles the TypeScript and tsc only ever
+    // typechecks, so nothing here is responsible for emit.
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+
+    // Correctness
+    "strict": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true
+
+    // noUnusedLocals / noUnusedParameters are deliberately left off: oxlint's
+    // no-unused-vars already reports these as errors, and both tools honour the
+    // same leading-underscore opt-out.
+  }
+}
