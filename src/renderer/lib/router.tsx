@@ -177,23 +177,37 @@ export interface LinkProps extends Omit<ComponentPropsWithoutRef<"a">, "href"> {
 }
 
 /**
- * Client-side navigation that still behaves like a link. Modified clicks and
- * middle-clicks fall through to the browser untouched, so "open in new tab",
- * "copy link address", and the status-bar URL preview all keep working — the
- * things people quietly rely on and notice immediately when a SPA breaks them.
+ * Client-side navigation that still behaves like a link: a real href, so
+ * right-click → "copy link address" keeps working.
+ *
+ * In the browser this let modified and middle clicks fall through untouched, so
+ * "open in new tab" behaved. There are no tabs now — Casebook is one window,
+ * and the main process denies every request to open a second one. Falling
+ * through therefore meant Cmd-clicking a student did nothing whatsoever: no
+ * navigation, no window, no feedback. Every click that lands on a link now goes
+ * where the link points, which is the only outcome this app can honour.
  */
-export function Link({ to, replace, state, onClick, ...rest }: LinkProps) {
+export function Link({ to, replace, state, onClick, onAuxClick, ...rest }: LinkProps) {
+  const follow = (event: { defaultPrevented: boolean; preventDefault: () => void }) => {
+    if (event.defaultPrevented) return;
+    if (rest.target && rest.target !== "_self") return;
+    event.preventDefault();
+    navigate(to, { replace, state });
+  };
   return (
     <a
       href={to}
       onClick={(event) => {
         onClick?.(event);
-        if (event.defaultPrevented) return;
         if (event.button !== 0) return;
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-        if (rest.target && rest.target !== "_self") return;
-        event.preventDefault();
-        navigate(to, { replace, state });
+        follow(event);
+      }}
+      // Middle-click never reaches onClick. Without this it reaches the main
+      // process as a request for a new window and is silently refused.
+      onAuxClick={(event) => {
+        onAuxClick?.(event);
+        if (event.button !== 1) return;
+        follow(event);
       }}
       {...rest}
     />

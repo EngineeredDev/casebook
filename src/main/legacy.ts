@@ -20,7 +20,7 @@ import {
   unlinkSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, isAbsolute, join } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 import type { ImportResult, LegacyInstall, RetireResult } from "../shared/api.ts";
 import { backupDir, dataDir, dataFile } from "./paths.ts";
 import { copyMissingBackups, dayStamp, writeFileAtomic } from "./storage.ts";
@@ -127,15 +127,22 @@ export function importInstall(dir: string): ImportResult {
   if (dir === dataDir()) return { error: "That's the folder Casebook is already using." };
 
   try {
-    mkdirSync(dataDir(), { recursive: true });
+    // Order matters. data.json is written last, and everything that can fail —
+    // reading the source, making the folder, snapshotting what is here,
+    // carrying the old backups across — happens before it. A failure halfway
+    // through then means the current data file was never touched, rather than
+    // leaving the disk holding an imported document this process has not read
+    // and would overwrite on the next save.
+    const contents = readFileSync(join(dir, "data.json"), "utf8");
     const destination = dataFile();
+    mkdirSync(dataDir(), { recursive: true });
     if (existsSync(destination)) {
       const backups = backupDir();
       mkdirSync(backups, { recursive: true });
       copyFileSync(destination, join(backups, `data-pre-import-${dayStamp()}.json`));
     }
-    writeFileAtomic(destination, readFileSync(join(dir, "data.json"), "utf8"));
     copyMissingBackups(join(dir, "backups"), backupDir());
+    writeFileAtomic(destination, contents);
   } catch (error) {
     return { error: `Couldn't bring the data over — ${(error as Error).message}` };
   }
@@ -164,11 +171,12 @@ export function retireInstall(dir: string): RetireResult {
     }
   }
 
-  // Only ever the executable this project installs, in the folder the import
-  // came from. A plist edited by hand is not licence to delete a path of
-  // someone else's choosing.
+  // Only ever the executable this project installs, and only inside the folder
+  // the caller has already confirmed holds an old install. A plist edited by
+  // hand is not licence to delete a path of someone else's choosing, which is
+  // why the path is built here rather than read from one.
   const executable = join(dir, EXECUTABLE_NAME);
-  if (basename(executable) === EXECUTABLE_NAME && existsSync(executable)) {
+  if (existsSync(executable)) {
     try {
       unlinkSync(executable);
     } catch (error) {

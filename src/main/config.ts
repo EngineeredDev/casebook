@@ -23,15 +23,31 @@ function configFile(): string {
 
 export function readConfig(): Config {
   if (cache) return cache;
+
+  let raw: string;
+  try {
+    raw = readFileSync(configFile(), "utf8");
+  } catch {
+    // No config file. That is the normal state for anyone who has never moved
+    // the data folder, and the defaults are exactly right.
+    cache = {};
+    return cache;
+  }
+
   let parsed: unknown;
   try {
-    parsed = JSON.parse(readFileSync(configFile(), "utf8"));
-  } catch {
-    // No config yet, or one that cannot be read. Either way the defaults apply
-    // and the app opens; refusing to start over a settings file would be a poor
-    // trade for something with a working fallback.
-    parsed = {};
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    // A file that exists and says something unreadable is not the same as no
+    // file. Falling back to the default here would look through the wrong
+    // folder, find nothing, and present a fresh empty Casebook to someone
+    // whose records are sitting in the folder this file was supposed to name.
+    throw new Error(
+      `Casebook can't read its settings file (${configFile()}) — ${(error as Error).message}`,
+      { cause: error },
+    );
   }
+
   const config: Config = {};
   if (typeof parsed === "object" && parsed !== null) {
     const { dataDir } = parsed as Config;

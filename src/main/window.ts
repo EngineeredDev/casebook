@@ -93,6 +93,35 @@ export function createWindow(): BrowserWindow {
 }
 
 /**
+ * Reloading throws away everything the renderer is holding, which is the whole
+ * of an unsaved edit. Cmd-R is a reflex, and the moment it does the most damage
+ * is the one the app itself invites: the save-failure alert says "your edits
+ * are still here, leave the app open and try again", and reloading is how they
+ * stop being here.
+ */
+export function reloadWindow(): void {
+  const window = BrowserWindow.getFocusedWindow();
+  if (!window) return;
+  if (hasUnsavedChanges() && !confirmDiscard(window, "Reloading now would discard them.")) {
+    return;
+  }
+  window.webContents.reload();
+}
+
+function confirmDiscard(window: BrowserWindow, detail: string): boolean {
+  return (
+    dialog.showMessageBoxSync(window, {
+      type: "warning",
+      buttons: ["Continue", "Cancel"],
+      defaultId: 1,
+      cancelId: 1,
+      message: "Casebook hasn't finished saving.",
+      detail: `Some recent changes may not be written to disk yet. ${detail}`,
+    }) === 0
+  );
+}
+
+/**
  * Saves are debounced and can be retrying in the background, so closing the
  * window is occasionally the one action that loses work. Asking costs a click
  * on the rare occasion it fires and nothing at all the rest of the time —
@@ -103,15 +132,7 @@ function guardClose(window: BrowserWindow): void {
   window.on("close", (event) => {
     if (confirmed || !hasUnsavedChanges()) return;
     event.preventDefault();
-    const choice = dialog.showMessageBoxSync(window, {
-      type: "warning",
-      buttons: ["Close anyway", "Cancel"],
-      defaultId: 1,
-      cancelId: 1,
-      message: "Casebook hasn't finished saving.",
-      detail: "Some recent changes may not be written to disk yet.",
-    });
-    if (choice !== 0) {
+    if (!confirmDiscard(window, "Closing now would discard them.")) {
       quitting = false;
       return;
     }

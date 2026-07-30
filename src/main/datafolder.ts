@@ -27,8 +27,12 @@ export function relocateData(target: string): RelocateResult {
 
   const source = dataDir();
   if (target === source) return { ok: true, dir: source };
-  if (isInside(target, source)) {
-    return { error: "Pick a folder outside the one Casebook is using now." };
+  // Both directions. A folder inside the current one is the obvious mistake;
+  // a folder *containing* it is the quieter one — choosing the home folder
+  // would scatter data.json and a backups/ directory loose into it and leave
+  // the old copy nested inside the new location.
+  if (isInside(target, source) || isInside(source, target)) {
+    return { error: "Pick a folder that doesn't overlap the one Casebook uses now." };
   }
 
   const sourceFile = dataFile();

@@ -98,9 +98,11 @@ export function ImportOldData() {
         title: "Old Casebook removed",
         message: "It won't start at login any more.",
       });
+      // Only on success. Closing over a failure would take away the one place
+      // that explains what is still sitting on her Mac.
+      setDismissed(true);
     } finally {
       setBusy(false);
-      setDismissed(true);
     }
   };
 

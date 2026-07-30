@@ -32,6 +32,16 @@ export function canRelocate(): boolean {
   return app.isPackaged;
 }
 
+/**
+ * Whether the folder was chosen rather than defaulted to. It changes what a
+ * missing data file means: nothing at all in `~/Casebook` is a new install,
+ * while nothing at a path someone deliberately set is a folder that has gone
+ * somewhere (see loadDoc).
+ */
+export function dataDirIsConfigured(): boolean {
+  return canRelocate() && readConfig().dataDir !== undefined;
+}
+
 export function dataFile(): string {
   return join(dataDir(), "data.json");
 }

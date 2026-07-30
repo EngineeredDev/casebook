@@ -102,7 +102,19 @@ export function ReportsPage() {
 
   const note = attributionNote(attribution);
 
-  /** Charts take literal colors, so dark mode would print white text on white paper. */
+  /**
+   * Charts take literal colors, so dark mode would print white text on white
+   * paper. Switch to light, print, switch back.
+   *
+   * The switch back waits for `afterprint` rather than for a delay. It used to
+   * follow `window.print()` on the next line, which was safe in a browser
+   * because print() blocks there until the job is placed — Electron does not
+   * guarantee that, and a print() that returns immediately would restore dark
+   * mode while the page was still being rendered for paper, producing exactly
+   * the unreadable report the switch exists to prevent. The timeout is a
+   * backstop for an `afterprint` that never arrives; without it a failure here
+   * would leave the app stuck in light mode.
+   */
   const print = () => {
     if (computed !== "dark") {
       window.print();
@@ -110,10 +122,20 @@ export function ReportsPage() {
     }
     const restore = colorScheme;
     setColorScheme("light");
-    setTimeout(() => {
-      window.print();
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      window.removeEventListener("afterprint", finish);
+      clearTimeout(backstop);
       setColorScheme(restore);
-    }, 250);
+    };
+    window.addEventListener("afterprint", finish);
+    const backstop = setTimeout(finish, 60_000);
+
+    // One beat for the repaint, so the dialog previews the light-mode page.
+    setTimeout(() => window.print(), 250);
   };
 
   const exportWeeklyCsv = () => {

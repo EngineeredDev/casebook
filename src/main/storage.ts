@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { join, basename } from "node:path";
 import { emptyDoc, DATA_VERSION, type DataDoc, type Entry } from "../shared/types.ts";
-import { backupDir, dataDir, dataFile } from "./paths.ts";
+import { backupDir, dataDir, dataDirIsConfigured, dataFile } from "./paths.ts";
 
 const KEEP_BACKUPS = 30;
 
@@ -35,6 +35,31 @@ function plainToHtml(text: string): string {
     .join("");
 }
 
+/**
+ * Enough of a shape to migrate and then use. Deliberately looser than
+ * `isDataDoc` in ipc.ts, which guards documents arriving from the renderer and
+ * so insists on the current version — a file on disk is allowed to be older.
+ *
+ * Without this, a data.json that parses as JSON but isn't a Casebook document
+ * travels all the way to the renderer, where the first `doc.students.length`
+ * throws and — there being no error boundary — leaves a white window. A file
+ * that isn't the thing it claims to be is exactly as unusable as one that isn't
+ * valid JSON, and should fail in the same place.
+ */
+function looksLikeDoc(raw: unknown): raw is DataDoc & { version: number } {
+  if (typeof raw !== "object" || raw === null) return false;
+  const d = raw as DataDoc;
+  return (
+    typeof d.version === "number" &&
+    typeof d.rev === "number" &&
+    Array.isArray(d.categories) &&
+    Array.isArray(d.students) &&
+    Array.isArray(d.entries) &&
+    typeof d.settings === "object" &&
+    d.settings !== null
+  );
+}
+
 function migrate(raw: DataDoc & { version: number }): DataDoc {
   if (raw.version === DATA_VERSION) return raw;
   if (raw.version !== 1) throw new Error(`Unsupported data version: ${raw.version}`);
@@ -54,11 +79,26 @@ function migrate(raw: DataDoc & { version: number }): DataDoc {
 export function loadDoc(): DataDoc {
   const path = dataFile();
   if (!existsSync(path)) {
+    /**
+     * No data file usually means a new install. It means something else when
+     * the folder came from the config and has since gone: renamed in Finder,
+     * an external drive that isn't mounted, a synced folder that hasn't come
+     * down yet. Assuming a fresh start there would open an empty app, write an
+     * empty data.json into a folder that has to be created first, and offer to
+     * import from an install that no longer exists — with nothing anywhere
+     * saying her records had not been found.
+     */
+    if (dataDirIsConfigured() && !existsSync(dataDir())) {
+      throw new Error(
+        `the folder ${dataDir()} isn't there. If it moved, put it back — or point Casebook at its new home in Settings.`,
+      );
+    }
     const doc = emptyDoc();
     saveDoc(doc);
     return doc;
   }
-  const raw = JSON.parse(readFileSync(path, "utf8"));
+  const raw: unknown = JSON.parse(readFileSync(path, "utf8"));
+  if (!looksLikeDoc(raw)) throw new Error("it isn't a Casebook data file.");
   const doc = migrate(raw);
   if (doc !== raw) {
     // A dedicated snapshot, not backupIfNeeded() — that one is a no-op once

@@ -1,4 +1,5 @@
 import { app, Menu, shell, type MenuItemConstructorOptions } from "electron";
+import { reloadWindow } from "./window.ts";
 
 const REPO_URL = "https://github.com/EngineeredDev/casebook";
 
@@ -41,7 +42,8 @@ export function buildMenu(): void {
     {
       label: "View",
       submenu: [
-        { role: "reload" },
+        // Not `role: "reload"`, which discards unsaved edits without asking.
+        { label: "Reload", accelerator: "CmdOrCtrl+R", click: reloadWindow },
         // Kept in the shipped build on purpose: it is the only way to see what
         // went wrong on a machine that isn't this one.
         { role: "toggleDevTools" },

@@ -100,7 +100,12 @@ function currentDoc(): DataDoc {
   return doc;
 }
 
-/** Nothing has been recorded here yet, so there is nothing an import could lose. */
+/**
+ * No students and no entries — so an import cannot bury anything that took
+ * work to produce. Categories and the clinician name are not consulted: they
+ * exist in a brand-new document too, and an upgrade wants the old install's
+ * versions of both anyway.
+ */
 function nothingRecordedYet(): boolean {
   const current = currentDoc();
   return current.students.length === 0 && current.entries.length === 0;
@@ -258,14 +263,21 @@ export function registerIpc(): void {
       return { error: "Casebook already has entries in it, so nothing was imported." };
     }
     const result = importInstall(dir);
-    // Dropping the cached copy is what makes the next read come off the file
-    // the import just wrote; the renderer reloads straight after.
-    if ("ok" in result) doc = null;
+    // Unconditionally, including on failure. Dropping the cached copy makes the
+    // next read come off the file rather than out of memory, and after an
+    // import that got partway there is no longer any reason to believe the two
+    // agree — holding a stale in-memory document whose rev matches the
+    // renderer's is precisely how the next save overwrites what was imported.
+    doc = null;
     return result;
   });
 
   handle("legacy:retire", (dir: unknown): RetireResult => {
     if (typeof dir !== "string") return { error: "That isn't a folder Casebook can read." };
+    // Deleting things needs the same precondition importing did, checked here
+    // rather than trusted from the renderer: this has to still be an old
+    // install, in a folder that still contains one.
+    if (!describeInstall(dir)) return { error: `There's no Casebook install in ${dir}.` };
     return retireInstall(dir);
   });
 }
