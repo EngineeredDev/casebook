@@ -22,3 +22,13 @@ export function api(): CasebookApi {
   if (!bridge) throw new Error("Casebook's data bridge didn't load. Quit and open it again.");
   return bridge;
 }
+
+/**
+ * The message out of a rejected bridge call. Electron wraps whatever the main
+ * process threw in "Error invoking remote method 'doc:get': ", which is true
+ * and unhelpful — the part worth showing someone is what follows it.
+ */
+export function bridgeMessage(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  return raw.replace(/^Error invoking remote method '[^']*':\s*(Error:\s*)?/, "");
+}

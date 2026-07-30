@@ -15,6 +15,7 @@ const api: CasebookApi = {
   getDoc: () => ipcRenderer.invoke("doc:get"),
   saveDoc: (doc) => ipcRenderer.invoke("doc:save", doc),
   setUnsaved: (unsaved) => ipcRenderer.invoke("doc:set-unsaved", unsaved),
+  exportFile: (name, contents) => ipcRenderer.invoke("file:export", name, contents),
 };
 
 contextBridge.exposeInMainWorld("casebook", api);

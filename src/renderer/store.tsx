@@ -10,7 +10,7 @@ import {
 } from "react";
 import { Alert, Button, Center, Loader, Stack } from "@mantine/core";
 import type { Category, DataDoc, Entry, Student } from "../shared/types.ts";
-import { api } from "./lib/api.ts";
+import { api, bridgeMessage } from "./lib/api.ts";
 
 export type SaveState = "saved" | "saving" | "retrying" | "error" | "conflict";
 
@@ -69,7 +69,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setDoc(fresh);
       setSaveState("saved");
     } catch (err) {
-      setLoadError(String(err));
+      setLoadError(bridgeMessage(err));
     }
   }, []);
 

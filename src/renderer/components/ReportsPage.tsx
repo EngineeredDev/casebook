@@ -31,7 +31,7 @@ import {
   weeklyByGroup,
   weeklySummaryRows,
 } from "../lib/aggregate.ts";
-import { downloadCsv, downloadFile } from "../lib/csv.ts";
+import { exportCsv, exportFile } from "../lib/export.ts";
 import { fmtDuration, fmtWeekLabel, toHours, todayYmd } from "../lib/time.ts";
 import { useAttributionParam, useRangeParam } from "../lib/urlState.ts";
 import { Link, studentPath } from "../lib/router.tsx";
@@ -118,7 +118,7 @@ export function ReportsPage() {
 
   const exportWeeklyCsv = () => {
     const rows = weeklySummaryRows(entries, doc.students, doc.categories, attribution, range.range);
-    downloadCsv(`weekly-summary-${todayYmd()}.csv`, [
+    void exportCsv(`weekly-summary-${todayYmd()}.csv`, [
       [
         "Week of",
         "Student",
@@ -145,7 +145,7 @@ export function ReportsPage() {
   /** Notes are deliberately absent — clinical narrative never leaves the app. */
   const exportRawCsv = () => {
     const sorted = entries.toSorted((a, b) => a.date.localeCompare(b.date));
-    downloadCsv(`raw-entries-${todayYmd()}.csv`, [
+    void exportCsv(`raw-entries-${todayYmd()}.csv`, [
       [
         "Date",
         "Start",
@@ -174,11 +174,7 @@ export function ReportsPage() {
   };
 
   const exportBackup = () => {
-    downloadFile(
-      `casebook-backup-${todayYmd()}.json`,
-      JSON.stringify(doc, null, 2),
-      "application/json",
-    );
+    void exportFile(`casebook-backup-${todayYmd()}.json`, JSON.stringify(doc, null, 2));
   };
 
   const generated = new Date().toLocaleDateString(undefined, {

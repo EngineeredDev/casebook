@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, nativeTheme, shell } from "electron";
+import { app, BrowserWindow, dialog, nativeTheme, shell } from "electron";
 import { join } from "node:path";
 import { hasUnsavedChanges } from "./ipc.ts";
 import { RENDERER_ORIGIN, RENDERER_URL } from "./renderer.ts";
@@ -18,6 +18,16 @@ const BODY_DARK = "#242424";
 
 /** Schemes a link in a clinical note may plausibly use, and nothing else. */
 const EXTERNAL_SCHEMES = new Set(["https:", "http:", "mailto:"]);
+
+/**
+ * Whether the window is closing because the app is quitting, which changes what
+ * confirming the close should do. Registered once here rather than per window,
+ * so reopening from the Dock doesn't stack listeners.
+ */
+let quitting = false;
+app.on("before-quit", () => {
+  quitting = true;
+});
 
 /**
  * Hands a URL to the real browser, or drops it. Anything that reaches here came
@@ -101,8 +111,15 @@ function guardClose(window: BrowserWindow): void {
       message: "Casebook hasn't finished saving.",
       detail: "Some recent changes may not be written to disk yet.",
     });
-    if (choice !== 0) return;
+    if (choice !== 0) {
+      quitting = false;
+      return;
+    }
     confirmed = true;
-    window.close();
+    // Cancelling the close also cancelled the quit that asked for it, so
+    // closing the window now would leave the app sitting in the Dock with
+    // nothing open — Cmd-Q would have to be pressed twice.
+    if (quitting) app.quit();
+    else window.close();
   });
 }

@@ -22,9 +22,17 @@ export type SaveResult =
    */
   | { error: string; retryable: boolean };
 
+export type ExportResult =
+  | { saved: true; path: string }
+  /** The user dismissed the save dialog. Not an error; say nothing. */
+  | { saved: false }
+  | { error: string };
+
 export interface CasebookApi {
   getDoc(): Promise<DataDoc>;
   saveDoc(doc: DataDoc): Promise<SaveResult>;
+  /** Offers a save dialog, then writes `contents` wherever it points. */
+  exportFile(name: string, contents: string): Promise<ExportResult>;
   /**
    * Whether edits are still on their way to disk. Closing the window while
    * this is true asks before discarding them — the job `beforeunload` did in
