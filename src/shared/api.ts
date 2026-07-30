@@ -13,7 +13,7 @@ import type { DataDoc } from "./types.ts";
 export type SaveResult =
   | { ok: true; rev: number }
   /** The document on disk moved on without us — was HTTP 409. */
-  | { conflict: true; serverRev: number }
+  | { conflict: true; currentRev: number }
   /**
    * `retryable` is the old 5xx/4xx split. A failed disk write is worth trying
    * again on a widening interval; a document the main process refuses to
@@ -28,6 +28,33 @@ export type ExportResult =
   | { saved: false }
   | { error: string };
 
+export interface DataLocation {
+  /** Absolute path to the folder holding data.json and backups/. */
+  dir: string;
+  /** False in a development build, where the folder is pinned to the repo. */
+  relocatable: boolean;
+}
+
+export type RelocateResult = { ok: true; dir: string } | { error: string };
+
+/**
+ * A pre-Electron Casebook found on this Mac: a folder with a data.json in it,
+ * and whatever is still around that would keep starting it.
+ */
+export interface LegacyInstall {
+  dir: string;
+  entries: number;
+  students: number;
+  /** ISO timestamp of the old data.json, so the offer can say how recent it is. */
+  modified: string;
+  backups: number;
+  executable: string | null;
+  launchAgent: string | null;
+}
+
+export type ImportResult = { ok: true; entries: number; students: number } | { error: string };
+export type RetireResult = { ok: true } | { error: string };
+
 export interface CasebookApi {
   getDoc(): Promise<DataDoc>;
   saveDoc(doc: DataDoc): Promise<SaveResult>;
@@ -39,4 +66,20 @@ export interface CasebookApi {
    * the browser, which Electron cancels silently rather than prompting for.
    */
   setUnsaved(unsaved: boolean): Promise<void>;
+
+  getDataLocation(): Promise<DataLocation>;
+  revealDataFolder(): Promise<void>;
+  /** Folder-picking dialog. Null when dismissed. */
+  chooseDataFolder(): Promise<string | null>;
+  /** Copies the data to `target`, verifies it arrived, then switches over. */
+  relocateData(target: string): Promise<RelocateResult>;
+
+  /** An older install, if one is sitting where the installer used to put it. */
+  findLegacyInstall(): Promise<LegacyInstall | null>;
+  /** The same, for a copy that is somewhere less obvious. Null when dismissed. */
+  chooseLegacyInstall(): Promise<LegacyInstall | null>;
+  /** Refused unless the current document is still empty. */
+  importLegacyData(dir: string): Promise<ImportResult>;
+  /** Removes the old LaunchAgent, its plist and the old executable. */
+  retireLegacyInstall(dir: string): Promise<RetireResult>;
 }

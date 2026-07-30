@@ -7,12 +7,22 @@
  * keeps the two honest — the same job the HTTP layer did, minus the HTTP.
  */
 
-import { app, BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from "electron";
-import { writeFileSync } from "node:fs";
-import { extname, join } from "node:path";
-import type { ExportResult, SaveResult } from "../shared/api.ts";
+import { app, BrowserWindow, dialog, ipcMain, shell, type IpcMainInvokeEvent } from "electron";
+import { mkdirSync, statSync, writeFileSync } from "node:fs";
+import { dirname, extname, join } from "node:path";
+import type {
+  DataLocation,
+  ExportResult,
+  ImportResult,
+  LegacyInstall,
+  RelocateResult,
+  RetireResult,
+  SaveResult,
+} from "../shared/api.ts";
 import { DATA_VERSION, type DataDoc } from "../shared/types.ts";
-import { dataFile } from "./paths.ts";
+import { relocateData } from "./datafolder.ts";
+import { describeInstall, findInstall, importInstall, retireInstall } from "./legacy.ts";
+import { canRelocate, dataDir, dataFile } from "./paths.ts";
 import { RENDERER_ORIGIN } from "./renderer.ts";
 import { backupIfNeeded, loadDoc, saveDoc } from "./storage.ts";
 
@@ -74,29 +84,40 @@ function isDataDoc(candidate: unknown): candidate is DataDoc {
   );
 }
 
+/**
+ * Read lazily, so a data file that cannot be parsed becomes an error the
+ * renderer can show and offer to retry, rather than a main process that dies
+ * before there is a window to say so in. The old server had no such option: it
+ * threw on startup and the browser tab just never loaded.
+ */
+function currentDoc(): DataDoc {
+  if (doc) return doc;
+  try {
+    doc = loadDoc();
+  } catch (error) {
+    throw new Error(`Couldn't read ${dataFile()} — ${(error as Error).message}`, { cause: error });
+  }
+  return doc;
+}
+
+/** Nothing has been recorded here yet, so there is nothing an import could lose. */
+function nothingRecordedYet(): boolean {
+  const current = currentDoc();
+  return current.students.length === 0 && current.entries.length === 0;
+}
+
+/** The window a dialog should hang off, so it opens as a sheet rather than free-floating. */
+function dialogParent(): BrowserWindow | undefined {
+  return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+}
+
 export function registerIpc(): void {
-  /**
-   * Read lazily, so a data file that cannot be parsed becomes an error the
-   * renderer can show and offer to retry, rather than a main process that dies
-   * before there is a window to say so in. The old server had no such option:
-   * it threw on startup and the browser tab just never loaded.
-   */
-  handle("doc:get", (): DataDoc => {
-    if (doc) return doc;
-    try {
-      doc = loadDoc();
-    } catch (error) {
-      throw new Error(`Couldn't read ${dataFile()} — ${(error as Error).message}`, {
-        cause: error,
-      });
-    }
-    return doc;
-  });
+  handle("doc:get", (): DataDoc => currentDoc());
 
   handle("doc:save", (candidate: unknown): SaveResult => {
     if (!doc) return { error: "Casebook hasn't finished opening your data.", retryable: true };
     if (!isDataDoc(candidate)) return { error: "Malformed document", retryable: false };
-    if (candidate.rev !== doc.rev) return { conflict: true, serverRev: doc.rev };
+    if (candidate.rev !== doc.rev) return { conflict: true, currentRev: doc.rev };
 
     const next: DataDoc = { ...candidate, rev: doc.rev + 1 };
     try {
@@ -131,7 +152,7 @@ export function registerIpc(): void {
       return { error: "Malformed export request" };
     }
     const extension = extname(name).slice(1);
-    const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+    const window = dialogParent();
     const options = {
       defaultPath: join(app.getPath("downloads"), name),
       filters: extension ? [{ name: extension.toUpperCase(), extensions: [extension] }] : undefined,
@@ -149,5 +170,102 @@ export function registerIpc(): void {
       return { error: (error as Error).message };
     }
     return { saved: true, path: result.filePath };
+  });
+
+  /* ---------- where the data lives ---------- */
+
+  handle("folder:get", (): DataLocation => ({ dir: dataDir(), relocatable: canRelocate() }));
+
+  handle("folder:reveal", (): void => {
+    // The folder is created on demand, and "Show in Finder" is a perfectly
+    // ordinary reason for it to come into existence.
+    const dir = dataDir();
+    mkdirSync(dir, { recursive: true });
+    void shell.openPath(dir);
+  });
+
+  handle("folder:choose", async (): Promise<string | null> => {
+    const window = dialogParent();
+    const options = {
+      title: "Choose a folder for your Casebook data",
+      buttonLabel: "Use this folder",
+      defaultPath: dataDir(),
+      properties: ["openDirectory" as const, "createDirectory" as const],
+    };
+    const result = window
+      ? await dialog.showOpenDialog(window, options)
+      : await dialog.showOpenDialog(options);
+    return result.canceled ? null : (result.filePaths[0] ?? null);
+  });
+
+  handle("folder:relocate", (target: unknown): RelocateResult => {
+    if (!canRelocate()) {
+      return { error: "A development build always keeps its data in the repository." };
+    }
+    if (typeof target !== "string") return { error: "That isn't a folder Casebook can use." };
+    return relocateData(target);
+  });
+
+  /* ---------- the Casebook that came before ---------- */
+
+  /**
+   * Offered only while there is nothing here to lose. Importing over a document
+   * she has been using would be a data-loss bug wearing a helpful face.
+   */
+  handle("legacy:find", (): LegacyInstall | null => (nothingRecordedYet() ? findInstall() : null));
+
+  handle("legacy:choose", async (): Promise<LegacyInstall | null> => {
+    const window = dialogParent();
+    const options = {
+      title: "Find your old Casebook",
+      message: "Choose the old Casebook app, or the folder its data.json is in.",
+      buttonLabel: "Use this",
+      properties: ["openFile" as const, "openDirectory" as const],
+    };
+    const result = window
+      ? await dialog.showOpenDialog(window, options)
+      : await dialog.showOpenDialog(options);
+    const picked = result.canceled ? undefined : result.filePaths[0];
+    if (!picked) return null;
+
+    // Pointing at the executable is the intuitive thing to do, and the data
+    // sits beside it — so accept either and work out which this was.
+    let dir = picked;
+    try {
+      if (!statSync(picked).isDirectory()) dir = dirname(picked);
+    } catch {
+      return null;
+    }
+
+    const found = describeInstall(dir);
+    if (!found) {
+      // Said here rather than handed back as an error, because "null" already
+      // means "she changed her mind" and the two should not look the same.
+      const message = {
+        type: "info" as const,
+        message: "No Casebook data there.",
+        detail: `${dir} doesn't contain a data.json. Look for the folder holding the old Casebook app.`,
+      };
+      await (window ? dialog.showMessageBox(window, message) : dialog.showMessageBox(message));
+      return null;
+    }
+    return found;
+  });
+
+  handle("legacy:import", (dir: unknown): ImportResult => {
+    if (typeof dir !== "string") return { error: "That isn't a folder Casebook can read." };
+    if (!nothingRecordedYet()) {
+      return { error: "Casebook already has entries in it, so nothing was imported." };
+    }
+    const result = importInstall(dir);
+    // Dropping the cached copy is what makes the next read come off the file
+    // the import just wrote; the renderer reloads straight after.
+    if ("ok" in result) doc = null;
+    return result;
+  });
+
+  handle("legacy:retire", (dir: unknown): RetireResult => {
+    if (typeof dir !== "string") return { error: "That isn't a folder Casebook can read." };
+    return retireInstall(dir);
   });
 }

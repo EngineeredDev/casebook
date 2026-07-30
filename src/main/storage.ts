@@ -15,7 +15,7 @@ import { backupDir, dataDir, dataFile } from "./paths.ts";
 const KEEP_BACKUPS = 30;
 
 /** Local YYYY-MM-DD, used to name backup files. */
-function dayStamp(): string {
+export function dayStamp(): string {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -78,14 +78,40 @@ export function loadDoc(): DataDoc {
 }
 
 /** Atomic write: temp file in the same directory, then rename over the original. */
+export function writeFileAtomic(path: string, contents: string): void {
+  const tmp = path + ".tmp";
+  writeFileSync(tmp, contents);
+  renameSync(tmp, path);
+}
+
 export function saveDoc(doc: DataDoc): void {
   // The data folder is created on demand rather than at first run, so the very
   // first save is also the one that has to make it.
   mkdirSync(dataDir(), { recursive: true });
-  const path = dataFile();
-  const tmp = path + ".tmp";
-  writeFileSync(tmp, JSON.stringify(doc, null, 2));
-  renameSync(tmp, path);
+  writeFileAtomic(dataFile(), JSON.stringify(doc, null, 2));
+}
+
+/**
+ * Copy every backup that isn't already at the destination, leaving the source
+ * untouched. Same-named files are left alone rather than overwritten: two
+ * folders can hold a `data-2026-03-14.json` from different installs, and the
+ * one already in the destination is the one this app has been keeping.
+ */
+export function copyMissingBackups(from: string, to: string): void {
+  let names: string[];
+  try {
+    names = readdirSync(from);
+  } catch {
+    return; // No backups/ in the source. Nothing to bring over.
+  }
+  const wanted = names.filter((name) => name.endsWith(".json"));
+  if (wanted.length === 0) return;
+  mkdirSync(to, { recursive: true });
+  for (const name of wanted) {
+    const dest = join(to, name);
+    if (existsSync(dest)) continue;
+    copyFileSync(join(from, name), dest);
+  }
 }
 
 /** Copy today's first pre-write state into backups/, pruning to the newest N. */

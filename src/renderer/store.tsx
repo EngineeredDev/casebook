@@ -34,7 +34,8 @@ const StoreContext = createContext<StoreValue | null>(null);
 const SAVE_DEBOUNCE_MS = 500;
 /**
  * A failing save backs off instead of hammering: 1s, 2s, 4s, 8s, 16s, then it
- * stops and waits for the user. Retrying forever is what a broken server turns
+ * stops and waits for the user. Retrying forever is what a disk it cannot write
+ * to turns
  * into a request loop, and past a certain point the retry is not going to be
  * the thing that fixes it — a person looking at the error is.
  */
@@ -55,7 +56,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   /**
    * Set while saves are failing. Edits made in that window ride the backoff
    * timer rather than scheduling their own request — otherwise every keystroke
-   * against a down server would restart the debounce and cancel the backoff.
+   * made while the disk is refusing writes would restart the debounce and
+   * cancel the backoff.
    */
   const failingRef = useRef(false);
 
@@ -133,8 +135,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
-   * Deliberate "try again" — from the failure alert or from returning to the
-   * tab. The budget resets because the user is asserting something changed.
+   * Deliberate "try again" — from the failure alert or from coming back to the
+   * window. The budget resets because the user is asserting something changed.
    */
   const retrySave = useCallback(() => {
     if (!dirtyRef.current) return;

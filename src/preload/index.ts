@@ -16,6 +16,16 @@ const api: CasebookApi = {
   saveDoc: (doc) => ipcRenderer.invoke("doc:save", doc),
   setUnsaved: (unsaved) => ipcRenderer.invoke("doc:set-unsaved", unsaved),
   exportFile: (name, contents) => ipcRenderer.invoke("file:export", name, contents),
+
+  getDataLocation: () => ipcRenderer.invoke("folder:get"),
+  revealDataFolder: () => ipcRenderer.invoke("folder:reveal"),
+  chooseDataFolder: () => ipcRenderer.invoke("folder:choose"),
+  relocateData: (target) => ipcRenderer.invoke("folder:relocate", target),
+
+  findLegacyInstall: () => ipcRenderer.invoke("legacy:find"),
+  chooseLegacyInstall: () => ipcRenderer.invoke("legacy:choose"),
+  importLegacyData: (dir) => ipcRenderer.invoke("legacy:import", dir),
+  retireLegacyInstall: (dir) => ipcRenderer.invoke("legacy:retire", dir),
 };
 
 contextBridge.exposeInMainWorld("casebook", api);

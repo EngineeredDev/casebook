@@ -55,7 +55,7 @@ export const DATA_VERSION = 2;
 
 export interface DataDoc {
   version: typeof DATA_VERSION;
-  /** Optimistic-concurrency revision; server increments on every accepted PUT. */
+  /** Optimistic-concurrency revision; the main process increments it on every accepted save. */
   rev: number;
   settings: Settings;
   categories: Category[];

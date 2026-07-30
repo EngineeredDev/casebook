@@ -26,6 +26,7 @@ import {
   IconFileDescription,
   IconMoon,
   IconPencilPlus,
+  IconSettings,
   IconSun,
   IconTags,
   IconTimeline,
@@ -41,8 +42,12 @@ import { StudentsPage } from "./components/StudentsPage.tsx";
 import { StudentPage } from "./components/StudentPage.tsx";
 import { CategoriesPage } from "./components/CategoriesPage.tsx";
 import { ReportsPage } from "./components/ReportsPage.tsx";
+import { SettingsPage } from "./components/SettingsPage.tsx";
+import { ImportOldData } from "./components/ImportOldData.tsx";
 
-const NAV: { path: string; label: string; icon: typeof IconPencilPlus; hint: string }[] = [
+type NavEntry = { path: string; label: string; icon: typeof IconPencilPlus; hint: string };
+
+const NAV: NavEntry[] = [
   { path: "/log", label: "Log", icon: IconPencilPlus, hint: "Record time" },
   { path: "/timeline", label: "Timeline", icon: IconTimeline, hint: "Search all history" },
   { path: "/dashboard", label: "Dashboard", icon: IconChartBar, hint: "Charts and totals" },
@@ -50,6 +55,14 @@ const NAV: { path: string; label: string; icon: typeof IconPencilPlus; hint: str
   { path: "/categories", label: "Categories", icon: IconTags, hint: "Edit and archive" },
   { path: "/reports", label: "Reports", icon: IconFileDescription, hint: "Print and export" },
 ];
+
+/** Sits below the main list rather than in it — it is about the app, not the work. */
+const SETTINGS_NAV: NavEntry = {
+  path: "/settings",
+  label: "Settings",
+  icon: IconSettings,
+  hint: "Data folder",
+};
 
 /**
  * The app mark: an open book whose two pages carry the direct and indirect
@@ -129,7 +142,13 @@ function ThemeToggle() {
   );
 }
 
-/** A concurrent-window save conflict needs an explicit choice, so it gets a persistent alert. */
+/**
+ * The data file moved on without this window, so the two disagree about what
+ * the latest version is and only a person can say which one wins. Rare now that
+ * only one Casebook runs at a time — it takes the file changing underneath the
+ * app, which an import does on purpose — but it still needs an explicit choice,
+ * so it gets a persistent alert rather than a toast.
+ */
 function ConflictAlert() {
   const { saveState, reload } = useStore();
   useEffect(() => {
@@ -137,8 +156,8 @@ function ConflictAlert() {
     notifications.show({
       id: "conflict",
       color: "red",
-      title: "Another window saved first",
-      message: "Reload to pick up the latest data.",
+      title: "Your data file changed",
+      message: "Reload to pick up the latest version.",
       autoClose: false,
     });
     return () => {
@@ -152,13 +171,13 @@ function ConflictAlert() {
       color="red"
       variant="light"
       icon={<IconAlertTriangle size={18} />}
-      title="Another window saved changes first"
+      title="Your data file changed underneath this window"
       mb="md"
       className="no-print"
     >
       <Group justify="space-between" wrap="nowrap" gap="md">
         <Text size="sm">
-          Reload to pick up the latest data. Unsynced edits in this window will be lost.
+          Reload to pick up the latest version. Unsaved edits in this window will be lost.
         </Text>
         <Button size="xs" color="red" onClick={reload} style={{ flex: "none" }}>
           Reload data
@@ -187,8 +206,8 @@ function SaveErrorAlert() {
     >
       <Group justify="space-between" wrap="nowrap" gap="md">
         <Text size="sm">
-          The app couldn't reach the server. Your edits are still here — keep this tab open and try
-          again.
+          Casebook couldn't write to your data file. Your edits are still here — leave the app open
+          and try again.
         </Text>
         <Button size="xs" color="red" onClick={retrySave} style={{ flex: "none" }}>
           Try again
@@ -235,12 +254,14 @@ function CurrentPage(): ReactNode {
       return <CategoriesPage />;
     case "reports":
       return <ReportsPage />;
+    case "settings":
+      return <SettingsPage />;
     case "notFound":
       return <NotFound />;
   }
 }
 
-function NavItem({ item }: { item: (typeof NAV)[number] }) {
+function NavItem({ item }: { item: NavEntry }) {
   const active = useIsActive(item.path);
   return (
     <NavLink
@@ -303,7 +324,8 @@ function Shell() {
           ))}
         </AppShell.Section>
         <AppShell.Section>
-          <Text size="xs" c="dimmed" ta="center">
+          <NavItem item={SETTINGS_NAV} />
+          <Text size="xs" c="dimmed" ta="center" mt="xs">
             Saved locally on this computer
           </Text>
         </AppShell.Section>
@@ -313,6 +335,7 @@ function Shell() {
         <ConflictAlert />
         <SaveErrorAlert />
         <CurrentPage />
+        <ImportOldData />
       </AppShell.Main>
     </AppShell>
   );

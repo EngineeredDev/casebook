@@ -22,6 +22,7 @@ export type Route =
   | { page: "student"; studentId: string }
   | { page: "categories" }
   | { page: "reports" }
+  | { page: "settings" }
   | { page: "notFound" };
 
 export function parseRoute(pathname: string): Route {
@@ -37,7 +38,8 @@ export function parseRoute(pathname: string): Route {
     head === "timeline" ||
     head === "dashboard" ||
     head === "categories" ||
-    head === "reports"
+    head === "reports" ||
+    head === "settings"
   ) {
     return { page: head };
   }
