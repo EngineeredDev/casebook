@@ -23,7 +23,7 @@ import { DATA_VERSION, type DataDoc } from "../shared/types.ts";
 import { relocateData } from "./datafolder.ts";
 import { describeInstall, findInstall, importInstall, retireInstall } from "./legacy.ts";
 import { canRelocate, dataDir, dataFile } from "./paths.ts";
-import { RENDERER_ORIGIN } from "./renderer.ts";
+import { isRendererUrl } from "./renderer.ts";
 import { backupIfNeeded, loadDoc, saveDoc } from "./storage.ts";
 
 /** Null until the first successful read; see the `doc:get` handler. */
@@ -48,7 +48,7 @@ export function hasUnsavedChanges(): boolean {
 function fromRenderer(event: IpcMainInvokeEvent): boolean {
   try {
     const url = event.senderFrame?.url;
-    return url !== undefined && URL.parse(url)?.origin === RENDERER_ORIGIN;
+    return url !== undefined && isRendererUrl(url);
   } catch {
     // Reading `url` on a frame that has already gone throws.
     return false;

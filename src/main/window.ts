@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, nativeTheme, shell } from "electron";
 import { join } from "node:path";
 import { hasUnsavedChanges } from "./ipc.ts";
-import { RENDERER_ORIGIN, RENDERER_URL } from "./renderer.ts";
+import { isRendererUrl, RENDERER_URL } from "./renderer.ts";
 
 /**
  * Mantine's body background in each scheme. The window is painted with one of
@@ -81,7 +81,7 @@ export function createWindow(): BrowserWindow {
   // navigation therefore means a link was followed — and the only place it may
   // lead is back into the app itself.
   window.webContents.on("will-navigate", (event, url) => {
-    if (URL.parse(url)?.origin === RENDERER_ORIGIN) return;
+    if (isRendererUrl(url)) return;
     event.preventDefault();
     openExternal(url);
   });

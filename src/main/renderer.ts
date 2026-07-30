@@ -23,12 +23,30 @@ const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL;
 /** What the window loads. */
 export const RENDERER_URL = DEV_SERVER_URL ?? `${SCHEME}://${HOST}/`;
 
+const RENDERER_LOCATION = new URL(RENDERER_URL);
+
 /**
- * The one origin the renderer is ever allowed to be. Navigation checks and
- * every IPC handler compare against it, so a page that somehow ends up
- * somewhere else can neither keep the window nor reach the disk.
+ * Whether a URL is this app. Navigation checks and every IPC handler ask, so a
+ * page that somehow ends up somewhere else can neither keep the window nor
+ * reach the disk.
+ *
+ * Emphatically not an `origin` comparison, which is the obvious way to write
+ * this and is wrong here. Node's URL reports `origin` as the *string* "null"
+ * for every non-special scheme — `app:` and `file:` alike — so comparing
+ * origins in the main process quietly accepts `app://anywhere-else/` and
+ * `file:///` as if they were this app, turning both checks into no-ops in the
+ * packaged build while continuing to work in development, where the dev server
+ * has a real http origin. Chromium knows `app:` is a standard scheme and would
+ * answer correctly; the main process is not Chromium.
  */
-export const RENDERER_ORIGIN = new URL(RENDERER_URL).origin;
+export function isRendererUrl(candidate: string): boolean {
+  const url = URL.parse(candidate);
+  return (
+    url !== null &&
+    url.protocol === RENDERER_LOCATION.protocol &&
+    url.host === RENDERER_LOCATION.host
+  );
+}
 
 /**
  * Everything is same-origin and local, so the policy can be a deny-list of one:
