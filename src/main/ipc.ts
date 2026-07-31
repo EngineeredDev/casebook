@@ -33,6 +33,16 @@ import type {
   UpdateState,
 } from "../shared/api.ts";
 import { DATA_VERSION, type DataDoc } from "../shared/types.ts";
+import type {
+  CategoryReply,
+  CategoryRequest,
+  LlmResult,
+  MemoryAdvice,
+  ModelStatus,
+  SummaryRequest,
+} from "../shared/llm.ts";
+import { downloadModel, modelStatus, pauseDownload, removeModel } from "./llm/model.ts";
+import { classify, memoryAdvice, shutdown as shutdownInference, summarize } from "./llm/service.ts";
 import {
   backupsState,
   currentMirrorState,
@@ -186,7 +196,18 @@ function failure(error: unknown): { error: string; kind: EncryptionFailure } {
   return { error: describe(error), kind: "other" };
 }
 
-export function registerIpc(): void {
+/**
+ * How progress and streamed text reach open windows. Supplied by index.ts,
+ * which is the only place in the app that talks to `webContents` — the modules
+ * that produce the events know nothing about windows, exactly as autolock.ts
+ * and updater.ts already do.
+ */
+export interface Broadcast {
+  modelStatus(status: ModelStatus): void;
+  summaryChunk(chunk: string): void;
+}
+
+export function registerIpc(broadcast: Broadcast): void {
   handle("doc:get", (): DataDoc => currentDoc());
 
   handle("doc:save", (candidate: unknown, confirmed: unknown): SaveResult => {
@@ -579,6 +600,48 @@ export function registerIpc(): void {
     );
   });
 
+  /* ---------- AI features ---------- */
+
+  handle("llm:status", (): ModelStatus => modelStatus());
+
+  handle("llm:download", (): ModelStatus => {
+    // Deliberately not awaited: 2.3 GB takes minutes and the renderer needs an
+    // answer now. Progress and completion both arrive as broadcasts.
+    void downloadModel(broadcast.modelStatus);
+    return modelStatus();
+  });
+
+  handle("llm:pause-download", (): ModelStatus => {
+    pauseDownload();
+    return modelStatus();
+  });
+
+  handle("llm:remove", async (): Promise<ModelStatus> => {
+    // Stop the process before deleting what it has open. Removing a model out
+    // from under a running load is how you get a crash instead of a tidy-up.
+    shutdownInference();
+    await removeModel();
+    const status = modelStatus();
+    broadcast.modelStatus(status);
+    return status;
+  });
+
+  handle("llm:memory", (): MemoryAdvice => memoryAdvice());
+
+  handle("llm:category", (request: unknown): Promise<LlmResult<CategoryReply>> => {
+    if (!isCategoryRequest(request)) {
+      return Promise.resolve({ unavailable: "crashed", message: "Malformed request." });
+    }
+    return classify(request);
+  });
+
+  handle("llm:summary", (request: unknown): Promise<LlmResult<string>> => {
+    if (!isSummaryRequest(request)) {
+      return Promise.resolve({ unavailable: "crashed", message: "Malformed request." });
+    }
+    return summarize(request, broadcast.summaryChunk);
+  });
+
   handle("legacy:retire", (dir: unknown): RetireResult => {
     if (typeof dir !== "string") return { error: "That isn't a folder Casebook can read." };
     // retireInstall re-describes the folder itself before touching anything, so
@@ -586,4 +649,34 @@ export function registerIpc(): void {
     // deletes rather than trusted from here — or from the renderer.
     return retireInstall(dir);
   });
+}
+
+/**
+ * Shape checks for the two requests that carry structured data from the
+ * renderer. Lighter than `isDataDoc` because nothing here is written to disk —
+ * the cost of a malformed one is a wasted inference, not a damaged file — but
+ * present because the alternative is handing unvalidated shapes to a native
+ * library in another process.
+ */
+function isCategoryRequest(value: unknown): value is CategoryRequest {
+  if (typeof value !== "object" || value === null) return false;
+  const r = value as CategoryRequest;
+  return (
+    (r.kind === "classify-entry" || r.kind === "suggest-mapping") &&
+    Array.isArray(r.samples) &&
+    r.samples.every((s) => typeof s === "string") &&
+    Array.isArray(r.categories) &&
+    r.categories.every((c) => typeof c?.id === "string" && typeof c?.name === "string")
+  );
+}
+
+function isSummaryRequest(value: unknown): value is SummaryRequest {
+  if (typeof value !== "object" || value === null) return false;
+  const r = value as SummaryRequest;
+  return (
+    typeof r.studentName === "string" &&
+    typeof r.windowLabel === "string" &&
+    Array.isArray(r.notes) &&
+    r.notes.every((n) => typeof n?.date === "string" && typeof n?.text === "string")
+  );
 }

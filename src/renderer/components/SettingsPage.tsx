@@ -5,6 +5,7 @@ import { IconFolderOpen, IconFolderSymlink } from "@tabler/icons-react";
 import type { BackupsState, DataLocation, MirrorState } from "../../shared/api.ts";
 import { api, bridgeMessage } from "../lib/api.ts";
 import { useStore } from "../store.tsx";
+import { AiPanel } from "./AiPanel.tsx";
 import { BackupsPanel } from "./BackupsPanel.tsx";
 import { EncryptionPanel } from "./EncryptionPanel.tsx";
 import { MirrorPanel } from "./MirrorPanel.tsx";
@@ -166,6 +167,7 @@ export function SettingsPage() {
       <BackupsPanel state={backups} onRefresh={refreshBackups} onRestored={restored} />
       <MirrorPanel mirror={backups?.mirror ?? null} onChange={applyMirror} />
       <EncryptionPanel />
+      <AiPanel />
       <UpdatePanel />
     </Stack>
   );

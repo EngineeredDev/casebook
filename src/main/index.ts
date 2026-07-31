@@ -7,6 +7,7 @@ import { buildMenu } from "./menu.ts";
 import { registerAppScheme, serveRenderer } from "./renderer.ts";
 import { settlePendingUpdate } from "./selfupdate.ts";
 import { startUpdateChecks } from "./updater.ts";
+import { shutdown as shutdownInference } from "./llm/service.ts";
 import { createWindow } from "./window.ts";
 
 /**
@@ -50,7 +51,23 @@ function start(): void {
   settlePendingUpdate();
 
   serveRenderer();
-  registerIpc();
+  registerIpc({
+    /**
+     * The only place `webContents` is touched for the AI features, matching how
+     * updates and locking already work: the modules that produce these events
+     * know nothing about windows.
+     */
+    modelStatus: (status) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.send("llm:model-status", status);
+      }
+    },
+    summaryChunk: (chunk) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.send("llm:summary-chunk", chunk);
+      }
+    },
+  });
   buildMenu();
   createWindow();
 
@@ -89,6 +106,16 @@ function start(): void {
  * minutes since the last one. Synchronous and on `will-quit`, which is the last
  * moment the app is still able to write anything at all.
  */
+/**
+ * The inference process must not outlive the app. It is a child utilityProcess
+ * so Electron would take it down anyway, but doing it here means the 3.5 GB it
+ * may be holding is released while the app is closing rather than as part of
+ * whatever the OS gets round to.
+ */
+app.on("before-quit", () => {
+  shutdownInference();
+});
+
 app.on("will-quit", () => {
   snapshotOnQuit();
 });

@@ -14,11 +14,44 @@ directories:
 # want to construct that URL rather than query an API to discover it.
 artifactName: ${productName}-mac-${arch}.${ext}
 
-# The renderer is bundled into out/ and the package has no runtime
-# dependencies, so this is the whole app.
+# The renderer is bundled into out/, so out/ plus the manifest was the whole
+# app until node-llama-cpp arrived. It is the one runtime dependency, and it
+# has to ship: the inference process `require`s it at runtime rather than
+# having it bundled, because bundling breaks the on-disk layout its native
+# binaries are located through.
+#
+# The exclusions below matter more than they look. node-llama-cpp ships
+# prebuilt binaries for every platform it supports — Linux, Windows, CUDA,
+# Vulkan — and without filtering them out they all ride along, several hundred
+# megabytes of them, in a Mac-arm64-only app.
 files:
   - out/**
   - package.json
+  - node_modules/node-llama-cpp/**
+  - "!node_modules/node-llama-cpp/{docs,test,.github,templates}/**"
+  - node_modules/@node-llama-cpp/mac-arm64-metal/**
+  - node_modules/ipull/**
+  - node_modules/lifecycle-utils/**
+
+# The native pieces cannot live inside app.asar: dlopen needs a real path on
+# disk, not a path into an archive. Copied from the official node-llama-cpp
+# Electron template.
+asarUnpack:
+  - node_modules/node-llama-cpp/bins/**
+  - node_modules/@node-llama-cpp/**
+
+# Re-sign after unpacking, and the ordering is the whole point.
+#
+# electron-builder signs the bundle before asarUnpack's payload is in its final
+# place, so the unpacked .node files and dylibs end up with no valid signature
+# of their own. On arm64 macOS that is fatal — the loader kills the app as
+# damaged (electron-builder#5850).
+#
+# It is doubly load-bearing here because `identity` is ad-hoc and selfupdate.ts
+# runs `codesign --verify --deep --strict` against every downloaded bundle
+# before swapping it in. Skip this and the app still launches from a fresh
+# install while every future self-update silently refuses.
+afterPack: build/resign.cjs
 
 mac:
   category: public.app-category.productivity

@@ -9,6 +9,14 @@
  */
 
 import type { DataDoc } from "./types.ts";
+import type {
+  CategoryReply,
+  CategoryRequest,
+  LlmResult,
+  MemoryAdvice,
+  ModelStatus,
+  SummaryRequest,
+} from "./llm.ts";
 
 /** How much a refused save would have removed. Both counts, so the wording can be exact. */
 export interface MassDeletion {
@@ -314,4 +322,38 @@ export interface CasebookApi {
    * hears about it. Returns its own unsubscribe.
    */
   onUpdateAvailable(listener: (info: UpdateInfo) => void): () => void;
+
+  /**
+   * The AI features (docs/local-llm.md). Every method here describes something
+   * optional — a model that may never be downloaded, a process that is usually
+   * not running, an answer that is always allowed to be "I don't know". Nothing
+   * above this line may come to depend on anything below it.
+   */
+  getModelStatus(): Promise<ModelStatus>;
+  /** Starts or resumes the download. Progress arrives via `onModelStatus`. */
+  startModelDownload(): Promise<ModelStatus>;
+  /** Stops it, keeping what has arrived so it can be resumed. */
+  pauseModelDownload(): Promise<ModelStatus>;
+  /** Deletes the weights and hands the disk back. */
+  removeModel(): Promise<ModelStatus>;
+  onModelStatus(listener: (status: ModelStatus) => void): () => void;
+  /** Whether there is room to load the model right now, and how much is needed. */
+  getMemoryAdvice(): Promise<MemoryAdvice>;
+  /**
+   * One category question for the import workbench. Never throws for an
+   * unavailable model — the caller's correct response is always to carry on
+   * without it, so the failure is a value.
+   */
+  suggestCategory(request: CategoryRequest): Promise<LlmResult<CategoryReply>>;
+  /**
+   * A grounded narrative summary of some notes. Streams through
+   * `onSummaryChunk` while it runs; the resolved value is the whole of it.
+   * Never persisted anywhere by anything.
+   */
+  summarizeNotes(request: SummaryRequest): Promise<LlmResult<string>>;
+  /**
+   * Text as the summary is generated. Only one summary runs at a time — the
+   * inference host has a single job queue — so these need no correlation id.
+   */
+  onSummaryChunk(listener: (chunk: string) => void): () => void;
 }

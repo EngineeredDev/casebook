@@ -47,7 +47,7 @@ const FIXTURES = join(HERE, "fixtures");
 
 const DEFAULT_MODEL = join(
   homedir(),
-  "Library/Application Support/Casebook/models/hf_unsloth_Qwen3-4B-Instruct-2507.Q4_K_M.gguf",
+  "Library/Application Support/Casebook/models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
 );
 
 /** The plan's bar for shipping LLM prefill, on gap chunks. */
