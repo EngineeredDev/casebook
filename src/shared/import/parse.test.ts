@@ -194,6 +194,53 @@ describe("segmentation", () => {
   });
 });
 
+describe("manual boundaries", () => {
+  const doc = [
+    "9/25/2025 @ 10:00 Routine Session", // line 0
+    "She came in upset.", // line 1
+    "10/2/2025 is a date she mentioned, capitalised oddly.", // line 2
+    "Follow-up needed.", // line 3
+  ].join("\n");
+
+  it("merges an entry into the one above when a boundary is suppressed", () => {
+    // Over-splitting is fixed by taking a boundary away. The false header's
+    // line has to survive as note text — it was always prose.
+    const split = parseImport("9/25/2025 @ 10:00 A\nnote\n10/2/2025 Wrongly Split\nmore");
+    expect(split.entries).toHaveLength(2);
+
+    const merged = parseImport("9/25/2025 @ 10:00 A\nnote\n10/2/2025 Wrongly Split\nmore", {
+      suppressedBoundaries: [2],
+    });
+    expect(merged.entries).toHaveLength(1);
+    expect(merged.entries[0]!.note).toContain("10/2/2025 Wrongly Split");
+    expect(merged.entries[0]!.note).toContain("more");
+  });
+
+  it("splits at a line that looks like nothing, without eating it", () => {
+    // Under-splitting is the dangerous direction — an entry that silently never
+    // existed. Forcing a boundary on ordinary prose has to keep that prose.
+    // The document splits into one entry on its own: line 2 opens with a date
+    // but continues in lowercase prose, which the weak guard correctly refuses.
+    expect(parseImport(doc).entries).toHaveLength(1);
+
+    const forced = parseImport(doc, { forcedBoundaries: [3] });
+    expect(forced.entries).toHaveLength(2);
+    expect(forced.entries[1]!.note).toBe("<p>Follow-up needed.</p>");
+    expect(forced.entries[1]!.date).toBeNull();
+    // Nothing was read off that line, so every field is up for review.
+    expect(forced.entries[1]!.flags).toContain("weak-header");
+    expect(forced.entries[1]!.flags).toContain("no-type-phrase");
+  });
+
+  it("still loses no line when boundaries are moved by hand", () => {
+    const forced = parseImport(doc, { forcedBoundaries: [1, 3], suppressedBoundaries: [2] });
+    const covered = forced.entries.flatMap((e) =>
+      doc.split("\n").slice(e.chunk.startLine, e.chunk.endLine + 1),
+    );
+    expect(covered.join("\n")).toBe(doc);
+  });
+});
+
 describe("clock readings", () => {
   const minutesOf = (header: string) => parseImport(header).entries[0]!;
 

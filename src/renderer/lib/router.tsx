@@ -1,5 +1,5 @@
 /**
- * A router for eight routes and one dynamic segment.
+ * A router for nine routes and one dynamic segment.
  *
  * Deliberately not react-router: everything that library adds beyond this file
  * — nested layouts, loaders, lazy routes, navigation blocking, scroll
@@ -22,6 +22,7 @@ export type Route =
   | { page: "student"; studentId: string }
   | { page: "categories" }
   | { page: "reports" }
+  | { page: "import" }
   | { page: "settings" }
   | { page: "notFound" };
 
@@ -39,6 +40,7 @@ export function parseRoute(pathname: string): Route {
     head === "dashboard" ||
     head === "categories" ||
     head === "reports" ||
+    head === "import" ||
     head === "settings"
   ) {
     return { page: head };

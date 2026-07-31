@@ -26,6 +26,7 @@ import {
   IconChartBar,
   IconCircleCheck,
   IconFileDescription,
+  IconFileImport,
   IconMoon,
   IconPencilPlus,
   IconSettings,
@@ -46,6 +47,7 @@ import { StudentsPage } from "./components/StudentsPage.tsx";
 import { StudentPage } from "./components/StudentPage.tsx";
 import { CategoriesPage } from "./components/CategoriesPage.tsx";
 import { ReportsPage } from "./components/ReportsPage.tsx";
+import { ImportPage } from "./components/ImportPage.tsx";
 import { SettingsPage } from "./components/SettingsPage.tsx";
 import { ImportOldData } from "./components/ImportOldData.tsx";
 
@@ -58,6 +60,7 @@ const NAV: NavEntry[] = [
   { path: "/students", label: "Students", icon: IconUsers, hint: "Roster and totals" },
   { path: "/categories", label: "Categories", icon: IconTags, hint: "Edit and archive" },
   { path: "/reports", label: "Reports", icon: IconFileDescription, hint: "Print and export" },
+  { path: "/import", label: "Import", icon: IconFileImport, hint: "Bring in a document" },
 ];
 
 /** Sits below the main list rather than in it — it is about the app, not the work. */
@@ -388,6 +391,8 @@ function CurrentPage(): ReactNode {
       return <CategoriesPage />;
     case "reports":
       return <ReportsPage />;
+    case "import":
+      return <ImportPage />;
     case "settings":
       return <SettingsPage />;
     case "notFound":

@@ -10,7 +10,7 @@ import {
 } from "react";
 import { Center, Loader } from "@mantine/core";
 import type { EncryptionState, MassDeletion } from "../shared/api.ts";
-import type { Category, DataDoc, Entry, Student } from "../shared/types.ts";
+import type { Category, DataDoc, Entry, ImportMappings, Student } from "../shared/types.ts";
 import { RecoveryScreen } from "./components/RecoveryScreen.tsx";
 import { UnlockScreen } from "./components/UnlockScreen.tsx";
 import { api, bridgeMessage } from "./lib/api.ts";
@@ -39,9 +39,20 @@ interface StoreValue {
   addStudent: (partial: { name: string; iep: boolean }) => Student;
   updateStudent: (id: string, patch: Partial<Student>) => void;
   addEntry: (partial: Omit<Entry, "id" | "createdAt">) => void;
+  /**
+   * A whole reviewed import, in one document change.
+   *
+   * Not `addEntry` in a loop: that is forty renders and forty intermediate
+   * documents for one action, and — more to the point — the deletion tripwire
+   * compares consecutive documents, so a bulk change should reach it as the one
+   * thing it actually is.
+   */
+  addEntries: (partials: Omit<Entry, "id" | "createdAt">[]) => void;
   updateEntry: (id: string, patch: Partial<Entry>) => void;
   deleteEntry: (id: string) => void;
   addCategory: (name: string, group: Category["group"]) => void;
+  /** Remember what her import type phrases mean, replacing the whole table. */
+  setImportMappings: (mappings: ImportMappings) => void;
   updateCategory: (id: string, patch: Partial<Category>) => void;
 }
 
@@ -339,6 +350,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [mutate],
   );
 
+  const addEntries = useCallback(
+    (partials: Omit<Entry, "id" | "createdAt">[]) =>
+      mutate((d) => ({
+        ...d,
+        entries: [
+          ...d.entries,
+          ...partials.map((partial) => ({
+            ...partial,
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
+          })),
+        ],
+      })),
+    [mutate],
+  );
+
   const updateEntry = useCallback(
     (id: string, patch: Partial<Entry>) =>
       mutate((d) => ({
@@ -371,6 +398,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [mutate],
   );
 
+  const setImportMappings = useCallback(
+    (mappings: ImportMappings) =>
+      mutate((d) => ({
+        ...d,
+        // Back to absent rather than `{}` when the last one is cleared, so a
+        // document that has decided nothing looks like one that never could.
+        importMappings: Object.keys(mappings).length > 0 ? mappings : undefined,
+      })),
+    [mutate],
+  );
+
   // Built once per doc change rather than per render: every consumer re-renders
   // whenever this value's identity changes, and the actions are already
   // useCallback-stable. It has to be computed above the early returns below,
@@ -390,10 +428,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             addStudent,
             updateStudent,
             addEntry,
+            addEntries,
             updateEntry,
             deleteEntry,
             addCategory,
             updateCategory,
+            setImportMappings,
           }
         : null,
     [
@@ -408,10 +448,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addStudent,
       updateStudent,
       addEntry,
+      addEntries,
       updateEntry,
       deleteEntry,
       addCategory,
       updateCategory,
+      setImportMappings,
     ],
   );
 

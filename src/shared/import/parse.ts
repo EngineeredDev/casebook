@@ -43,6 +43,20 @@ export interface ParseOptions {
   schoolYearStartMonth?: number;
   /** YYYY-MM-DD. Which school year a yearless date belongs to is relative to this. */
   referenceDate?: string;
+  /**
+   * Line numbers that must open an entry even though nothing about them looks
+   * like a header, and line numbers that must not open one even though they do.
+   *
+   * This is how the workbench implements click-to-split and click-to-merge. It
+   * could have re-implemented the joining and cutting in the UI over an array
+   * of chunks; passing the corrections back through here instead means there is
+   * exactly one piece of code that decides where entries begin, and it is the
+   * one with the tests. A merge is a suppressed boundary and a split is a
+   * forced one — nothing else in the pipeline has to know that a person
+   * intervened.
+   */
+  forcedBoundaries?: readonly number[];
+  suppressedBoundaries?: readonly number[];
 }
 
 /**
@@ -83,13 +97,34 @@ interface Header {
   phrase: string | null;
   /** Matched by the loose fallback rather than the `date @ time` form. */
   weak: boolean;
+  /**
+   * False for a boundary a person forced on a line that says nothing about a
+   * date or a time. That line is ordinary prose and belongs in the note, so it
+   * opens the chunk without being eaten by it.
+   */
+  consumesLine: boolean;
 }
+
+/** A boundary somebody asked for on a line that does not look like a header. */
+const FORCED_HEADER: Header = {
+  date: null,
+  startMinutes: null,
+  endMinutes: null,
+  phrase: null,
+  weak: true,
+  consumesLine: false,
+};
 
 export function parseImport(text: string, options: ParseOptions = {}): ParsedDoc {
   const lines = text.split(/\r?\n/);
+  const forced = new Set(options.forcedBoundaries ?? []);
+  const suppressed = new Set(options.suppressedBoundaries ?? []);
   const found: { line: number; header: Header }[] = [];
   for (const [index, line] of lines.entries()) {
-    const header = matchHeader(line ?? "", options);
+    // A forced boundary wins over a suppressed one only by never being both:
+    // the workbench toggles a line into one set or neither, never into both.
+    if (suppressed.has(index)) continue;
+    const header = matchHeader(line ?? "", options) ?? (forced.has(index) ? FORCED_HEADER : null);
     if (header) found.push({ line: index, header });
   }
 
@@ -103,7 +138,8 @@ export function parseImport(text: string, options: ParseOptions = {}): ParsedDoc
 
   const entries = found.map((hit, i): ParsedEntry => {
     const endLine = (found[i + 1]?.line ?? lines.length) - 1;
-    const body = lines.slice(hit.line + 1, endLine + 1).join("\n");
+    const bodyStart = hit.header.consumesLine ? hit.line + 1 : hit.line;
+    const body = lines.slice(bodyStart, endLine + 1).join("\n");
     return buildEntry(
       hit.header,
       {
@@ -186,6 +222,7 @@ function matchHeader(line: string, options: ParseOptions): Header | null {
     endMinutes: range?.end ?? null,
     phrase,
     weak: !strong,
+    consumesLine: true,
   };
 }
 
