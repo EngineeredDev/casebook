@@ -30,6 +30,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { useStore } from "../store.tsx";
+import { NotesSummary, PatternsPanel } from "./StudentSummary.tsx";
 import { useChartPalette } from "../theme.tsx";
 import type { Entry } from "../../shared/types.ts";
 import {
@@ -392,6 +393,12 @@ export function StudentPage({ studentId }: { studentId: string }) {
           />
         )}
       </ChartCard>
+
+      {/* The deterministic panel first, and always. The AI one renders nothing
+          at all when the model is not downloaded, so this page reads the same
+          for someone who never turns the feature on. */}
+      <PatternsPanel entries={inRange} studentId={studentId} rangeLabel={range.label} />
+      <NotesSummary student={student} entries={mine} />
 
       <Card>
         <Group justify="space-between" mb="sm" wrap="nowrap">

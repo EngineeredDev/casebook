@@ -227,6 +227,87 @@ export function studentEntries(entries: Entry[], studentId: string): Entry[] {
     .toSorted((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 }
 
+/**
+ * The shape of a student's service over a window, as facts rather than prose.
+ *
+ * This is the half of "summarise this student" that needs no model at all
+ * (docs/local-llm.md §5): how often she is actually seeing them, how long the
+ * quiet stretches were, how many times they did not turn up. All of it is a
+ * query over structured entries, so it is instant and it is always right —
+ * which is exactly what a model is worst at and this is best at.
+ */
+export interface ServicePattern {
+  /** Direct-service sessions that carried time. What a mandate is measured in. */
+  sessions: number;
+  /** Mean days between consecutive sessions. Null with fewer than two. */
+  meanDaysBetween: number | null;
+  /** Stretches of at least `GAP_DAYS` with no direct service, longest first. */
+  gaps: ServiceGap[];
+  /** No-shows and cancellations — untimed categories, which store zero minutes. */
+  missed: number;
+  /** The most recent direct session, or null when there has not been one. */
+  lastSession: string | null;
+}
+
+export interface ServiceGap {
+  /** The session before the quiet stretch, and the one that ended it. */
+  from: string;
+  to: string;
+  days: number;
+}
+
+/**
+ * Three weeks. Long enough to skip a fortnight's holiday and a single missed
+ * week without crying wolf, short enough that a term's silence is caught.
+ */
+const GAP_DAYS = 21;
+
+export function servicePattern(
+  entries: Entry[],
+  categories: Category[],
+  studentId: string,
+): ServicePattern {
+  const mine = entries.filter((e) => e.studentIds.includes(studentId));
+  const missed = mine.filter((e) => isUntimed(e.categoryId, categories)).length;
+
+  // Untimed events are deliberately excluded from the cadence: a no-show is
+  // evidence that a session did *not* happen, and counting it as one would
+  // report a student as seen regularly on the strength of their absences.
+  const dates = mine
+    .filter(
+      (e) =>
+        categoryGroupOf(e.categoryId, categories) === "direct" &&
+        !isUntimed(e.categoryId, categories),
+    )
+    .map((e) => e.date)
+    .toSorted((a, b) => a.localeCompare(b));
+
+  const gaps: ServiceGap[] = [];
+  let spanned = 0;
+  for (let i = 1; i < dates.length; i += 1) {
+    const days = daysBetween(dates[i - 1]!, dates[i]!);
+    spanned += days;
+    if (days >= GAP_DAYS) gaps.push({ from: dates[i - 1]!, to: dates[i]!, days });
+  }
+
+  return {
+    sessions: dates.length,
+    meanDaysBetween: dates.length > 1 ? Math.round(spanned / (dates.length - 1)) : null,
+    gaps: gaps.toSorted((a, b) => b.days - a.days),
+    missed,
+    lastSession: dates[dates.length - 1] ?? null,
+  };
+}
+
+/**
+ * Whole days between two calendar dates. Built from UTC midnights on purpose:
+ * local-time arithmetic across a daylight-saving boundary is off by one, and a
+ * "21 days" threshold that moves twice a year is a bug nobody would look for.
+ */
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+}
+
 export interface MandateRow {
   student: Student;
   mandated: number;
