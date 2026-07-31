@@ -13,9 +13,35 @@ import type { CasebookApi, UpdateInfo } from "../shared/api.ts";
 
 const api: CasebookApi = {
   getDoc: () => ipcRenderer.invoke("doc:get"),
-  saveDoc: (doc) => ipcRenderer.invoke("doc:save", doc),
+  saveDoc: (doc, confirmed) => ipcRenderer.invoke("doc:save", doc, confirmed === true),
   setUnsaved: (unsaved) => ipcRenderer.invoke("doc:set-unsaved", unsaved),
   exportFile: (name, contents) => ipcRenderer.invoke("file:export", name, contents),
+
+  getRecoveryOffer: () => ipcRenderer.invoke("backup:offer"),
+  getBackups: () => ipcRenderer.invoke("backup:list"),
+  restoreSnapshot: (name) => ipcRenderer.invoke("backup:restore", name),
+  checkBackups: () => ipcRenderer.invoke("backup:check"),
+  revealBackupsFolder: () => ipcRenderer.invoke("backup:reveal"),
+
+  getEncryptionState: () => ipcRenderer.invoke("encryption:state"),
+  enableEncryption: (passphrase) => ipcRenderer.invoke("encryption:enable", passphrase),
+  disableEncryption: () => ipcRenderer.invoke("encryption:disable"),
+  unlock: (passphrase) => ipcRenderer.invoke("encryption:unlock", passphrase),
+  unlockWithRecoveryKey: (recoveryKey, newPassphrase) =>
+    ipcRenderer.invoke("encryption:recover", recoveryKey, newPassphrase),
+  changePassphrase: (current, next) => ipcRenderer.invoke("encryption:change", current, next),
+  lockNow: () => ipcRenderer.invoke("encryption:lock"),
+  setAutoLockMinutes: (minutes) => ipcRenderer.invoke("encryption:auto-lock", minutes),
+  onLocked: (listener: () => void) => {
+    const forward = () => listener();
+    ipcRenderer.on("encryption:locked", forward);
+    return () => ipcRenderer.removeListener("encryption:locked", forward);
+  },
+
+  getMirrorState: () => ipcRenderer.invoke("mirror:state"),
+  chooseMirrorFolder: () => ipcRenderer.invoke("mirror:choose"),
+  setMirrorFolder: (dir) => ipcRenderer.invoke("mirror:set", dir),
+  syncMirrorNow: () => ipcRenderer.invoke("mirror:sync"),
 
   getDataLocation: () => ipcRenderer.invoke("folder:get"),
   revealDataFolder: () => ipcRenderer.invoke("folder:reveal"),

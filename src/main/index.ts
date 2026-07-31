@@ -1,5 +1,8 @@
 import { app, BrowserWindow, session } from "electron";
-import { registerIpc } from "./ipc.ts";
+import { startAutoLock } from "./autolock.ts";
+import { mirrorSoon } from "./backups.ts";
+import { snapshotOnQuit } from "./storage.ts";
+import { hasUnsavedChanges, registerIpc } from "./ipc.ts";
 import { buildMenu } from "./menu.ts";
 import { registerAppScheme, serveRenderer } from "./renderer.ts";
 import { settlePendingUpdate } from "./selfupdate.ts";
@@ -64,7 +67,31 @@ function start(): void {
       window.webContents.send("update:available", info);
     }
   });
+
+  // Catch the second location up on whatever it missed — a drive that was
+  // unplugged all week, or snapshots taken while it was.
+  mirrorSoon();
+
+  // The window has the document in memory, so locking the main process without
+  // telling it would protect the files and leave the student names on screen.
+  startAutoLock({
+    onLocked: () => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.send("encryption:locked");
+      }
+    },
+    pendingEdits: hasUnsavedChanges,
+  });
 }
+
+/**
+ * One last snapshot on the way out, so quitting at ten past never costs the ten
+ * minutes since the last one. Synchronous and on `will-quit`, which is the last
+ * moment the app is still able to write anything at all.
+ */
+app.on("will-quit", () => {
+  snapshotOnQuit();
+});
 
 /** Opening the app again while it is already running just brings it forward. */
 function focusWindow(): void {

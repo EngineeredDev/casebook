@@ -11,11 +11,21 @@ import { app, BrowserWindow, dialog, ipcMain, shell, type IpcMainInvokeEvent } f
 import { mkdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, extname, join } from "node:path";
 import type {
+  BackupsState,
+  CheckBackupsResult,
   DataLocation,
+  EnableEncryptionResult,
+  EncryptionFailure,
+  EncryptionResult,
+  EncryptionState,
+  UnlockResult,
   ExportResult,
   ImportResult,
   LegacyInstall,
+  MirrorState,
+  RecoveryOffer,
   RelocateResult,
+  RestoreResult,
   RetireResult,
   SaveResult,
   UpdateCheck,
@@ -23,11 +33,33 @@ import type {
   UpdateState,
 } from "../shared/api.ts";
 import { DATA_VERSION, type DataDoc } from "../shared/types.ts";
+import {
+  backupsState,
+  currentMirrorState,
+  mirrorNow,
+  mirrorSoon,
+  recoveryOffer,
+  restore,
+  revealBackups,
+  setMirrorDir,
+} from "./backups.ts";
+import { autoLockMinutes, lockAndTell, setAutoLockMinutes } from "./autolock.ts";
+import { CryptoError } from "./crypto.ts";
 import { relocateData } from "./datafolder.ts";
+import { buildMenu } from "./menu.ts";
+import {
+  changePassphrase,
+  disable as disableEncryption,
+  enable as enableEncryption,
+  isEnabled,
+  isUnlocked,
+  unlock,
+  unlockWithRecovery,
+} from "./encryption.ts";
 import { describeInstall, findInstall, importInstall, retireInstall } from "./legacy.ts";
 import { canRelocate, dataDir, dataFile } from "./paths.ts";
 import { isRendererUrl } from "./renderer.ts";
-import { backupIfNeeded, loadDoc, saveDoc } from "./storage.ts";
+import { checkSnapshots, loadDoc, massDeletion, saveDoc } from "./storage.ts";
 import { canSelfUpdate, installUpdate } from "./selfupdate.ts";
 import { checkForUpdate, getAvailableUpdate } from "./updater.ts";
 
@@ -121,10 +153,26 @@ function dialogParent(): BrowserWindow | undefined {
   return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
 }
 
+function describe(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Carry the kind across the bridge rather than the exception.
+ *
+ * The renderer words a wrong passphrase, a mistyped recovery key and a damaged
+ * keyfile quite differently, and recovering which happened by matching on a
+ * message string is how those three end up sharing one wrong sentence.
+ */
+function failure(error: unknown): { error: string; kind: EncryptionFailure } {
+  if (error instanceof CryptoError) return { error: error.message, kind: error.kind };
+  return { error: describe(error), kind: "other" };
+}
+
 export function registerIpc(): void {
   handle("doc:get", (): DataDoc => currentDoc());
 
-  handle("doc:save", (candidate: unknown): SaveResult => {
+  handle("doc:save", (candidate: unknown, confirmed: unknown): SaveResult => {
     /**
      * Read rather than refuse when the cache is empty. `legacy:import` drops it
      * deliberately, and a save already in flight when that happens used to come
@@ -144,10 +192,23 @@ export function registerIpc(): void {
     if (!isDataDoc(candidate)) return { error: "Malformed document", retryable: false };
     if (candidate.rev !== current.rev) return { conflict: true, currentRev: current.rev };
 
+    /**
+     * The app removes one entry at a time and has no "delete everything"
+     * anywhere, so a document arriving with a fifth of the log missing did not
+     * get that way by being edited. Refusing costs one dialog on a false alarm
+     * and nothing at all the rest of the time; the document is still in the
+     * window either way, so nothing is lost by asking.
+     */
+    if (confirmed !== true) {
+      const losing = massDeletion(current, candidate);
+      if (losing) return { confirmDeletion: losing };
+    }
+
     const next: DataDoc = { ...candidate, rev: current.rev + 1 };
     try {
-      backupIfNeeded();
-      saveDoc(next);
+      // `current` becomes data.json.prev — the outgoing version, which bounds
+      // the damage of a save that lands but shouldn't have to a single save.
+      saveDoc(next, current);
     } catch (error) {
       // A write that failed must not advance the in-memory doc: leaving it
       // ahead of the file would make the next save a phantom conflict and lose
@@ -159,8 +220,176 @@ export function registerIpc(): void {
       };
     }
     doc = next;
+    // After the save has already succeeded, and never awaited. The second copy
+    // must not be able to slow a save down or fail one.
+    mirrorSoon();
     return { ok: true, rev: next.rev };
   });
+
+  /* ---------- backups ---------- */
+
+  handle("backup:offer", (): RecoveryOffer => recoveryOffer());
+
+  handle("backup:list", (): BackupsState => backupsState());
+
+  handle("backup:restore", (name: unknown): RestoreResult => {
+    if (typeof name !== "string") return { error: "That isn't a backup Casebook can read." };
+    /**
+     * Null when the live file cannot be read, which is the whole reason this
+     * exists — and the case where `restore` moves that file aside instead of
+     * snapshotting it. Deliberately not `currentDoc()`, which throws.
+     */
+    let current: DataDoc | null = doc;
+    if (!current) {
+      try {
+        current = loadDoc();
+      } catch {
+        current = null;
+      }
+    }
+    const { result, doc: restored } = restore(name, current);
+    if ("ok" in result) doc = restored;
+    return result;
+  });
+
+  handle("backup:check", (): CheckBackupsResult => checkSnapshots());
+
+  handle("backup:reveal", (): void => {
+    revealBackups();
+  });
+
+  /* ---------- the passphrase ---------- */
+
+  handle(
+    "encryption:state",
+    (): EncryptionState => ({
+      enabled: isEnabled(),
+      unlocked: isUnlocked(),
+      autoLockMinutes: autoLockMinutes(),
+    }),
+  );
+
+  handle("encryption:unlock", async (passphrase: unknown): Promise<UnlockResult> => {
+    if (typeof passphrase !== "string") return { error: "Enter your passphrase.", kind: "other" };
+    try {
+      await unlock(passphrase);
+    } catch (error) {
+      return failure(error);
+    }
+    // The cached document was read — or failed to be read — while locked.
+    doc = null;
+    // "Lock Now" is disabled while there is nothing to lock, and its enabled
+    // state is baked into the built menu rather than evaluated on open.
+    buildMenu();
+    return { ok: true };
+  });
+
+  handle(
+    "encryption:recover",
+    async (recoveryKey: unknown, nextPassphrase: unknown): Promise<UnlockResult> => {
+      if (typeof recoveryKey !== "string" || typeof nextPassphrase !== "string") {
+        return { error: "Enter your recovery key and a new passphrase.", kind: "other" };
+      }
+      if (nextPassphrase.length === 0) {
+        return { error: "Choose a new passphrase.", kind: "other" };
+      }
+      try {
+        await unlockWithRecovery(recoveryKey, nextPassphrase);
+      } catch (error) {
+        return failure(error);
+      }
+      doc = null;
+      buildMenu();
+      return { ok: true };
+    },
+  );
+
+  handle("encryption:enable", async (passphrase: unknown): Promise<EnableEncryptionResult> => {
+    if (typeof passphrase !== "string" || passphrase.length === 0) {
+      return { error: "Choose a passphrase." };
+    }
+    try {
+      const recoveryKey = await enableEncryption(passphrase);
+      // Everything on disk moved to `.enc`; the cached copy's provenance is
+      // fine but the next read has to go through the new codec.
+      doc = null;
+      buildMenu();
+      mirrorSoon();
+      return { ok: true, recoveryKey };
+    } catch (error) {
+      return { error: `Casebook couldn't turn on the passphrase — ${describe(error)}` };
+    }
+  });
+
+  handle("encryption:disable", (): EncryptionResult => {
+    try {
+      disableEncryption();
+      doc = null;
+      buildMenu();
+      mirrorSoon();
+      return { ok: true };
+    } catch (error) {
+      return failure(error);
+    }
+  });
+
+  handle(
+    "encryption:change",
+    async (current: unknown, next: unknown): Promise<EncryptionResult> => {
+      if (typeof current !== "string" || typeof next !== "string" || next.length === 0) {
+        return { error: "Enter your current passphrase and a new one.", kind: "other" };
+      }
+      try {
+        await changePassphrase(current, next);
+        mirrorSoon();
+        return { ok: true };
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
+
+  handle("encryption:lock", (): void => {
+    lockAndTell();
+    doc = null;
+    buildMenu();
+  });
+
+  handle("encryption:auto-lock", (minutes: unknown): EncryptionState => {
+    const value =
+      minutes === null || (typeof minutes === "number" && Number.isInteger(minutes) && minutes > 0)
+        ? minutes
+        : null;
+    setAutoLockMinutes(value);
+    return { enabled: isEnabled(), unlocked: isUnlocked(), autoLockMinutes: autoLockMinutes() };
+  });
+
+  /* ---------- the second location ---------- */
+
+  handle("mirror:state", (): MirrorState => currentMirrorState());
+
+  handle("mirror:choose", async (): Promise<string | null> => {
+    const window = dialogParent();
+    const options = {
+      title: "Choose where to keep a second copy",
+      message: "Pick a folder on an external drive, a network share, or one a cloud service syncs.",
+      buttonLabel: "Keep copies here",
+      properties: ["openDirectory" as const, "createDirectory" as const],
+    };
+    const result = window
+      ? await dialog.showOpenDialog(window, options)
+      : await dialog.showOpenDialog(options);
+    return result.canceled ? null : (result.filePaths[0] ?? null);
+  });
+
+  handle("mirror:set", (target: unknown): Promise<MirrorState> => {
+    if (target !== null && typeof target !== "string") {
+      return Promise.resolve(currentMirrorState());
+    }
+    return setMirrorDir(target);
+  });
+
+  handle("mirror:sync", (): Promise<MirrorState> => mirrorNow());
 
   handle("doc:set-unsaved", (pending: unknown): void => {
     unsaved = pending === true;
@@ -181,6 +410,15 @@ export function registerIpc(): void {
     const options = {
       defaultPath: join(app.getPath("downloads"), name),
       filters: extension ? [{ name: extension.toUpperCase(), extensions: [extension] }] : undefined,
+      /**
+       * Said at the moment it becomes true, rather than only in Settings. An
+       * export is a deliberate copy of student records in plain text, and
+       * someone who has just turned on a passphrase would reasonably assume it
+       * travelled with the file.
+       */
+      message: isEnabled()
+        ? "This file is saved without the passphrase — anyone who opens it can read it."
+        : undefined,
     };
 
     // Attached to the window as a sheet where there is one to attach it to.

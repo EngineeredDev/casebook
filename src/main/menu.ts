@@ -1,7 +1,25 @@
-import { app, Menu, shell, type MenuItemConstructorOptions } from "electron";
+import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from "electron";
+import { canLock, lockAndTell } from "./autolock.ts";
 import { reloadWindow } from "./window.ts";
 
 const REPO_URL = "https://github.com/EngineeredDev/casebook";
+
+/**
+ * Lock from the menu bar.
+ *
+ * The window is told separately rather than being left to notice, because it is
+ * holding the whole document: dropping the key here while the renderer went on
+ * displaying student names would lock the files and none of the screen.
+ */
+function lockNow(): void {
+  lockAndTell();
+  for (const window of BrowserWindow.getAllWindows()) {
+    window.webContents.send("encryption:locked");
+  }
+  // The item's own enabled state is baked into the built menu, so the menu is
+  // rebuilt now that there is nothing left to lock.
+  buildMenu();
+}
 
 /**
  * The macOS menu bar. Spelled out rather than assembled from `role: "appMenu"`
@@ -15,6 +33,16 @@ export function buildMenu(): void {
       label: app.name,
       submenu: [
         { role: "about" },
+        { type: "separator" },
+        {
+          label: "Lock Now",
+          accelerator: "CmdOrCtrl+L",
+          // Enabled only while there is something to lock. Shown always, rather
+          // than appearing and disappearing, so the shortcut is somewhere it
+          // can be found before the day it is needed.
+          enabled: canLock(),
+          click: lockNow,
+        },
         { type: "separator" },
         { role: "services" },
         { type: "separator" },
