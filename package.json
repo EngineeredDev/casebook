@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "dist": "electron-vite build && electron-builder --mac",
     "start": "electron-vite preview",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",

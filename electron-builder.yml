@@ -1,12 +1,18 @@
-# Packaging. Release targets, the DMG, and CI arrive with the distribution
-# work; what is here now is the identity that must never change and the fuses,
-# which are worth having from the first build rather than retrofitted.
 appId: com.engineereddev.casebook
 productName: Casebook
 copyright: Copyright © EngineeredDev
 
 directories:
   output: dist
+  # Where icon.icns lives. Build resources are inputs to the packager, not
+  # contents of the app, so nothing in here is shipped inside the bundle.
+  buildResources: build
+
+# No version in the name, deliberately. GitHub serves the newest release's
+# assets from /releases/latest/download/<name>, which is only a usable URL if
+# <name> is the same every time — and both the install script and the updater
+# want to construct that URL rather than query an API to discover it.
+artifactName: ${productName}-mac-${arch}.${ext}
 
 # The renderer is bundled into out/ and the package has no runtime
 # dependencies, so this is the whole app.
@@ -16,6 +22,7 @@ files:
 
 mac:
   category: public.app-category.productivity
+  icon: build/icon.icns
   # Ad-hoc. There is no Apple Developer certificate behind this project and
   # there is not going to be one; an unsigned arm64 binary is killed on exec, so
   # "-" is the floor, not a preference. Hardened runtime buys nothing without
@@ -23,6 +30,17 @@ mac:
   # ad-hoc identity.
   identity: "-"
   hardenedRuntime: false
+  # zip is what the install script and the updater consume — it is the format
+  # ditto round-trips with signatures, symlinks and execute bits intact. dmg is
+  # for anyone who would rather click, and costs one Gatekeeper argument (see
+  # the README) that the zip path never has.
+  #
+  # arm64 only. Adding x64 back is one line here if an Intel Mac ever turns up.
+  target:
+    - target: zip
+      arch: [arm64]
+    - target: dmg
+      arch: [arm64]
 
 # Compiled into the binary at package time, and irreversible from outside it.
 # The first two close the "run this app as a plain Node process" hole; the
