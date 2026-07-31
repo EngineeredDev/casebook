@@ -84,6 +84,22 @@ export type UpdateCheck =
   | { available: false; version: string }
   | { error: string };
 
+/**
+ * Whether this copy can replace itself where it stands. False for a dev build,
+ * for an app translocated to a read-only mount, and for one installed somewhere
+ * the current account cannot write — each of which needs different advice.
+ */
+export type SelfUpdateAbility = { ok: true } | { ok: false; reason: string };
+
+export interface UpdateState {
+  version: string;
+  available: UpdateInfo | null;
+  selfUpdate: SelfUpdateAbility;
+}
+
+/** On success the app is already on its way down to restart, so this rarely returns. */
+export type UpdateInstallResult = { ok: true } | { error: string };
+
 export interface CasebookApi {
   getDoc(): Promise<DataDoc>;
   saveDoc(doc: DataDoc): Promise<SaveResult>;
@@ -113,11 +129,17 @@ export interface CasebookApi {
   retireLegacyInstall(dir: string): Promise<RetireResult>;
 
   /** The running version, plus whatever a background check has already found. */
-  getUpdateState(): Promise<{ version: string; available: UpdateInfo | null }>;
+  getUpdateState(): Promise<UpdateState>;
   /** Asks GitHub now, rather than waiting for the next scheduled check. */
   checkForUpdate(): Promise<UpdateCheck>;
   /** Opens the release page in the default browser, for installing by hand. */
   openReleasePage(): Promise<void>;
+  /**
+   * Downloads the update the main process already knows about, swaps the app
+   * bundle and restarts. Takes no argument on purpose: the renderer does not get
+   * to say what gets downloaded or where it is written.
+   */
+  installUpdate(): Promise<UpdateInstallResult>;
   /**
    * Called when a background check finds one, so a window that was already open
    * hears about it. Returns its own unsubscribe.

@@ -19,7 +19,8 @@ import type {
   RetireResult,
   SaveResult,
   UpdateCheck,
-  UpdateInfo,
+  UpdateInstallResult,
+  UpdateState,
 } from "../shared/api.ts";
 import { DATA_VERSION, type DataDoc } from "../shared/types.ts";
 import { relocateData } from "./datafolder.ts";
@@ -27,6 +28,7 @@ import { describeInstall, findInstall, importInstall, retireInstall } from "./le
 import { canRelocate, dataDir, dataFile } from "./paths.ts";
 import { isRendererUrl } from "./renderer.ts";
 import { backupIfNeeded, loadDoc, saveDoc } from "./storage.ts";
+import { canSelfUpdate, installUpdate } from "./selfupdate.ts";
 import { checkForUpdate, getAvailableUpdate } from "./updater.ts";
 
 /** Null until the first successful read; see the `doc:get` handler. */
@@ -292,12 +294,25 @@ export function registerIpc(): void {
 
   /* ---------- updates ---------- */
 
-  handle("update:state", (): { version: string; available: UpdateInfo | null } => ({
-    version: app.getVersion(),
-    available: getAvailableUpdate(),
-  }));
+  handle(
+    "update:state",
+    (): UpdateState => ({
+      version: app.getVersion(),
+      available: getAvailableUpdate(),
+      selfUpdate: canSelfUpdate(),
+    }),
+  );
 
   handle("update:check", (): Promise<UpdateCheck> => checkForUpdate());
+
+  handle("update:install", (): Promise<UpdateInstallResult> => {
+    // The renderer names nothing here. What gets downloaded is whatever the
+    // main process's own check found, at the URL GitHub gave it — a channel
+    // that accepted a URL would be a channel for installing anything.
+    const info = getAvailableUpdate();
+    if (!info) return Promise.resolve({ error: "There's no update to install." });
+    return installUpdate(info);
+  });
 
   handle("update:open-release", async (): Promise<void> => {
     const info = getAvailableUpdate();

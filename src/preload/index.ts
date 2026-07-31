@@ -30,6 +30,7 @@ const api: CasebookApi = {
   getUpdateState: () => ipcRenderer.invoke("update:state"),
   checkForUpdate: () => ipcRenderer.invoke("update:check"),
   openReleasePage: () => ipcRenderer.invoke("update:open-release"),
+  installUpdate: () => ipcRenderer.invoke("update:install"),
   onUpdateAvailable: (listener: (info: UpdateInfo) => void) => {
     // The event object never crosses the bridge — only the payload. Handing a
     // renderer an IpcRendererEvent would hand it `sender`, and with it a way

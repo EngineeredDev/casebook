@@ -2,6 +2,7 @@ import { app, BrowserWindow, session } from "electron";
 import { registerIpc } from "./ipc.ts";
 import { buildMenu } from "./menu.ts";
 import { registerAppScheme, serveRenderer } from "./renderer.ts";
+import { settlePendingUpdate } from "./selfupdate.ts";
 import { startUpdateChecks } from "./updater.ts";
 import { createWindow } from "./window.ts";
 
@@ -39,6 +40,11 @@ function start(): void {
     applicationName: "Casebook",
     applicationVersion: app.getVersion(),
   });
+
+  // Reaching a clean start is the only evidence that a swapped-in update
+  // actually works, and the only thing that authorises deleting the bundle it
+  // replaced. Before any window, so a crash later still counts as "it started".
+  settlePendingUpdate();
 
   serveRenderer();
   registerIpc();
