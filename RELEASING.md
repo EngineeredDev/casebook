@@ -55,11 +55,17 @@ model for a personal tool and would not be for broader distribution.
 
 ## Versioning
 
-Ordinary semver, read from the clinician's side rather than the code's:
+Semver, read from the clinician's side rather than the code's:
 
 - **Patch** — fixes and adjustments to things that already exist.
 - **Minor** — new capability she would notice.
 - **Major** — something about the app she already knows stops being true.
+
+Casebook started at **0.1.0**, deliberately. The Electron app has never run on
+her Mac for a day's real work, and 0.x says that out loud: while the leading
+zero is there, a minor bump is allowed to carry something that would otherwise
+be a major. 1.0.0 is worth saving for the version she has actually been using
+without complaint.
 
 Anything touching `data.json`'s shape needs a migration in `src/main/storage.ts`
 and a `DATA_VERSION` bump, which is a separate thing from the app version and
