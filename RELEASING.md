@@ -18,12 +18,17 @@ update forever.
 ## Cutting a release
 
 ```sh
-# 1. Set the version. This commit is the release.
+# 1. Write the notes. CHANGELOG.md's section for this version *is* the release
+#    body, so this happens before the tag rather than after it.
+$EDITOR CHANGELOG.md
+node scripts/release-notes.mjs 1.2.0   # what CI will publish; fails if empty
+
+# 2. Set the version. This commit is the release.
 npm version 1.2.0 --no-git-tag-version
-git add package.json package-lock.json
+git add package.json package-lock.json CHANGELOG.md
 git commit -m "Casebook 1.2.0"
 
-# 2. Tag it and push both.
+# 3. Tag it and push both.
 git tag v1.2.0
 git push origin main v1.2.0
 ```
@@ -34,6 +39,24 @@ release with `Casebook-mac-arm64.zip` and `Casebook-mac-arm64.dmg` attached.
 Nothing else needs doing. The install script and the updater both fetch from
 `releases/latest/download/<asset>`, which GitHub points at the newest release
 that is not a prerelease — so publishing is what makes a version live.
+
+## The notes
+
+`CHANGELOG.md`'s `## [X.Y.Z]` section is published verbatim as the release
+body, extracted by `scripts/release-notes.mjs`. CI runs that extraction _before_
+the build and fails the release if the section is missing or empty, so a
+forgotten changelog costs a re-tag rather than a permanently blank release.
+
+This replaced `gh release create --generate-notes`, which appeared to be doing
+the job and was not. GitHub's generator lists merged pull requests; work here
+goes straight to `main`, so it found none — v0.1.0 published with a body one
+line long. Write the section by hand, in the same voice as the version numbers:
+what changed for the clinician, not what changed in the code.
+
+The compare link at the foot of the body comes from the `[X.Y.Z]: https://...`
+reference at the bottom of `CHANGELOG.md`, not from git. `actions/checkout`
+fetches no tags by default, so deriving the previous tag with `git describe`
+works locally and silently yields nothing in CI.
 
 ## What a push to `main` does
 
