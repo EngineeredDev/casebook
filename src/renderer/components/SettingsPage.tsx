@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { Anchor, Button, Card, Code, Group, Loader, Stack, Text } from "@mantine/core";
+import { Button, Card, Code, Group, Loader, Stack, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconFolderOpen, IconFolderSymlink } from "@tabler/icons-react";
-import type { DataLocation } from "../../shared/api.ts";
+import type { BackupsState, DataLocation, MirrorState } from "../../shared/api.ts";
 import { api, bridgeMessage } from "../lib/api.ts";
-import { Link } from "../lib/router.tsx";
+import { useStore } from "../store.tsx";
+import { BackupsPanel } from "./BackupsPanel.tsx";
+import { EncryptionPanel } from "./EncryptionPanel.tsx";
+import { MirrorPanel } from "./MirrorPanel.tsx";
 import { UpdatePanel } from "./UpdatePanel.tsx";
 
 /**
@@ -15,7 +18,9 @@ import { UpdatePanel } from "./UpdatePanel.tsx";
  * drive, or in a synced folder, and who otherwise has no way to say so.
  */
 export function SettingsPage() {
+  const { reload } = useStore();
   const [location, setLocation] = useState<DataLocation | null>(null);
+  const [backups, setBackups] = useState<BackupsState | null>(null);
   const [moving, setMoving] = useState(false);
 
   const refresh = useCallback(() => {
@@ -33,9 +38,47 @@ export function SettingsPage() {
 
   useEffect(refresh, [refresh]);
 
-  const reveal = () => {
-    void api().revealDataFolder();
-  };
+  /**
+   * One read for both panels below. They are looking at the same folder, and
+   * fetching it twice would have them disagreeing about it from the moment
+   * either one changed something.
+   */
+  const refreshBackups = useCallback(() => {
+    api()
+      .getBackups()
+      .then(setBackups)
+      .catch((error: unknown) => {
+        notifications.show({
+          color: "red",
+          title: "Couldn't read your backups",
+          message: bridgeMessage(error),
+        });
+      });
+  }, []);
+
+  useEffect(refreshBackups, [refreshBackups]);
+
+  /**
+   * The mirror calls each hand back the state they produced, which beats a
+   * re-read: `setMirrorFolder` starts a copy in the background that a fresh
+   * `getBackups()` would race and report the wrong side of.
+   */
+  const applyMirror = useCallback((mirror: MirrorState) => {
+    setBackups((current) => (current ? { ...current, mirror } : current));
+  }, []);
+
+  /**
+   * A restore replaced the file this window is holding a copy of. `reload` is
+   * not optional: without it the store keeps the pre-restore document, and the
+   * next edit saves that straight back over what was just restored — turning a
+   * recovery into the second loss of the day. The list is re-read too, because
+   * the restore snapshotted the outgoing state on its way past and that
+   * snapshot is now the newest row in it.
+   */
+  const restored = useCallback(() => {
+    reload();
+    refreshBackups();
+  }, [reload, refreshBackups]);
 
   const relocate = async () => {
     const target = await api().chooseDataFolder();
@@ -54,6 +97,9 @@ export function SettingsPage() {
         return;
       }
       refresh();
+      // The backups folder moved with the data folder, so the list the panel
+      // below is showing is describing a place Casebook has stopped using.
+      refreshBackups();
       notifications.show({
         color: "teal",
         title: "Casebook is using the new folder",
@@ -70,8 +116,8 @@ export function SettingsPage() {
       <Card>
         <Text fw={600}>Where your data is kept</Text>
         <Text size="xs" c="dimmed" mt={2} mb="sm">
-          This folder holds <Code>data.json</Code> and a <Code>backups</Code> folder of daily
-          snapshots. Copying it copies everything Casebook knows.
+          This folder holds <Code>data.json</Code> and a <Code>backups</Code> folder of snapshots.
+          Copying it copies everything Casebook knows.
         </Text>
 
         {location ? (
@@ -89,7 +135,7 @@ export function SettingsPage() {
           <Button
             variant="default"
             leftSection={<IconFolderOpen size={16} />}
-            onClick={reveal}
+            onClick={() => void api().revealDataFolder()}
             disabled={!location}
           >
             Show in Finder
@@ -117,19 +163,9 @@ export function SettingsPage() {
         </Text>
       </Card>
 
-      <Card>
-        <Text fw={600}>Backups</Text>
-        <Text size="xs" c="dimmed" mt={2}>
-          Casebook snapshots <Code>data.json</Code> into <Code>backups</Code> before the first
-          change of each day, and keeps the most recent 30. To keep a copy off this computer, take
-          the whole folder — or use{" "}
-          <Anchor component={Link} to="/reports" size="xs">
-            Reports → Export → Full data file
-          </Anchor>
-          , which is the same data in one file.
-        </Text>
-      </Card>
-
+      <BackupsPanel state={backups} onRefresh={refreshBackups} onRestored={restored} />
+      <MirrorPanel mirror={backups?.mirror ?? null} onChange={applyMirror} />
+      <EncryptionPanel />
       <UpdatePanel />
     </Stack>
   );
