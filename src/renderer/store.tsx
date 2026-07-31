@@ -8,18 +8,34 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Alert, Button, Center, Loader, Stack } from "@mantine/core";
+import { Center, Loader } from "@mantine/core";
+import type { EncryptionState, MassDeletion } from "../shared/api.ts";
 import type { Category, DataDoc, Entry, Student } from "../shared/types.ts";
+import { RecoveryScreen } from "./components/RecoveryScreen.tsx";
+import { UnlockScreen } from "./components/UnlockScreen.tsx";
 import { api, bridgeMessage } from "./lib/api.ts";
 
-export type SaveState = "saved" | "saving" | "retrying" | "error" | "conflict";
+/**
+ * `blocked` is the deletion tripwire: the main process refused a save that
+ * would remove more than an edit plausibly can, and nothing more will be
+ * attempted until a person says which it was. Deliberately not `error` — the
+ * disk is fine, and offering "Try again" would be an invitation to click
+ * through the one guard standing between a bug and the whole caseload.
+ */
+export type SaveState = "saved" | "saving" | "retrying" | "error" | "conflict" | "blocked";
 
 interface StoreValue {
   doc: DataDoc;
   saveState: SaveState;
+  /** What a refused save would have removed, while the question is open. */
+  pendingDeletion: MassDeletion | null;
   mutate: (fn: (doc: DataDoc) => DataDoc) => void;
   reload: () => void;
   retrySave: () => void;
+  /** Send the refused save again, this time authorised. */
+  confirmDeletion: () => void;
+  /** Leave it unsaved. The file still holds everything; reloading gets it back. */
+  cancelDeletion: () => void;
   addStudent: (partial: { name: string; iep: boolean }) => Student;
   updateStudent: (id: string, patch: Partial<Student>) => void;
   addEntry: (partial: Omit<Entry, "id" | "createdAt">) => void;
@@ -46,6 +62,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [doc, setDoc] = useState<DataDoc | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("saved");
+  const [pendingDeletion, setPendingDeletion] = useState<MassDeletion | null>(null);
+  /** Null until the main process has been asked; see the effect below. */
+  const [encryption, setEncryption] = useState<EncryptionState | null>(null);
+  /**
+   * Set for exactly one send, by someone answering the tripwire's question. A
+   * ref rather than state because it has to be readable inside `flush` without
+   * making it a dependency, and it must never outlive the save it authorises.
+   */
+  const confirmedRef = useRef(false);
+  /**
+   * The same fact as `pendingDeletion`, readable from callbacks that must not
+   * re-create themselves when it changes. `retrySave` in particular is wired to
+   * the window's focus event, and a stale closure there would resend a refused
+   * save the moment she clicked back into the app.
+   */
+  const pendingDeletionRef = useRef<MassDeletion | null>(null);
 
   const docRef = useRef<DataDoc | null>(null);
   docRef.current = doc;
@@ -68,6 +100,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       dirtyRef.current = false;
       failingRef.current = false;
       attemptsRef.current = 0;
+      confirmedRef.current = false;
+      pendingDeletionRef.current = null;
+      setPendingDeletion(null);
       setDoc(fresh);
       setSaveState("saved");
     } catch (err) {
@@ -75,8 +110,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  /**
+   * The lock is asked about before the document, and that order is the whole
+   * of it: when encryption is on and this launch has not unlocked yet, there is
+   * no document to ask for — the main process cannot read one. Loading first
+   * would turn an ordinary locked launch into the corrupt-data screen.
+   */
   useEffect(() => {
-    load();
+    void (async () => {
+      let state: EncryptionState;
+      try {
+        state = await api().getEncryptionState();
+      } catch {
+        // A bridge that cannot answer this is one that cannot answer anything;
+        // let the ordinary load path produce the error the user sees.
+        state = { enabled: false, unlocked: false, autoLockMinutes: null };
+      }
+      setEncryption(state);
+      if (!state.enabled || state.unlocked) void load();
+    })();
+  }, [load]);
+
+  /**
+   * Locking has to reach the window, not just the key. The main process
+   * dropping the data key while the renderer carried on displaying student
+   * names would protect the files and none of the screen — which is the half
+   * that someone standing at the desk can actually see.
+   */
+  useEffect(() => {
+    return api().onLocked(() => {
+      dirtyRef.current = false;
+      failingRef.current = false;
+      setDoc(null);
+      setSaveState("saved");
+      setEncryption((was) => (was ? { ...was, unlocked: false } : was));
+    });
+  }, []);
+
+  const onUnlocked = useCallback(() => {
+    setEncryption((was) => (was ? { ...was, unlocked: true } : was));
+    void load();
   }, [load]);
 
   const flush = useCallback(async () => {
@@ -90,7 +163,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // nothing left to send, or failed in a way another attempt won't mend.
     let nextAttemptMs: number | null = null;
     try {
-      const result = await api().saveDoc(current);
+      const confirmed = confirmedRef.current;
+      confirmedRef.current = false;
+      const result = await api().saveDoc(current, confirmed);
+      if ("confirmDeletion" in result) {
+        // Nothing was written, and nothing more will be until this is answered.
+        // `failingRef` is what stops the debounce from re-sending the same
+        // document on the next keystroke and asking again.
+        dirtyRef.current = true;
+        failingRef.current = true;
+        pendingDeletionRef.current = result.confirmDeletion;
+        setPendingDeletion(result.confirmDeletion);
+        setSaveState("blocked");
+        return;
+      }
       if ("conflict" in result) {
         // Nothing here can resolve it — the alert offers a reload, which is the
         // only move that can't lose the file's version — but which two
@@ -147,11 +233,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
    */
   const retrySave = useCallback(() => {
     if (!dirtyRef.current) return;
+    // A save the tripwire refused is not one a retry may quietly resend. It
+    // comes back through confirmDeletion or not at all — otherwise clicking
+    // away from the window and back would answer the question for her.
+    if (pendingDeletionRef.current) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     attemptsRef.current = 0;
     failingRef.current = false;
     flush();
   }, [flush]);
+
+  const confirmDeletion = useCallback(() => {
+    pendingDeletionRef.current = null;
+    setPendingDeletion(null);
+    confirmedRef.current = true;
+    attemptsRef.current = 0;
+    failingRef.current = false;
+    flush();
+  }, [flush]);
+
+  /**
+   * Leave it. The edits stay in the window and stay unsaved, and the alert that
+   * replaces the dialog offers the reload that brings back what the file still
+   * holds — which, the tripwire having refused the write, is everything.
+   */
+  const cancelDeletion = useCallback(() => {
+    pendingDeletionRef.current = null;
+    setPendingDeletion(null);
+  }, []);
 
   const mutate = useCallback(
     (fn: (d: DataDoc) => DataDoc) => {
@@ -272,9 +381,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ? {
             doc,
             saveState,
+            pendingDeletion,
             mutate,
             reload: load,
             retrySave,
+            confirmDeletion,
+            cancelDeletion,
             addStudent,
             updateStudent,
             addEntry,
@@ -287,9 +399,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [
       doc,
       saveState,
+      pendingDeletion,
       mutate,
       load,
       retrySave,
+      confirmDeletion,
+      cancelDeletion,
       addStudent,
       updateStudent,
       addEntry,
@@ -300,18 +415,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  if (loadError) {
-    return (
-      <Center h="100vh" p="md">
-        <Stack align="center" gap="sm">
-          <Alert color="red" title="Couldn't load your data" variant="light">
-            {loadError}
-          </Alert>
-          <Button onClick={load}>Retry</Button>
-        </Stack>
-      </Center>
-    );
+  // Before the loading spinner and before any error: a locked Casebook has not
+  // failed at anything, it is waiting to be asked.
+  if (encryption?.enabled && !encryption.unlocked) {
+    return <UnlockScreen onUnlocked={onUnlocked} />;
   }
+
+  // Not an alert and a Retry that re-reads the same unreadable file. See
+  // RecoveryScreen — this is the one screen in the app that has to be good.
+  if (loadError) return <RecoveryScreen message={loadError} onRecovered={load} />;
   if (!value) {
     return (
       <Center h="100vh">

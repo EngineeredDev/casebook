@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   ActionIcon,
   Alert,
@@ -7,9 +7,11 @@ import {
   Burger,
   Button,
   Card,
+  Code,
   Group,
   Loader,
   MantineProvider,
+  Modal,
   NavLink,
   Stack,
   Text,
@@ -33,6 +35,8 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 import { theme } from "./theme.tsx";
+import { api } from "./lib/api.ts";
+import { describeElapsed } from "./lib/snapshots.ts";
 import { StoreProvider, useStore } from "./store.tsx";
 import { Link, navigate, useIsActive, useLocation, useRoute } from "./lib/router.tsx";
 import { LogPage } from "./components/LogPage.tsx";
@@ -117,10 +121,95 @@ function SaveStatus() {
       </Badge>
     );
   }
+  if (saveState === "blocked") {
+    return (
+      <Badge color="orange" variant="light" size="sm" leftSection={<IconAlertTriangle size={12} />}>
+        Not saved
+      </Badge>
+    );
+  }
   return (
     <Badge color="red" variant="light" size="sm" leftSection={<IconAlertTriangle size={12} />}>
       {saveState === "conflict" ? "Conflict" : "Save failed"}
     </Badge>
+  );
+}
+
+/**
+ * The deletion tripwire, asking.
+ *
+ * Casebook removes one entry at a time and has no "delete everything"
+ * anywhere, so a save that would take out a fifth of the log did not get that
+ * way by being edited. The main process refuses it and this asks; nothing has
+ * been written either way, so the cost of a false alarm is one dialog and the
+ * cost of a real one is nothing at all.
+ */
+function DeletionGuard() {
+  const { pendingDeletion, confirmDeletion, cancelDeletion } = useStore();
+  if (!pendingDeletion) return null;
+
+  const lost = [
+    pendingDeletion.entries > 0 ? `${pendingDeletion.entries} entries` : null,
+    pendingDeletion.students > 0 ? `${pendingDeletion.students} students` : null,
+  ].filter(Boolean);
+
+  return (
+    <Modal
+      opened
+      onClose={cancelDeletion}
+      title="That's a lot to remove at once"
+      centered
+      className="no-print"
+    >
+      <Stack gap="md">
+        <Text size="sm">
+          Saving this would remove <strong>{lost.join(" and ")}</strong> from your records. Casebook
+          only deletes one thing at a time, so this is unusual enough to check.
+        </Text>
+        <Text size="sm" c="dimmed">
+          Nothing has been saved yet. If this wasn't deliberate, keep the file as it is — everything
+          is still there.
+        </Text>
+        <Group justify="flex-end" gap="sm">
+          <Button variant="default" onClick={cancelDeletion}>
+            Don't save
+          </Button>
+          <Button color="red" onClick={confirmDeletion}>
+            Yes, remove them
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
+  );
+}
+
+/**
+ * Shown after the dialog above is dismissed without answering. The edits are
+ * still in the window and still unsaved; the file is untouched, so reloading is
+ * the move that puts everything back.
+ */
+function BlockedAlert() {
+  const { saveState, pendingDeletion, reload } = useStore();
+  if (saveState !== "blocked" || pendingDeletion) return null;
+  return (
+    <Alert
+      color="orange"
+      variant="light"
+      icon={<IconAlertTriangle size={18} />}
+      title="These changes haven't been saved"
+      mb="md"
+      className="no-print"
+    >
+      <Group justify="space-between" wrap="nowrap" gap="md">
+        <Text size="sm">
+          Casebook stopped a save that would have removed a lot of records at once. Your data file
+          still has everything in it — reload to go back to it.
+        </Text>
+        <Button size="xs" color="orange" onClick={reload} style={{ flex: "none" }}>
+          Reload data
+        </Button>
+      </Group>
+    </Alert>
   );
 }
 
@@ -213,6 +302,51 @@ function SaveErrorAlert() {
           Try again
         </Button>
       </Group>
+    </Alert>
+  );
+}
+
+/**
+ * The one time the second location speaks up on its own.
+ *
+ * The mirror is a bonus copy, not a dependency: an unplugged drive is silent,
+ * a failed pass is silent, and nothing about it ever blocks a save or interrupts
+ * a session. But a drive that has been unplugged for a fortnight has quietly
+ * stopped being a backup, and the whole point of it is the day the Mac is gone —
+ * so exactly once, past a week, it says so. Dismissible, and never red.
+ */
+function MirrorStaleBanner() {
+  const [stale, setStale] = useState<{ dir: string; since: string | null } | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    api()
+      .getMirrorState()
+      .then((mirror) => {
+        if (mirror.stale && mirror.dir) setStale({ dir: mirror.dir, since: mirror.lastSuccessAt });
+      })
+      // Nothing here is worth a message of its own. The Backups panel says the
+      // same thing in more detail whenever she looks.
+      .catch(() => undefined);
+  }, []);
+
+  if (!stale || dismissed) return null;
+  return (
+    <Alert
+      color="yellow"
+      variant="light"
+      icon={<IconAlertTriangle size={18} />}
+      title="Your second copy hasn't been updated in a while"
+      mb="md"
+      withCloseButton
+      onClose={() => setDismissed(true)}
+      className="no-print"
+    >
+      <Text size="sm">
+        Casebook last copied your backups to <Code>{stale.dir}</Code> {describeElapsed(stale.since)}
+        . If that's an external drive, plugging it in is all it needs — everything on this Mac is
+        still saved as usual.
+      </Text>
     </Alert>
   );
 }
@@ -334,8 +468,11 @@ function Shell() {
       <AppShell.Main>
         <ConflictAlert />
         <SaveErrorAlert />
+        <BlockedAlert />
+        <MirrorStaleBanner />
         <CurrentPage />
         <ImportOldData />
+        <DeletionGuard />
       </AppShell.Main>
     </AppShell>
   );

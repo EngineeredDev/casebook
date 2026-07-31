@@ -10,6 +10,12 @@
 
 import type { DataDoc } from "./types.ts";
 
+/** How much a refused save would have removed. Both counts, so the wording can be exact. */
+export interface MassDeletion {
+  students: number;
+  entries: number;
+}
+
 export type SaveResult =
   | { ok: true; rev: number }
   /**
@@ -19,12 +25,117 @@ export type SaveResult =
    */
   | { conflict: true; currentRev: number }
   /**
+   * The save would remove far more than an edit plausibly can, so it was not
+   * written. The renderer asks, and sends it again with `confirmed` set if the
+   * answer is yes. Nothing is lost by refusing once: the document is still in
+   * the window, and the only cost of a false alarm is one dialog.
+   */
+  | { confirmDeletion: MassDeletion }
+  /**
    * `retryable` is the old 5xx/4xx split. A failed disk write is worth trying
    * again on a widening interval; a document the main process refuses to
    * accept will be refused identically forever, and re-sending it only spends
    * the retry budget proving that.
    */
   | { error: string; retryable: boolean };
+
+/** One file in `backups/`, described well enough to choose between them. */
+export interface SnapshotSummary {
+  name: string;
+  /** ISO timestamp taken from the file, since the name carries no seconds. */
+  takenAt: string;
+  students: number;
+  entries: number;
+  /** False when the file is present but could not be parsed. */
+  readable: boolean;
+  encrypted: boolean;
+  /**
+   * Unreadable only because Casebook is locked, rather than because anything is
+   * wrong with it.
+   *
+   * Stated rather than inferred from `encrypted && !readable`. Telling someone
+   * a perfectly good backup is damaged is the worst wrong answer a list of
+   * backups can give, and it is one an inference gets to make on its own the
+   * first time these two facts come apart.
+   */
+  locked: boolean;
+}
+
+/**
+ * What the launch-failure screen is offered instead of a dead end.
+ *
+ * `locked` separates "this data is encrypted and we haven't unlocked it" from
+ * "this data is damaged" — they look identical to a parser and could not be
+ * more different to the person reading the screen.
+ */
+export interface RecoveryOffer {
+  snapshot: SnapshotSummary | null;
+  locked: boolean;
+}
+
+export type RestoreResult =
+  /** `preserved` names where the unreadable file was moved, when there was one. */
+  { ok: true; rev: number; preserved: string | null } | { error: string };
+
+export type CheckBackupsResult = { checked: number; unreadable: string[] };
+
+/** Why the mirror couldn't be written to, in the words the UI uses. */
+export type MirrorTrouble = "unreachable" | "denied" | "full" | "unknown";
+
+export interface MirrorState {
+  /** Null when no second location is configured, which is the default. */
+  dir: string | null;
+  lastSuccessAt: string | null;
+  lastAttemptAt: string | null;
+  trouble: MirrorTrouble | null;
+  fileCount: number;
+  /** Unreachable long enough to be worth one gentle banner. Never before a first success. */
+  stale: boolean;
+}
+
+export interface BackupsState {
+  dir: string;
+  snapshots: SnapshotSummary[];
+  mirror: MirrorState;
+}
+
+/**
+ * Whether the passphrase is on, and whether it has been given yet.
+ *
+ * Two separate facts. "Enabled but not unlocked" is the state at every launch
+ * once encryption is on, and it is the only one that has to come before the
+ * document loads.
+ */
+export interface EncryptionState {
+  enabled: boolean;
+  unlocked: boolean;
+  /** Minutes of idleness before locking. Null means never, which is the default. */
+  autoLockMinutes: number | null;
+}
+
+/**
+ * Failures carry a kind so the wording can differ where the difference matters:
+ * a mistyped recovery key is a "check what you typed", a wrong one is "that
+ * isn't the sheet for this data", and neither is "this file is damaged".
+ */
+export type EncryptionFailure =
+  | "wrong-passphrase"
+  | "wrong-recovery-key"
+  | "malformed-recovery-key"
+  | "corrupt"
+  | "unsupported-version"
+  | "other";
+
+export type UnlockResult = { ok: true } | { error: string; kind: EncryptionFailure };
+
+/**
+ * The recovery key is returned exactly once, here. It is derived from nothing
+ * and stored nowhere, so if it is not written down at this moment it cannot be
+ * produced again — which is why enabling is gated on saying it was.
+ */
+export type EnableEncryptionResult = { ok: true; recoveryKey: string } | { error: string };
+
+export type EncryptionResult = { ok: true } | { error: string; kind: EncryptionFailure };
 
 export type ExportResult =
   | { saved: true; path: string }
@@ -102,7 +213,12 @@ export type UpdateInstallResult = { ok: true } | { error: string };
 
 export interface CasebookApi {
   getDoc(): Promise<DataDoc>;
-  saveDoc(doc: DataDoc): Promise<SaveResult>;
+  /**
+   * `confirmed` re-sends a document the deletion tripwire refused. It is a
+   * separate argument rather than a flag on the document so that it cannot
+   * survive a round trip through disk and quietly disarm the guard forever.
+   */
+  saveDoc(doc: DataDoc, confirmed?: boolean): Promise<SaveResult>;
   /** Offers a save dialog, then writes `contents` wherever it points. */
   exportFile(name: string, contents: string): Promise<ExportResult>;
   /**
@@ -111,6 +227,59 @@ export interface CasebookApi {
    * the browser, which Electron cancels silently rather than prompting for.
    */
   setUnsaved(unsaved: boolean): Promise<void>;
+
+  /**
+   * What could be restored, asked only once loading has already failed. Kept
+   * off `getDoc` so the ordinary path stays a document or a throw.
+   */
+  getRecoveryOffer(): Promise<RecoveryOffer>;
+  /** Snapshots and the state of the second location, for the Backups panel. */
+  getBackups(): Promise<BackupsState>;
+  /**
+   * Replaces the live document with a snapshot. Takes a snapshot of the current
+   * state first, so restoring is itself undoable, and moves an unreadable live
+   * file aside rather than over it.
+   */
+  restoreSnapshot(name: string): Promise<RestoreResult>;
+  /** Parses every snapshot; renames the unreadable ones so the recovery scan skips them. */
+  checkBackups(): Promise<CheckBackupsResult>;
+  revealBackupsFolder(): Promise<void>;
+
+  /**
+   * Asked before the document, since when encryption is on the document cannot
+   * be read until this says it has been unlocked.
+   */
+  getEncryptionState(): Promise<EncryptionState>;
+  /** Encrypts the data folder and hands back the recovery key, once. */
+  enableEncryption(passphrase: string): Promise<EnableEncryptionResult>;
+  /** Decrypts everything back to plain files. Only while unlocked. */
+  disableEncryption(): Promise<EncryptionResult>;
+  unlock(passphrase: string): Promise<UnlockResult>;
+  /** The way in when the passphrase is gone. Setting a new one is not optional. */
+  unlockWithRecoveryKey(recoveryKey: string, newPassphrase: string): Promise<UnlockResult>;
+  /** Re-wraps the same data key, so every snapshot ever taken stays readable. */
+  changePassphrase(current: string, next: string): Promise<EncryptionResult>;
+  /** Drop the key and the document from memory now. */
+  lockNow(): Promise<void>;
+  setAutoLockMinutes(minutes: number | null): Promise<EncryptionState>;
+  /** Fires when the idle timer or the menu item locked the app. Returns its own unsubscribe. */
+  onLocked(listener: () => void): () => void;
+
+  /**
+   * Just the second location's state, without the snapshot list.
+   *
+   * Separate from `getBackups` because that one opens and parses every file in
+   * `backups/` to report what is in each — right for a panel someone has
+   * deliberately navigated to, far too much for a banner that renders at every
+   * launch.
+   */
+  getMirrorState(): Promise<MirrorState>;
+  /** Folder-picking dialog for the second location. Null when dismissed. */
+  chooseMirrorFolder(): Promise<string | null>;
+  /** Point the mirror at a folder, or pass null to turn it off. */
+  setMirrorFolder(dir: string | null): Promise<MirrorState>;
+  /** Copy anything outstanding now, rather than waiting for the next snapshot. */
+  syncMirrorNow(): Promise<MirrorState>;
 
   getDataLocation(): Promise<DataLocation>;
   revealDataFolder(): Promise<void>;
