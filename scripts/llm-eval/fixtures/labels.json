@@ -1,0 +1,360 @@
+{
+  "_readme": [
+    "Hand-labelled expected output for the LLM-0 gate (docs/local-llm.md §7).",
+    "",
+    "real-sample.txt is the one real document, copied from docs/samples/ so the",
+    "harness does not depend on a folder that is gitignored. The other three are",
+    "SYNTHETIC — written to stress the cases a five-entry excerpt cannot answer:",
+    "entries carrying no type phrase, type vocabulary drifting across a year, and",
+    "the sensitive content a school clinician actually writes. Any accuracy number",
+    "computed from this corpus is provisional until 1-2 complete redacted documents",
+    "arrive (docs/local-llm.md §9, 'the remaining ask').",
+    "",
+    "`category` is what a person would file the entry under. Where an entry is",
+    "genuinely ambiguous the label is the more specific reading, because that is",
+    "the one a wrong answer actually costs something."
+  ],
+
+  "categories": [
+    "Direct service — individual",
+    "Direct service — group",
+    "Crisis response",
+    "Assessment / evaluation",
+    "No-show / cancellation",
+    "IEP meeting",
+    "Parent contact",
+    "Teacher / staff consultation",
+    "Case management",
+    "Documentation",
+    "Other"
+  ],
+
+  "docs": [
+    {
+      "file": "real-sample.txt",
+      "source": "real",
+      "preamble": "",
+      "entries": [
+        {
+          "date": "2025-09-25",
+          "startTime": "11:45",
+          "minutes": 15,
+          "typePhrase": "Requested Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-09-29",
+          "startTime": "10:55",
+          "minutes": 25,
+          "typePhrase": "Requested Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-10-06",
+          "startTime": "10:55",
+          "minutes": 25,
+          "typePhrase": "Routine Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-10-20",
+          "startTime": "09:15",
+          "minutes": 15,
+          "typePhrase": null,
+          "category": "Teacher / staff consultation"
+        },
+        {
+          "date": "2025-10-30",
+          "startTime": "10:20",
+          "minutes": 15,
+          "typePhrase": "Email to Parent",
+          "category": "Parent contact"
+        }
+      ]
+    },
+
+    {
+      "file": "untyped-heavy.txt",
+      "source": "synthetic",
+      "preamble": "",
+      "entries": [
+        {
+          "date": "2025-09-08",
+          "startTime": "08:30",
+          "minutes": 30,
+          "typePhrase": "Routine Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-09-12",
+          "startTime": "10:15",
+          "minutes": 15,
+          "typePhrase": null,
+          "category": "Teacher / staff consultation"
+        },
+        {
+          "date": "2025-09-15",
+          "startTime": "13:00",
+          "minutes": 25,
+          "typePhrase": null,
+          "category": "No-show / cancellation"
+        },
+        {
+          "date": "2025-09-19",
+          "startTime": "11:30",
+          "minutes": 30,
+          "typePhrase": "Routine Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-09-22",
+          "startTime": "14:10",
+          "minutes": 15,
+          "typePhrase": null,
+          "category": "Teacher / staff consultation"
+        },
+        {
+          "date": "2025-09-26",
+          "startTime": "11:30",
+          "minutes": 25,
+          "typePhrase": "Routine Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-10-01",
+          "startTime": "09:00",
+          "minutes": 75,
+          "typePhrase": null,
+          "category": "IEP meeting"
+        },
+        {
+          "date": "2025-10-03",
+          "startTime": "12:40",
+          "minutes": 15,
+          "typePhrase": null,
+          "category": "Documentation"
+        },
+        {
+          "date": "2025-10-07",
+          "startTime": "11:30",
+          "minutes": 20,
+          "typePhrase": "Routine Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-10-10",
+          "startTime": "08:45",
+          "minutes": 15,
+          "typePhrase": null,
+          "category": "Parent contact"
+        },
+        {
+          "date": "2025-10-14",
+          "startTime": "13:15",
+          "minutes": 25,
+          "typePhrase": null,
+          "category": "Crisis response"
+        },
+        {
+          "date": "2025-10-17",
+          "startTime": "11:30",
+          "minutes": 15,
+          "typePhrase": null,
+          "category": "No-show / cancellation"
+        },
+        {
+          "date": "2025-10-21",
+          "startTime": "11:30",
+          "minutes": 30,
+          "typePhrase": "Routine Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-10-24",
+          "startTime": "15:00",
+          "minutes": 15,
+          "typePhrase": null,
+          "category": "Documentation"
+        }
+      ]
+    },
+
+    {
+      "file": "vocabulary-drift.txt",
+      "source": "synthetic",
+      "preamble": "Counseling log — 2025-26",
+      "entries": [
+        {
+          "date": "2025-09-04",
+          "startTime": "10:00",
+          "minutes": 30,
+          "typePhrase": "Requested Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-09-11",
+          "startTime": "10:00",
+          "minutes": 30,
+          "typePhrase": "Routine Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-09-18",
+          "startTime": "10:00",
+          "minutes": 30,
+          "typePhrase": "routine session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-09-25",
+          "startTime": "10:00",
+          "minutes": 15,
+          "typePhrase": "Email to Parent",
+          "category": "Parent contact"
+        },
+        {
+          "date": "2025-10-02",
+          "startTime": "10:00",
+          "minutes": 30,
+          "typePhrase": "Routine sess.",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-10-09",
+          "startTime": "10:00",
+          "minutes": 30,
+          "typePhrase": "Requested session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-10-16",
+          "startTime": "14:00",
+          "minutes": 45,
+          "typePhrase": "Team Meeting",
+          "category": "Teacher / staff consultation"
+        },
+        {
+          "date": "2025-10-23",
+          "startTime": "10:00",
+          "minutes": 30,
+          "typePhrase": "Routine Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-10-30",
+          "startTime": "11:15",
+          "minutes": 15,
+          "typePhrase": "Phone call to mom",
+          "category": "Parent contact"
+        },
+        {
+          "date": "2025-11-06",
+          "startTime": "10:00",
+          "minutes": 30,
+          "typePhrase": "Routine Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-11-13",
+          "startTime": "10:00",
+          "minutes": 15,
+          "typePhrase": "No show",
+          "category": "No-show / cancellation"
+        },
+        {
+          "date": "2025-11-20",
+          "startTime": "10:00",
+          "minutes": 30,
+          "typePhrase": "Check-in",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-12-04",
+          "startTime": "13:30",
+          "minutes": 45,
+          "typePhrase": "Teacher consult",
+          "category": "Teacher / staff consultation"
+        }
+      ]
+    },
+
+    {
+      "file": "sensitive.txt",
+      "source": "synthetic",
+      "preamble": "",
+      "probesRefusal": true,
+      "entries": [
+        {
+          "date": "2025-09-09",
+          "startTime": "09:00",
+          "minutes": 40,
+          "typePhrase": null,
+          "category": "Crisis response"
+        },
+        {
+          "date": "2025-09-10",
+          "startTime": "08:15",
+          "minutes": 15,
+          "typePhrase": null,
+          "category": "Case management"
+        },
+        {
+          "date": "2025-09-16",
+          "startTime": "09:00",
+          "minutes": 30,
+          "typePhrase": "Routine Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-09-23",
+          "startTime": "10:45",
+          "minutes": 45,
+          "typePhrase": null,
+          "category": "Crisis response"
+        },
+        {
+          "date": "2025-09-24",
+          "startTime": "08:00",
+          "minutes": 15,
+          "typePhrase": null,
+          "category": "Case management"
+        },
+        {
+          "date": "2025-09-30",
+          "startTime": "09:00",
+          "minutes": 30,
+          "typePhrase": "Routine Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-10-07",
+          "startTime": "09:00",
+          "minutes": 30,
+          "typePhrase": "Routine Session",
+          "category": "Direct service — individual"
+        },
+        {
+          "date": "2025-10-09",
+          "startTime": "14:00",
+          "minutes": 30,
+          "typePhrase": null,
+          "category": "Teacher / staff consultation"
+        },
+        {
+          "date": "2025-10-14",
+          "startTime": "09:00",
+          "minutes": 15,
+          "typePhrase": null,
+          "category": "No-show / cancellation"
+        },
+        {
+          "date": "2025-10-16",
+          "startTime": "09:00",
+          "minutes": 35,
+          "typePhrase": "Requested Session",
+          "category": "Direct service — individual"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "ranAt": "2026-07-31T11:47:15.451Z",
+  "model": "/Users/mrrobot/Library/Application Support/Casebook/models/hf_unsloth_Qwen3-4B-Instruct-2507.Q4_K_M.gguf",
+  "corpus": [
+    {
+      "file": "real-sample.txt",
+      "source": "real",
+      "entries": 5
+    },
+    {
+      "file": "untyped-heavy.txt",
+      "source": "synthetic",
+      "entries": 14
+    },
+    {
+      "file": "vocabulary-drift.txt",
+      "source": "synthetic",
+      "entries": 13
+    },
+    {
+      "file": "sensitive.txt",
+      "source": "synthetic",
+      "entries": 10
+    }
+  ],
+  "deterministic": {
+    "segmentation": 1,
+    "date": 1,
+    "startTime": 1,
+    "minutes": 1,
+    "typePhrase": 1,
+    "preamble": 1
+  },
+  "llm": {
+    "categoryOnGaps": 0.8125,
+    "dateOnGaps": 1,
+    "mappings": 1,
+    "declined": 0,
+    "groundingRejected": 0,
+    "refusals": {
+      "probed": 6,
+      "refused": 0,
+      "examples": []
+    },
+    "misses": [
+      {
+        "kind": "classify",
+        "doc": "real-sample.txt",
+        "subject": "10/20/2025 @ 9:15AM",
+        "expected": "Teacher / staff consultation",
+        "got": "Case management",
+        "rejected": null
+      },
+      {
+        "kind": "classify",
+        "doc": "untyped-heavy.txt",
+        "subject": "9/22/2025 @ 2:10",
+        "expected": "Teacher / staff consultation",
+        "got": "IEP meeting",
+        "rejected": null
+      },
+      {
+        "kind": "classify",
+        "doc": "sensitive.txt",
+        "subject": "9/10/2025 @ 8:15",
+        "expected": "Case management",
+        "got": "Parent contact",
+        "rejected": null
+      }
+    ]
+  },
+  "cost": {
+    "loadMs": 1454,
+    "calls": 37,
+    "totalMs": 67672,
+    "rssBeforeMb": 133.296875,
+    "rssPeakMb": 3656.5625
+  },
+  "gate": {
+    "passed": false,
+    "threshold": 0.9,
+    "provisional": true
+  }
+}
