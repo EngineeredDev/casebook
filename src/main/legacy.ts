@@ -20,17 +20,42 @@ import {
   unlinkSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join } from "node:path";
+import { basename, dirname, isAbsolute, join } from "node:path";
 import type { ImportResult, LegacyInstall, RetireResult } from "../shared/api.ts";
 import { backupDir, dataDir, dataFile } from "./paths.ts";
 import { copyMissingBackups, dayStamp, writeFileAtomic } from "./storage.ts";
 
 const LAUNCH_AGENT_LABEL = "com.casebook.server";
-/** What scripts/install-macos.sh named the executable, and the only name we delete. */
-const EXECUTABLE_NAME = "Casebook";
+/**
+ * What scripts/install-macos.sh called the executable when it downloaded one.
+ * Only a fallback: the installer also accepted a path to a copy she already
+ * had, under whatever name it happened to carry, so the LaunchAgent is the
+ * better source of truth and is asked first.
+ */
+const DEFAULT_EXECUTABLE_NAME = "Casebook";
 
 function launchAgentPlist(): string {
   return join(homedir(), "Library", "LaunchAgents", `${LAUNCH_AGENT_LABEL}.plist`);
+}
+
+function currentUid(): number {
+  return process.getuid?.() ?? 0;
+}
+
+function serviceTarget(): string {
+  return `gui/${currentUid()}/${LAUNCH_AGENT_LABEL}`;
+}
+
+/**
+ * Whether launchd is holding the old job right now.
+ *
+ * Asked rather than inferred from `bootout`'s exit status: that returns a
+ * distinct code for "nothing was loaded", which is the ordinary case on a Mac
+ * restarted since the old app last ran, and decoding launchctl's codes to tell
+ * that apart from a real failure is guesswork this can simply avoid.
+ */
+function agentIsLoaded(): boolean {
+  return spawnSync("launchctl", ["print", serviceTarget()], { encoding: "utf8" }).status === 0;
 }
 
 /**
@@ -75,13 +100,16 @@ export function describeInstall(dir: string): LegacyInstall | null {
   const { entries, students } = doc as { entries?: unknown; students?: unknown };
   if (!Array.isArray(entries)) return null;
 
+  // Whether the one LaunchAgent on this Mac is the thing that starts *this*
+  // folder's install, rather than merely existing somewhere.
   const fromAgent = executableFromLaunchAgent();
-  const executable =
-    fromAgent && dirname(fromAgent) === dir
-      ? fromAgent
-      : existsSync(join(dir, EXECUTABLE_NAME))
-        ? join(dir, EXECUTABLE_NAME)
-        : null;
+  const agentStartsThisInstall = fromAgent !== null && dirname(fromAgent) === dir;
+
+  const executable = agentStartsThisInstall
+    ? fromAgent
+    : existsSync(join(dir, DEFAULT_EXECUTABLE_NAME))
+      ? join(dir, DEFAULT_EXECUTABLE_NAME)
+      : null;
 
   return {
     dir,
@@ -90,7 +118,11 @@ export function describeInstall(dir: string): LegacyInstall | null {
     modified: statSync(file).mtime.toISOString(),
     backups: countBackups(join(dir, "backups")),
     executable,
-    launchAgent: existsSync(launchAgentPlist()) ? launchAgentPlist() : null,
+    // The plist is a single global file, so attributing it to whatever folder
+    // was asked about is how retiring a stray *copy* of the old data ends up
+    // booting out the install that is actually running. It counts as this
+    // folder's only when it names an executable in it.
+    launchAgent: agentStartsThisInstall ? launchAgentPlist() : null,
   };
 }
 
@@ -156,33 +188,58 @@ export function importInstall(dir: string): ImportResult {
  * this is not the moment to be deleting a second copy of her work.
  */
 export function retireInstall(dir: string): RetireResult {
+  // Re-described here rather than taken on trust from the caller: everything
+  // below deletes something, and this is what establishes both that there is an
+  // old install in this folder and which paths belong to it.
+  const found = describeInstall(dir);
+  if (!found) return { error: `There's no Casebook install in ${dir}.` };
+
   const problems: string[] = [];
+  let stoppedAgent = false;
+  let removedPlist = false;
+  let removedExecutable = false;
 
-  // Fails when nothing is loaded, which is the normal case on a Mac that has
-  // been restarted since the old app last ran.
-  spawnSync("launchctl", ["bootout", `gui/${process.getuid?.() ?? 0}/${LAUNCH_AGENT_LABEL}`]);
-
-  const plist = launchAgentPlist();
-  if (existsSync(plist)) {
-    try {
-      unlinkSync(plist);
-    } catch (error) {
-      problems.push(`couldn't remove ${plist} (${(error as Error).message})`);
+  if (found.launchAgent) {
+    const wasLoaded = agentIsLoaded();
+    if (wasLoaded) {
+      spawnSync("launchctl", ["bootout", serviceTarget()], { encoding: "utf8" });
+      stoppedAgent = !agentIsLoaded();
+    }
+    if (wasLoaded && !stoppedAgent) {
+      // Deleting the plist now would take away the only handle on a job that is
+      // still running — and still respawning, since the installer wrote
+      // KeepAlive into it. Better to leave both and say so.
+      problems.push(
+        `couldn't stop it starting at login — launchd still has ${LAUNCH_AGENT_LABEL} loaded`,
+      );
+    } else {
+      try {
+        unlinkSync(found.launchAgent);
+        removedPlist = true;
+      } catch (error) {
+        problems.push(`couldn't remove ${found.launchAgent} (${(error as Error).message})`);
+      }
     }
   }
 
-  // Only ever the executable this project installs, and only inside the folder
-  // the caller has already confirmed holds an old install. A plist edited by
-  // hand is not licence to delete a path of someone else's choosing, which is
-  // why the path is built here rather than read from one.
-  const executable = join(dir, EXECUTABLE_NAME);
-  if (existsSync(executable)) {
+  // describeInstall only ever reports an executable directly inside `dir` —
+  // either the path the LaunchAgent names, checked against this folder, or the
+  // installer's default name found in it. A plist edited by hand is still not
+  // licence to delete a path of someone else's choosing.
+  if (found.executable) {
+    // launchd is not the only way it can be running: double-clicking it starts
+    // a copy launchd knows nothing about, and macOS unlinks a running
+    // executable without complaint — so the kill is what makes the delete mean
+    // anything. Exit status 1 is "nothing matched", which is the usual case.
+    spawnSync("pkill", ["-x", "-u", String(currentUid()), basename(found.executable)]);
     try {
-      unlinkSync(executable);
+      unlinkSync(found.executable);
+      removedExecutable = true;
     } catch (error) {
-      problems.push(`couldn't remove ${executable} (${(error as Error).message})`);
+      problems.push(`couldn't remove ${found.executable} (${(error as Error).message})`);
     }
   }
 
-  return problems.length > 0 ? { error: problems.join("; ") } : { ok: true };
+  if (problems.length > 0) return { error: problems.join("; ") };
+  return { ok: true, stoppedAgent, removedPlist, removedExecutable };
 }

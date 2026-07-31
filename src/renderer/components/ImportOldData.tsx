@@ -93,10 +93,21 @@ export function ImportOldData() {
         });
         return;
       }
+      // Say what was actually removed. An install whose agent was already
+      // unloaded and whose executable is already gone is a perfectly ordinary
+      // thing to find, and announcing a tidy-up that didn't happen would leave
+      // her believing something about her Mac that isn't true.
+      const did = [
+        result.stoppedAgent || result.removedPlist ? "It won't start at login any more." : null,
+        result.removedExecutable ? "The old app has been deleted." : null,
+      ].filter(Boolean);
       notifications.show({
         color: "teal",
-        title: "Old Casebook removed",
-        message: "It won't start at login any more.",
+        title: did.length > 0 ? "Old Casebook removed" : "There was nothing left to remove",
+        message:
+          did.length > 0
+            ? did.join(" ")
+            : "The old Casebook had already been tidied up. Your data is untouched.",
       });
       // Only on success. Closing over a failure would take away the one place
       // that explains what is still sitting on her Mac.
@@ -175,13 +186,21 @@ export function ImportOldData() {
           {found.launchAgent || found.executable ? (
             <>
               <Text size="sm">
-                The old Casebook still starts itself every time you log in. Tidying it up will:
+                {found.launchAgent
+                  ? "The old Casebook still starts itself every time you log in. Tidying it up will:"
+                  : "The old Casebook is still on this Mac. Tidying it up will:"}
               </Text>
+              {/* Each line only where there is something behind it. The old
+                  installer let the app be called anything, so the path comes
+                  from what was actually found rather than from the name this
+                  project happens to use. */}
               <List size="sm" spacing={2}>
-                <List.Item>stop it launching at login</List.Item>
-                <List.Item>
-                  delete the old app <Code>{found.dir}/Casebook</Code>
-                </List.Item>
+                {found.launchAgent ? <List.Item>stop it launching at login</List.Item> : null}
+                {found.executable ? (
+                  <List.Item>
+                    delete the old app <Code>{found.executable}</Code>
+                  </List.Item>
+                ) : null}
               </List>
               <Alert variant="light" color="yellow" icon={<IconAlertTriangle size={18} />}>
                 <Text size="xs">

@@ -12,7 +12,11 @@ import type { DataDoc } from "./types.ts";
 
 export type SaveResult =
   | { ok: true; rev: number }
-  /** The document on disk moved on without us — was HTTP 409. */
+  /**
+   * The document on disk moved on without us — was HTTP 409. The migration plan
+   * called this field `serverRev`; there is no server any more, and the rev it
+   * carries is the one the main process is holding, so it is named for that.
+   */
   | { conflict: true; currentRev: number }
   /**
    * `retryable` is the old 5xx/4xx split. A failed disk write is worth trying
@@ -53,7 +57,16 @@ export interface LegacyInstall {
 }
 
 export type ImportResult = { ok: true; entries: number; students: number } | { error: string };
-export type RetireResult = { ok: true } | { error: string };
+
+/**
+ * What retiring actually managed to do, rather than just that it returned.
+ * The three can all be false — an install whose agent was already unloaded and
+ * whose executable is already gone — and saying "removed" to that is how a UI
+ * ends up reporting work it did not do.
+ */
+export type RetireResult =
+  | { ok: true; stoppedAgent: boolean; removedPlist: boolean; removedExecutable: boolean }
+  | { error: string };
 
 export interface CasebookApi {
   getDoc(): Promise<DataDoc>;
@@ -80,6 +93,6 @@ export interface CasebookApi {
   chooseLegacyInstall(): Promise<LegacyInstall | null>;
   /** Refused unless the current document is still empty. */
   importLegacyData(dir: string): Promise<ImportResult>;
-  /** Removes the old LaunchAgent, its plist and the old executable. */
+  /** Removes the old install's LaunchAgent, its plist and its executable. */
   retireLegacyInstall(dir: string): Promise<RetireResult>;
 }
