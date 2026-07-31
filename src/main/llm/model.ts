@@ -1,78 +1,104 @@
 /**
- * The weights on disk: where they live, getting them, and giving the space
- * back.
+ * The weights on disk: whether the feature is on at all, which model is chosen,
+ * where they live, getting them, and giving the space back.
  *
  * **They do not live in the data folder, and that is deliberate.** The
  * migration plan's one-liner put them there; this is the considered version.
  * `~/Casebook` is backed up, mirrored to a second location, and copy-verified
  * when it moves — all of which exists to protect a 100 KB document nobody can
- * reconstruct. A 2.3 GB file that Hugging Face will hand back on request has
- * no business riding through any of that. It would multiply every backup, make
- * the mirror unusable over a slow link, and turn relocating the data folder
- * into a several-minute copy.
+ * reconstruct. Gigabytes that Hugging Face will hand back on request have no
+ * business riding through any of that. It would multiply every backup, make the
+ * mirror unusable over a slow link, and turn relocating the data folder into a
+ * several-minute copy.
  *
  * So: `userData/models/`, alongside `config.json`, next to nothing that
  * `backups.ts`, `mirror.ts` or `datafolder.ts` will ever look at.
+ *
+ * The catalogue itself is in shared/models.ts, where the renderer can read it
+ * too. Everything here is about one Mac's copy of it.
  */
 
 import { createWriteStream, existsSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
 import { readdir, unlink } from "node:fs/promises";
+import { totalmem } from "node:os";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
 import { app } from "electron";
-import type { ModelStatus } from "../../shared/llm.ts";
-
-/**
- * The model, pinned exactly. A quantisation is not a detail — it decides the
- * file size, the wired memory, and the numbers in the eval report — so this
- * names one file rather than a repo and a preference.
- *
- * Qwen3-4B-Instruct-2507 at Q4_K_M, chosen in docs/local-llm.md §2 and measured
- * in scripts/llm-eval. Apache 2.0, so downloading it inside the app is
- * unambiguously fine.
- */
-export const MODEL = {
-  repo: "unsloth/Qwen3-4B-Instruct-2507-GGUF",
-  file: "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
-  /** What the settings panel promises before she agrees to the download. */
-  approxBytes: 2_500_000_000,
-  label: "Qwen3 4B Instruct",
-} as const;
-
-/** Weights, plus the 4k KV cache and compute buffers, wired under Metal. */
-export const NEEDED_BYTES = 3_500_000_000;
+import type { AiState, ModelStatus } from "../../shared/llm.ts";
+import { isKnownModelId, MODELS, modelChoice, type ModelChoice } from "../../shared/models.ts";
+import { readConfig, writeConfig } from "../config.ts";
 
 export function modelsDir(): string {
   return join(app.getPath("userData"), "models");
 }
 
-export function modelPath(): string {
-  return join(modelsDir(), MODEL.file);
+export function modelPath(choice: ModelChoice): string {
+  return join(modelsDir(), choice.file);
 }
 
 /** Where a download accumulates before it is known to be complete. */
-function partialPath(): string {
-  return `${modelPath()}.partial`;
+function partialPath(choice: ModelChoice): string {
+  return `${modelPath(choice)}.partial`;
 }
 
-let downloading: { received: number; total: number | null; abort: AbortController } | null = null;
-let lastError: string | null = null;
+/**
+ * One download at a time, on purpose.
+ *
+ * Two of these at once on a school network is how both of them get rate
+ * limited, and the largest entry in the catalogue is 19 GB — the panel says
+ * "one at a time" and this is what makes that true rather than advisory.
+ */
+let downloading: {
+  id: string;
+  received: number;
+  total: number | null;
+  abort: AbortController;
+} | null = null;
+/** Keyed by model id: a failure on one says nothing about the others. */
+const lastError = new Map<string, string>();
 
-export function modelStatus(): ModelStatus {
-  if (downloading) {
-    return {
-      state: "downloading",
-      receivedBytes: downloading.received,
-      totalBytes: downloading.total,
-    };
-  }
-  if (existsSync(modelPath())) return { state: "ready", bytes: sizeOf(modelPath()) };
-  if (lastError) return { state: "error", message: lastError };
-  const partial = sizeOf(partialPath());
-  if (partial > 0) return { state: "paused", receivedBytes: partial, totalBytes: null };
-  return { state: "absent" };
+/* ---------- the switch, and the choice ---------- */
+
+/**
+ * Whether the AI features are on.
+ *
+ * Absent means off, with one exception: an install that already downloaded
+ * weights under the old build had no switch to set, and taking its features
+ * away on upgrade would look like a bug rather than a default. Having weights
+ * on disk *is* the earlier build's opt-in, so it counts as one.
+ */
+export function aiEnabled(): boolean {
+  const setting = readConfig().aiEnabled;
+  if (typeof setting === "boolean") return setting;
+  return MODELS.some((m) => existsSync(modelPath(m)));
 }
+
+export function setAiEnabled(enabled: boolean): void {
+  writeConfig({ ...readConfig(), aiEnabled: enabled });
+}
+
+export function activeModel(): ModelChoice {
+  return modelChoice(readConfig().aiModel);
+}
+
+export function setActiveModel(id: string): void {
+  // Refused rather than resolved: an id that is not in the catalogue can only
+  // come from a renderer that made it up, and writing it would silently change
+  // her choice to the default the next time anything read it back.
+  if (!isKnownModelId(id)) return;
+  writeConfig({ ...readConfig(), aiModel: id });
+}
+
+export function activeModelPath(): string {
+  return modelPath(activeModel());
+}
+
+export function activeModelDownloaded(): boolean {
+  return existsSync(activeModelPath());
+}
+
+/* ---------- what is on this Mac ---------- */
 
 function sizeOf(path: string): number {
   try {
@@ -82,12 +108,56 @@ function sizeOf(path: string): number {
   }
 }
 
+/** One model's state, with no reference to the switch. */
+function entryStatus(choice: ModelChoice): ModelStatus {
+  if (downloading?.id === choice.id) {
+    return {
+      state: "downloading",
+      receivedBytes: downloading.received,
+      totalBytes: downloading.total,
+    };
+  }
+  if (existsSync(modelPath(choice))) return { state: "ready", bytes: sizeOf(modelPath(choice)) };
+  const failure = lastError.get(choice.id);
+  if (failure) return { state: "error", message: failure };
+  const partial = sizeOf(partialPath(choice));
+  if (partial > 0) return { state: "paused", receivedBytes: partial, totalBytes: null };
+  return { state: "absent" };
+}
+
+/**
+ * The active model's status — what the workbench and the summary panel gate on.
+ *
+ * The switch is folded in here rather than left for callers to remember. A
+ * screen that asked "is a model ready" and got `ready` for weights the features
+ * are switched off from would be the whole bug this state exists to prevent.
+ */
+export function modelStatus(): ModelStatus {
+  if (!aiEnabled()) return { state: "off" };
+  return entryStatus(activeModel());
+}
+
+export function aiState(): AiState {
+  const enabled = aiEnabled();
+  const models = MODELS.map((m) => ({ id: m.id, status: entryStatus(m) }));
+  return {
+    enabled,
+    activeId: activeModel().id,
+    active: enabled ? entryStatus(activeModel()) : { state: "off" },
+    machineBytes: totalmem(),
+    diskBytes: MODELS.reduce((sum, m) => sum + sizeOf(modelPath(m)) + sizeOf(partialPath(m)), 0),
+    models,
+  };
+}
+
 export function isDownloading(): boolean {
   return downloading !== null;
 }
 
+/* ---------- getting them ---------- */
+
 /**
- * Fetch the weights, resuming whatever is already on disk.
+ * Fetch one model's weights, resuming whatever is already on disk.
  *
  * Node's global `fetch`, never `net.fetch`. The reason is written down in
  * updater.ts and applies identically here: a Chromium-side download acquires
@@ -97,21 +167,23 @@ export function isDownloading(): boolean {
  *
  * Resume matters more than it looks. Anonymous Hugging Face downloads are rate
  * limited per IP, and a school network behind one NAT can be told 429 partway
- * through 2.3 GB. Keeping the partial file means the answer to that is "try
- * again later", not "start again".
+ * through several gigabytes. Keeping the partial file means the answer to that
+ * is "try again later", not "start again".
  */
-export async function downloadModel(onProgress: (status: ModelStatus) => void): Promise<void> {
+export async function downloadModel(id: string, onProgress: (state: AiState) => void) {
   if (downloading) return;
-  if (existsSync(modelPath())) return;
+  if (!isKnownModelId(id)) return;
+  const choice = modelChoice(id);
+  if (existsSync(modelPath(choice))) return;
 
   mkdirSync(modelsDir(), { recursive: true });
-  const already = sizeOf(partialPath());
+  const already = sizeOf(partialPath(choice));
   const abort = new AbortController();
-  downloading = { received: already, total: null, abort };
-  lastError = null;
+  downloading = { id, received: already, total: null, abort };
+  lastError.delete(id);
 
   try {
-    const url = `https://huggingface.co/${MODEL.repo}/resolve/main/${MODEL.file}?download=true`;
+    const url = `https://huggingface.co/${choice.repo}/resolve/main/${choice.file}?download=true`;
     const response = await fetch(url, {
       signal: abort.signal,
       headers: already > 0 ? { Range: `bytes=${already}-` } : {},
@@ -134,7 +206,7 @@ export async function downloadModel(onProgress: (status: ModelStatus) => void): 
     downloading.received = from;
 
     let lastReport = 0;
-    const sink = createWriteStream(partialPath(), { flags: resumed ? "a" : "w" });
+    const sink = createWriteStream(partialPath(choice), { flags: resumed ? "a" : "w" });
     const body = Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]);
     body.on("data", (piece: Buffer) => {
       if (!downloading) return;
@@ -143,25 +215,25 @@ export async function downloadModel(onProgress: (status: ModelStatus) => void): 
       const now = Date.now();
       if (now - lastReport > 1000) {
         lastReport = now;
-        onProgress(modelStatus());
+        onProgress(aiState());
       }
     });
     await pipeline(body, sink);
 
     // Only now is it the model. Renaming last means a crash mid-download can
     // never leave a truncated file sitting under the name the loader trusts.
-    renameSync(partialPath(), modelPath());
+    renameSync(partialPath(choice), modelPath(choice));
     downloading = null;
-    onProgress(modelStatus());
+    onProgress(aiState());
   } catch (error) {
     downloading = null;
     if (abort.signal.aborted) {
       // Paused on purpose. The partial file stays, which is the whole point.
-      onProgress(modelStatus());
+      onProgress(aiState());
       return;
     }
-    lastError = (error as Error).message;
-    onProgress(modelStatus());
+    lastError.set(id, (error as Error).message);
+    onProgress(aiState());
   }
 }
 
@@ -170,15 +242,17 @@ export function pauseDownload(): void {
 }
 
 /**
- * Hand the disk back. Removes the finished file and any partial, and takes the
- * folder with it when nothing else is in there — an empty `models/` left behind
- * is a small lie about whether the feature is installed.
+ * Hand the disk back for one model. Removes the finished file and any partial,
+ * and takes the folder with it when nothing else is in there — an empty
+ * `models/` left behind is a small lie about whether anything is installed.
  */
-export async function removeModel(): Promise<void> {
-  pauseDownload();
-  lastError = null;
+export async function removeModel(id: string): Promise<void> {
+  if (!isKnownModelId(id)) return;
+  const choice = modelChoice(id);
+  if (downloading?.id === id) pauseDownload();
+  lastError.delete(id);
   await Promise.all(
-    [modelPath(), partialPath()].map(async (path) => {
+    [modelPath(choice), partialPath(choice)].map(async (path) => {
       try {
         await unlink(path);
       } catch {

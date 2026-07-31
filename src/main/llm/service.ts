@@ -18,7 +18,6 @@
 /* eslint-disable unicorn/require-post-message-target-origin */
 
 import { join } from "node:path";
-import { existsSync } from "node:fs";
 import { utilityProcess, type UtilityProcess } from "electron";
 import type {
   CategoryReply,
@@ -30,7 +29,7 @@ import type {
   SummaryRequest,
 } from "../../shared/llm.ts";
 import { availableMemory } from "./memory.ts";
-import { modelPath, NEEDED_BYTES } from "./model.ts";
+import { activeModel, activeModelDownloaded, activeModelPath, aiEnabled } from "./model.ts";
 
 /**
  * Long enough that reviewing an import does not pay the load cost on every
@@ -46,9 +45,17 @@ interface Pending {
   reject: (error: Error) => void;
   onChunk?: (chunk: string) => void;
   timer: ReturnType<typeof setTimeout>;
+  /**
+   * Which process this job was sent to. Switching models kills one host and
+   * forks another, and for a couple of seconds both exist — without this, the
+   * old one's exit would reject a job the new one is busily working on.
+   */
+  owner: UtilityProcess;
 }
 
 let child: UtilityProcess | null = null;
+/** The weights the running host loaded, so a changed choice can be noticed. */
+let loadedPath: string | null = null;
 let nextId = 1;
 const pending = new Map<number, Pending>();
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -59,31 +66,34 @@ let idleTimer: ReturnType<typeof setTimeout> | null = null;
  */
 let chain: Promise<unknown> = Promise.resolve();
 
-export function modelIsDownloaded(): boolean {
-  return existsSync(modelPath());
-}
-
+/** Sized from the chosen model: a 19 GB mixture of experts is not a 2.5 GB 4B. */
 export function memoryAdvice(): MemoryAdvice {
   const availableBytes = availableMemory();
+  const neededBytes = activeModel().runBytes;
   return {
     availableBytes,
-    neededBytes: NEEDED_BYTES,
+    neededBytes,
     // Zero means vm_stat could not be read. Unknown is not a refusal: a check
     // that disables the feature because a diagnostic moved would be worse than
     // no check at all.
-    enough: availableBytes === 0 || availableBytes >= NEEDED_BYTES,
+    enough: availableBytes === 0 || availableBytes >= neededBytes,
   };
 }
 
 function spawn(): UtilityProcess {
-  if (child) return child;
+  const path = activeModelPath();
+  if (child && loadedPath === path) return child;
+  // A host holding the model she just switched away from is worse than no host:
+  // it would answer, plausibly, with the wrong weights. Its jobs are its own
+  // (see `owner`), so this is safe with work in flight.
+  if (child) shutdown();
   /**
    * Built as a second rollup input beside `index.js` — electron-vite has only
    * main/preload/renderer targets, so the host rides along on the main build
    * and lands next to us. Same `__dirname` idiom as the preload path.
    */
   const entry = join(__dirname, "llm-host.js");
-  const spawned = utilityProcess.fork(entry, [modelPath()], {
+  const spawned = utilityProcess.fork(entry, [path], {
     // The weights load faster and the app stays responsive when inference is
     // not competing with the UI for scheduling priority.
     serviceName: "casebook-inference",
@@ -105,11 +115,15 @@ function spawn(): UtilityProcess {
   });
 
   spawned.on("exit", () => {
-    child = null;
-    // Anything still waiting was in the process that just died. Failing them
-    // explicitly is the difference between a feature that says it crashed and
-    // a spinner that never stops.
+    if (child === spawned) {
+      child = null;
+      loadedPath = null;
+    }
+    // Anything still waiting on *this* process was in it when it died. Failing
+    // those explicitly is the difference between a feature that says it crashed
+    // and a spinner that never stops.
     for (const [id, waiting] of pending) {
+      if (waiting.owner !== spawned) continue;
       clearTimeout(waiting.timer);
       waiting.reject(new Error("The AI helper stopped unexpectedly."));
       pending.delete(id);
@@ -117,6 +131,7 @@ function spawn(): UtilityProcess {
   });
 
   child = spawned;
+  loadedPath = path;
   return spawned;
 }
 
@@ -136,6 +151,7 @@ export function shutdown(): void {
   if (!child) return;
   const dying = child;
   child = null;
+  loadedPath = null;
   try {
     dying.postMessage({ id: 0, kind: "shutdown" } satisfies HostRequest);
   } catch {
@@ -168,6 +184,7 @@ function send<T>(request: WithoutId<HostRequest>, onChunk?: (chunk: string) => v
       reject,
       onChunk,
       timer,
+      owner: proc,
     });
     proc.postMessage({ ...request, id } as HostRequest);
   });
@@ -181,8 +198,15 @@ function send<T>(request: WithoutId<HostRequest>, onChunk?: (chunk: string) => v
  * work" is to carry on without it.
  */
 async function run<T>(work: () => Promise<T>): Promise<LlmResult<T>> {
-  if (!modelIsDownloaded()) {
-    return { unavailable: "no-model", message: "The AI features aren't set up yet." };
+  // Checked here as well as in the UI. The renderer hides every affordance when
+  // the switch is off, but "no screen currently offers it" is a weaker promise
+  // than "the process will not run", and the switch is the one she was given to
+  // mean the second thing.
+  if (!aiEnabled()) {
+    return { unavailable: "disabled", message: "The AI features are switched off in Settings." };
+  }
+  if (!activeModelDownloaded()) {
+    return { unavailable: "no-model", message: "That model hasn't been downloaded yet." };
   }
   const memory = memoryAdvice();
   if (!memory.enough) {

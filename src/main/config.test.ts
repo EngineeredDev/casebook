@@ -162,4 +162,40 @@ describe("writeConfig", () => {
     expect(readConfig()).toEqual({ autoLockMinutes: 15 });
     expect(readConfigFile(app)).toEqual({ autoLockMinutes: 15 });
   });
+
+  it("takes the AI switch only as a boolean", async () => {
+    tempApp();
+    const { readConfig, writeConfig } = await import("./config.ts");
+
+    for (const bad of ["true", 1, null]) {
+      writeConfig({ aiEnabled: bad as unknown as boolean });
+      // Absent is the default, and the default is off — so a malformed value
+      // failing to land is the safe outcome rather than a lost setting.
+      expect(readConfig(), `accepted ${JSON.stringify(bad)}`).toEqual({});
+    }
+
+    writeConfig({ aiEnabled: true });
+    expect(readConfig()).toEqual({ aiEnabled: true });
+    writeConfig({ aiEnabled: false });
+    expect(readConfig()).toEqual({ aiEnabled: false });
+  });
+
+  it("keeps a model id it has never heard of", async () => {
+    const app = tempApp();
+    writeConfigFile(app, JSON.stringify({ aiModel: "some-model-from-a-newer-build" }));
+    const { readConfig, writeConfig } = await import("./config.ts");
+
+    // Checked for shape, never against the catalogue. An older Casebook — which
+    // the self-updater makes reachable — must not treat a newer build's choice
+    // as corrupt and erase it; shared/models.ts falls back to the default at the
+    // point of use, so running the old build once costs her nothing permanent.
+    expect(readConfig()).toEqual({ aiModel: "some-model-from-a-newer-build" });
+
+    writeConfig({ ...readConfig(), aiEnabled: true });
+    expect(readConfigFile(app)).toMatchObject({ aiModel: "some-model-from-a-newer-build" });
+
+    // An empty string is not a choice, and would resolve to the default anyway.
+    writeConfig({ aiModel: "" });
+    expect(readConfig()).toEqual({});
+  });
 });

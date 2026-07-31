@@ -9,9 +9,19 @@
  * paths may come to depend on any of it.
  */
 
-/** Where the AI features are, as one value the settings panel can render. */
+/**
+ * Where one model is, as a value a panel can render.
+ *
+ * Everything outside the settings panel asks one question of this — is it
+ * `ready` — and gets the right answer for free in every other case. That is why
+ * `off` is a state here rather than a separate flag beside it: a switch the
+ * import workbench had to remember to consult is a switch it will one day
+ * forget to consult.
+ */
 export type ModelStatus =
-  /** Never enabled. The default, and the state most installs stay in. */
+  /** The AI features are switched off. The default, and where installs start. */
+  | { state: "off" }
+  /** Switched on, but these weights are not on this Mac. */
   | { state: "absent" }
   | { state: "downloading"; receivedBytes: number; totalBytes: number | null }
   /** Downloaded and usable. `bytes` is what removing it would hand back. */
@@ -20,12 +30,42 @@ export type ModelStatus =
   | { state: "paused"; receivedBytes: number; totalBytes: number | null }
   | { state: "error"; message: string };
 
+/** One catalogue entry's state on this Mac. `id` indexes into `MODELS`. */
+export interface ModelEntryStatus {
+  id: string;
+  status: ModelStatus;
+}
+
+/**
+ * Everything the settings panel needs in one value, and the single thing the
+ * main process broadcasts when any of it changes.
+ *
+ * `active.state` is what the rest of the app gates on, and it already accounts
+ * for the switch: turning the features off makes it `off` no matter what is on
+ * disk, so nothing downloaded goes on being used by a screen that missed the
+ * change.
+ */
+export interface AiState {
+  enabled: boolean;
+  /** The chosen model's id, whether or not it has been downloaded. */
+  activeId: string;
+  /** The chosen model's status, or `off` when the features are switched off. */
+  active: ModelStatus;
+  /** `os.totalmem()`, so the panel can say which models this Mac can hold. */
+  machineBytes: number;
+  /** Weights and part-downloads on disk right now, across every model. */
+  diskBytes: number;
+  models: ModelEntryStatus[];
+}
+
 /**
  * Why a job could not run. Separated from a plain error string because the
  * settings panel and the workbench say different things for each, and
  * "not enough memory" in particular is advice rather than a fault.
  */
 export type LlmUnavailable =
+  /** Switched off in Settings. Not a fault, and not something to offer a retry for. */
+  | "disabled"
   | "no-model"
   | "low-memory"
   /** The inference process died. Retrying is reasonable; it is respawned. */

@@ -27,6 +27,23 @@ export interface Config {
   autoLockMinutes?: number | null;
 
   /**
+   * Whether the AI features are switched on. Absent means off — the default,
+   * and the state an install stays in unless she deliberately leaves it.
+   *
+   * Here rather than in the document because it is a fact about this Mac: what
+   * her 8 GB Air can be asked to run is not what a desktop could, and a setting
+   * that travelled with her data would arrive on the other machine having
+   * already decided.
+   */
+  aiEnabled?: boolean;
+  /**
+   * Which model in `shared/models.ts` she chose, by id. Absent means the
+   * default. An id this build has never heard of is kept, not corrected — see
+   * `modelChoice`.
+   */
+  aiModel?: string;
+
+  /**
    * Anything a newer Casebook wrote that this one has never heard of.
    *
    * Carried through reads and writes untouched. Without it, `writeConfig({
@@ -55,7 +72,7 @@ function configFile(): string {
  */
 function normalize(raw: unknown): Config {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return {};
-  const { dataDir, mirrorDir, autoLockMinutes, ...rest } = raw as Config;
+  const { dataDir, mirrorDir, autoLockMinutes, aiEnabled, aiModel, ...rest } = raw as Config;
 
   const config: Config = { ...rest };
   // A relative path would be resolved against whatever the working directory
@@ -66,6 +83,12 @@ function normalize(raw: unknown): Config {
   else if (Number.isInteger(autoLockMinutes) && (autoLockMinutes as number) > 0) {
     config.autoLockMinutes = autoLockMinutes as number;
   }
+  if (typeof aiEnabled === "boolean") config.aiEnabled = aiEnabled;
+  // Any non-empty string, deliberately: this file must not check the id against
+  // the catalogue. An older build reading a newer one's choice would drop it
+  // here and write the file back without it, turning "run this once" into
+  // "her model choice is gone". Unknown ids are resolved where they are used.
+  if (typeof aiModel === "string" && aiModel.length > 0) config.aiModel = aiModel;
   return config;
 }
 

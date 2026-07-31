@@ -57,9 +57,9 @@ function start(): void {
      * updates and locking already work: the modules that produce these events
      * know nothing about windows.
      */
-    modelStatus: (status) => {
+    aiState: (state) => {
       for (const window of BrowserWindow.getAllWindows()) {
-        window.webContents.send("llm:model-status", status);
+        window.webContents.send("llm:ai-state", state);
       }
     },
     summaryChunk: (chunk) => {

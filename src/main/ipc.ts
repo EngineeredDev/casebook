@@ -34,6 +34,7 @@ import type {
 } from "../shared/api.ts";
 import { DATA_VERSION, type DataDoc } from "../shared/types.ts";
 import type {
+  AiState,
   CategoryReply,
   CategoryRequest,
   LlmResult,
@@ -41,7 +42,15 @@ import type {
   ModelStatus,
   SummaryRequest,
 } from "../shared/llm.ts";
-import { downloadModel, modelStatus, pauseDownload, removeModel } from "./llm/model.ts";
+import {
+  aiState,
+  downloadModel,
+  modelStatus,
+  pauseDownload,
+  removeModel,
+  setActiveModel,
+  setAiEnabled,
+} from "./llm/model.ts";
 import { classify, memoryAdvice, shutdown as shutdownInference, summarize } from "./llm/service.ts";
 import {
   backupsState,
@@ -203,7 +212,14 @@ function failure(error: unknown): { error: string; kind: EncryptionFailure } {
  * and updater.ts already do.
  */
 export interface Broadcast {
-  modelStatus(status: ModelStatus): void;
+  /**
+   * One event for the whole of the AI settings — the switch, the chosen model,
+   * and every catalogue entry's state. Sent as a single value because these are
+   * not independent: a download finishing changes what "on" means, and two
+   * events that could arrive in either order would let a panel render a state
+   * that never existed.
+   */
+  aiState(state: AiState): void;
   summaryChunk(chunk: string): void;
 }
 
@@ -604,26 +620,53 @@ export function registerIpc(broadcast: Broadcast): void {
 
   handle("llm:status", (): ModelStatus => modelStatus());
 
-  handle("llm:download", (): ModelStatus => {
-    // Deliberately not awaited: 2.3 GB takes minutes and the renderer needs an
-    // answer now. Progress and completion both arrive as broadcasts.
-    void downloadModel(broadcast.modelStatus);
-    return modelStatus();
+  handle("llm:state", (): AiState => aiState());
+
+  handle("llm:set-enabled", (enabled: unknown): AiState => {
+    setAiEnabled(enabled === true);
+    // Off means off now, not after the idle timer. She switched it off to stop
+    // it doing something, and a host that keeps its gigabytes for another
+    // minute is the app disagreeing with her about what the switch does.
+    if (enabled !== true) shutdownInference();
+    const state = aiState();
+    broadcast.aiState(state);
+    return state;
   });
 
-  handle("llm:pause-download", (): ModelStatus => {
+  handle("llm:select-model", (id: unknown): AiState => {
+    if (typeof id !== "string") return aiState();
+    setActiveModel(id);
+    // The running host has the old weights loaded. service.ts would notice on
+    // the next job, but there is no reason to keep several gigabytes of a model
+    // she has stopped using.
+    shutdownInference();
+    const state = aiState();
+    broadcast.aiState(state);
+    return state;
+  });
+
+  handle("llm:download", (id: unknown): AiState => {
+    if (typeof id !== "string") return aiState();
+    // Deliberately not awaited: gigabytes take minutes and the renderer needs
+    // an answer now. Progress and completion both arrive as broadcasts.
+    void downloadModel(id, broadcast.aiState);
+    return aiState();
+  });
+
+  handle("llm:pause-download", (): AiState => {
     pauseDownload();
-    return modelStatus();
+    return aiState();
   });
 
-  handle("llm:remove", async (): Promise<ModelStatus> => {
+  handle("llm:remove", async (id: unknown): Promise<AiState> => {
+    if (typeof id !== "string") return aiState();
     // Stop the process before deleting what it has open. Removing a model out
     // from under a running load is how you get a crash instead of a tidy-up.
     shutdownInference();
-    await removeModel();
-    const status = modelStatus();
-    broadcast.modelStatus(status);
-    return status;
+    await removeModel(id);
+    const state = aiState();
+    broadcast.aiState(state);
+    return state;
   });
 
   handle("llm:memory", (): MemoryAdvice => memoryAdvice());

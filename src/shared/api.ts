@@ -10,6 +10,7 @@
 
 import type { DataDoc } from "./types.ts";
 import type {
+  AiState,
   CategoryReply,
   CategoryRequest,
   LlmResult,
@@ -329,14 +330,27 @@ export interface CasebookApi {
    * not running, an answer that is always allowed to be "I don't know". Nothing
    * above this line may come to depend on anything below it.
    */
+  /**
+   * The chosen model's state, which is `off` whenever the features are — so a
+   * screen that gates on `state === "ready"` needs to know nothing about the
+   * switch, the catalogue, or which model is in use.
+   */
   getModelStatus(): Promise<ModelStatus>;
-  /** Starts or resumes the download. Progress arrives via `onModelStatus`. */
-  startModelDownload(): Promise<ModelStatus>;
-  /** Stops it, keeping what has arrived so it can be resumed. */
-  pauseModelDownload(): Promise<ModelStatus>;
-  /** Deletes the weights and hands the disk back. */
-  removeModel(): Promise<ModelStatus>;
   onModelStatus(listener: (status: ModelStatus) => void): () => void;
+
+  /** The whole of Settings → AI features: the switch, the choice, the catalogue. */
+  getAiState(): Promise<AiState>;
+  /** Turning it off also stops the inference process, immediately. */
+  setAiEnabled(enabled: boolean): Promise<AiState>;
+  /** Choose which model runs. Downloading is separate, and may not have happened. */
+  selectModel(id: string): Promise<AiState>;
+  /** Starts or resumes one model's download. Progress arrives via `onAiState`. */
+  startModelDownload(id: string): Promise<AiState>;
+  /** Stops the download in flight, keeping what has arrived so it can resume. */
+  pauseModelDownload(): Promise<AiState>;
+  /** Deletes one model's weights and hands the disk back. */
+  removeModel(id: string): Promise<AiState>;
+  onAiState(listener: (state: AiState) => void): () => void;
   /** Whether there is room to load the model right now, and how much is needed. */
   getMemoryAdvice(): Promise<MemoryAdvice>;
   /**

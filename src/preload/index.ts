@@ -10,7 +10,7 @@
 
 import { contextBridge, ipcRenderer } from "electron";
 import type { CasebookApi, UpdateInfo } from "../shared/api.ts";
-import type { ModelStatus } from "../shared/llm.ts";
+import type { AiState, ModelStatus } from "../shared/llm.ts";
 
 const api: CasebookApi = {
   getDoc: () => ipcRenderer.invoke("doc:get"),
@@ -68,17 +68,32 @@ const api: CasebookApi = {
   },
 
   getModelStatus: () => ipcRenderer.invoke("llm:status"),
-  startModelDownload: () => ipcRenderer.invoke("llm:download"),
+  getAiState: () => ipcRenderer.invoke("llm:state"),
+  setAiEnabled: (enabled) => ipcRenderer.invoke("llm:set-enabled", enabled),
+  selectModel: (id) => ipcRenderer.invoke("llm:select-model", id),
+  startModelDownload: (id) => ipcRenderer.invoke("llm:download", id),
   pauseModelDownload: () => ipcRenderer.invoke("llm:pause-download"),
-  removeModel: () => ipcRenderer.invoke("llm:remove"),
+  removeModel: (id) => ipcRenderer.invoke("llm:remove", id),
   getMemoryAdvice: () => ipcRenderer.invoke("llm:memory"),
   suggestCategory: (request) => ipcRenderer.invoke("llm:category", request),
   summarizeNotes: (request) => ipcRenderer.invoke("llm:summary", request),
 
+  onAiState: (listener: (state: AiState) => void) => {
+    const forward = (_event: unknown, state: AiState) => listener(state);
+    ipcRenderer.on("llm:ai-state", forward);
+    return () => ipcRenderer.removeListener("llm:ai-state", forward);
+  },
+
+  /**
+   * The same event, narrowed to the one field the rest of the app cares about.
+   * A field pick is as much logic as this file is allowed, and it is worth it:
+   * the alternative is a second broadcast channel carrying a value derived from
+   * the first, which can then be stale relative to it.
+   */
   onModelStatus: (listener: (status: ModelStatus) => void) => {
-    const forward = (_event: unknown, status: ModelStatus) => listener(status);
-    ipcRenderer.on("llm:model-status", forward);
-    return () => ipcRenderer.removeListener("llm:model-status", forward);
+    const forward = (_event: unknown, state: AiState) => listener(state.active);
+    ipcRenderer.on("llm:ai-state", forward);
+    return () => ipcRenderer.removeListener("llm:ai-state", forward);
   },
 
   onSummaryChunk: (listener: (chunk: string) => void) => {
