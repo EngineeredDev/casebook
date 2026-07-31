@@ -1,0 +1,40 @@
+<!--
+  The source of build/icon.icns. Regenerate with scripts/make-icon.mjs after
+  editing this; the .icns is committed because CI packages the app and should
+  not have to rasterize anything.
+
+  The book is the same two paths as the app mark in src/renderer/App.tsx, at
+  the dark-theme direct/indirect series colors — the mark is drawn on a dark
+  squircle here, so it takes the dark palette's versions of those two colors.
+  Edit both if the mark ever changes.
+
+  Geometry is Apple's macOS grid: a 1024 canvas with the artwork confined to an
+  824 rounded square inset 100 on every side. The corners have to stay
+  transparent, which is why this is drawn rather than filled edge to edge.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="slate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#33322f" />
+      <stop offset="1" stop-color="#161615" />
+    </linearGradient>
+  </defs>
+
+  <rect x="100" y="100" width="824" height="824" rx="185.4" ry="185.4" fill="url(#slate)" />
+
+  <!--
+    The mark is drawn on a 32 unit grid centred on (16,16). Scaling by 20 puts
+    the book at ~516 across inside the 824 square, which leaves it room to
+    breathe without shrinking into the middle.
+  -->
+  <g transform="translate(512 512) scale(20) translate(-16 -16)">
+    <path
+      d="M14.7 9.4C12 6.6 8.2 5.4 4 5.8a1 1 0 0 0-.9 1v15.7a1 1 0 0 0 1.1 1c3.6-.3 7 .8 9.3 3 .5.5 1.2.1 1.2-.6z"
+      fill="#3987e5"
+    />
+    <path
+      d="M17.3 9.4c2.7-2.8 6.5-4 10.7-3.6a1 1 0 0 1 .9 1v15.7a1 1 0 0 1-1.1 1c-3.6-.3-7 .8-9.3 3-.5.5-1.2.1-1.2-.6z"
+      fill="#d95926"
+    />
+  </g>
+</svg>
