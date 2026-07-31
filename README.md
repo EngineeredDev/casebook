@@ -21,8 +21,13 @@ It downloads the app, puts it in `/Applications`, and opens it. Casebook is then
 an ordinary Mac app: it's in the Dock, in Spotlight, and it opens when you open
 it.
 
-Apple silicon (M1 and later) only. Run the same command again to upgrade —
-your data is never touched. To remove it, add `-s -- --uninstall` to the pipe.
+Apple silicon (M1 and later) only. To remove it, add `-s -- --uninstall` to the
+pipe; your data stays either way.
+
+**Updating.** Casebook checks for a new version when it opens and every few
+hours, and offers one in Settings → Updates. It downloads and reopens itself,
+and never does it without being asked. Running the install command again does
+the same job by hand, and is the way back if an update ever fails.
 
 **Why Terminal rather than a download?** Because it is genuinely the easier
 path here, not the technical one. Casebook is signed, but not by a certificate

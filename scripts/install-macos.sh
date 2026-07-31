@@ -179,4 +179,6 @@ if [ -f "$OLD_PLIST" ]; then
   echo "deleting anything yourself."
   echo
 fi
-echo "Run this again to upgrade. To remove it: install-macos.sh --uninstall"
+echo "Casebook updates itself from here — it offers new versions in Settings."
+echo "Running this again does the same job by hand, and is the way back if an"
+echo "update ever fails. To remove it: install-macos.sh --uninstall"
