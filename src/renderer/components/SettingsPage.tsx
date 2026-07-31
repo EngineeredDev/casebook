@@ -5,6 +5,7 @@ import { IconFolderOpen, IconFolderSymlink } from "@tabler/icons-react";
 import type { DataLocation } from "../../shared/api.ts";
 import { api, bridgeMessage } from "../lib/api.ts";
 import { Link } from "../lib/router.tsx";
+import { UpdatePanel } from "./UpdatePanel.tsx";
 
 /**
  * Where the data folder is, and how to put it somewhere else.
@@ -128,6 +129,8 @@ export function SettingsPage() {
           , which is the same data in one file.
         </Text>
       </Card>
+
+      <UpdatePanel />
     </Stack>
   );
 }

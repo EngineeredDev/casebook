@@ -2,6 +2,7 @@ import { app, BrowserWindow, session } from "electron";
 import { registerIpc } from "./ipc.ts";
 import { buildMenu } from "./menu.ts";
 import { registerAppScheme, serveRenderer } from "./renderer.ts";
+import { startUpdateChecks } from "./updater.ts";
 import { createWindow } from "./window.ts";
 
 /**
@@ -47,6 +48,15 @@ function start(): void {
   // Clicking the Dock icon with no window open.
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+
+  // Tell whatever window is open. Settings asks for itself when it mounts, so
+  // this only has to cover a check that finishes while she is already looking
+  // at something else.
+  startUpdateChecks((info) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      window.webContents.send("update:available", info);
+    }
   });
 }
 

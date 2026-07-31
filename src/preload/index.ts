@@ -9,7 +9,7 @@
  */
 
 import { contextBridge, ipcRenderer } from "electron";
-import type { CasebookApi } from "../shared/api.ts";
+import type { CasebookApi, UpdateInfo } from "../shared/api.ts";
 
 const api: CasebookApi = {
   getDoc: () => ipcRenderer.invoke("doc:get"),
@@ -26,6 +26,18 @@ const api: CasebookApi = {
   chooseLegacyInstall: () => ipcRenderer.invoke("legacy:choose"),
   importLegacyData: (dir) => ipcRenderer.invoke("legacy:import", dir),
   retireLegacyInstall: (dir) => ipcRenderer.invoke("legacy:retire", dir),
+
+  getUpdateState: () => ipcRenderer.invoke("update:state"),
+  checkForUpdate: () => ipcRenderer.invoke("update:check"),
+  openReleasePage: () => ipcRenderer.invoke("update:open-release"),
+  onUpdateAvailable: (listener: (info: UpdateInfo) => void) => {
+    // The event object never crosses the bridge — only the payload. Handing a
+    // renderer an IpcRendererEvent would hand it `sender`, and with it a way
+    // back into the preload's privileges.
+    const forward = (_event: unknown, info: UpdateInfo) => listener(info);
+    ipcRenderer.on("update:available", forward);
+    return () => ipcRenderer.removeListener("update:available", forward);
+  },
 };
 
 contextBridge.exposeInMainWorld("casebook", api);

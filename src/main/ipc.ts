@@ -18,6 +18,8 @@ import type {
   RelocateResult,
   RetireResult,
   SaveResult,
+  UpdateCheck,
+  UpdateInfo,
 } from "../shared/api.ts";
 import { DATA_VERSION, type DataDoc } from "../shared/types.ts";
 import { relocateData } from "./datafolder.ts";
@@ -25,6 +27,7 @@ import { describeInstall, findInstall, importInstall, retireInstall } from "./le
 import { canRelocate, dataDir, dataFile } from "./paths.ts";
 import { isRendererUrl } from "./renderer.ts";
 import { backupIfNeeded, loadDoc, saveDoc } from "./storage.ts";
+import { checkForUpdate, getAvailableUpdate } from "./updater.ts";
 
 /** Null until the first successful read; see the `doc:get` handler. */
 let doc: DataDoc | null = null;
@@ -285,6 +288,25 @@ export function registerIpc(): void {
     // renderer's is precisely how the next save overwrites what was imported.
     doc = null;
     return result;
+  });
+
+  /* ---------- updates ---------- */
+
+  handle("update:state", (): { version: string; available: UpdateInfo | null } => ({
+    version: app.getVersion(),
+    available: getAvailableUpdate(),
+  }));
+
+  handle("update:check", (): Promise<UpdateCheck> => checkForUpdate());
+
+  handle("update:open-release", async (): Promise<void> => {
+    const info = getAvailableUpdate();
+    // The URL is one this process built from GitHub's own response, never one
+    // the renderer supplied — openExternal hands a string to the OS, and the
+    // renderer is not allowed to choose what that string is.
+    await shell.openExternal(
+      info?.releaseUrl ?? "https://github.com/EngineeredDev/casebook/releases/latest",
+    );
   });
 
   handle("legacy:retire", (dir: unknown): RetireResult => {

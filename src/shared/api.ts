@@ -68,6 +68,22 @@ export type RetireResult =
   | { ok: true; stoppedAgent: boolean; removedPlist: boolean; removedExecutable: boolean }
   | { error: string };
 
+/** A published release newer than the running app. */
+export interface UpdateInfo {
+  /** Without the leading v — what app.getVersion() would report. */
+  version: string;
+  /** The zip, fetched by the main process. Never handed to the renderer to download. */
+  downloadUrl: string;
+  /** The release page, for the "download it yourself" path when anything fails. */
+  releaseUrl: string;
+}
+
+export type UpdateCheck =
+  | { available: true; info: UpdateInfo }
+  /** Up to date. Carries the running version so the UI can show it. */
+  | { available: false; version: string }
+  | { error: string };
+
 export interface CasebookApi {
   getDoc(): Promise<DataDoc>;
   saveDoc(doc: DataDoc): Promise<SaveResult>;
@@ -95,4 +111,16 @@ export interface CasebookApi {
   importLegacyData(dir: string): Promise<ImportResult>;
   /** Removes the old install's LaunchAgent, its plist and its executable. */
   retireLegacyInstall(dir: string): Promise<RetireResult>;
+
+  /** The running version, plus whatever a background check has already found. */
+  getUpdateState(): Promise<{ version: string; available: UpdateInfo | null }>;
+  /** Asks GitHub now, rather than waiting for the next scheduled check. */
+  checkForUpdate(): Promise<UpdateCheck>;
+  /** Opens the release page in the default browser, for installing by hand. */
+  openReleasePage(): Promise<void>;
+  /**
+   * Called when a background check finds one, so a window that was already open
+   * hears about it. Returns its own unsubscribe.
+   */
+  onUpdateAvailable(listener: (info: UpdateInfo) => void): () => void;
 }
