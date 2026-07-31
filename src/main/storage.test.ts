@@ -46,6 +46,11 @@ function v1Doc(entries: unknown[]): unknown {
   return { ...doc({ students: 1, entries: 0 }), version: 1, entries };
 }
 
+/** A document from the era after notes became HTML and before phrase mappings. */
+function v2Doc(): unknown {
+  return { ...doc({ students: 2, entries: 2 }), version: 2 };
+}
+
 /**
  * Pin the clock. Every backup is named after the day it was taken, and "once
  * per day" is the whole of the rotation policy, so a test that let the real
@@ -266,6 +271,62 @@ describe("the v1 migration", () => {
     // today's assumptions and then saving over it is how the newer fields get
     // dropped on the floor.
     expect(() => loadDoc()).toThrow("Unsupported data version: 99");
+  });
+});
+
+describe("the v3 migration", () => {
+  it("carries a v2 document forward without inventing an empty mapping table", () => {
+    const app = tempApp();
+    onDay("2026-03-14");
+    writeJson(app.dataFile, v2Doc());
+
+    const loaded = loadDoc();
+
+    expect(loaded.version).toBe(DATA_VERSION);
+    // Absent, not `{}`. A document that has never imported anything should look
+    // exactly as it did before the field existed — otherwise every install in
+    // the world gets a diff on its next save saying nothing happened.
+    expect(Object.hasOwn(loaded, "importMappings")).toBe(false);
+  });
+
+  it("brings a v1 document through the note conversion on its way to v3", () => {
+    const app = tempApp();
+    onDay("2026-03-14");
+    writeJson(app.dataFile, v1Doc([entry({ id: "e-1", note: "Plain text\nfrom 2025" })]));
+
+    const loaded = loadDoc();
+
+    // The chain is the point: a v1 file that has been sitting in a backups
+    // folder since before notes were HTML still has to pass through v2's work.
+    // A flat 1-to-3 conversion would leave this note as escaped plain text.
+    expect(loaded.version).toBe(DATA_VERSION);
+    expect(loaded.entries[0]!.note).toBe("<p>Plain text<br>from 2025</p>");
+  });
+
+  it("keeps a v2 file it replaced, so the migration has a way back", () => {
+    const app = tempApp();
+    onDay("2026-03-14");
+    const original = v2Doc();
+    writeJson(app.dataFile, original);
+
+    loadDoc();
+
+    const preserved = backupNames(app).filter((name) =>
+      name.startsWith(`data-pre-v${DATA_VERSION}-`),
+    );
+    expect(preserved).toHaveLength(1);
+    expect(readJson(join(app.backupDir, preserved[0]!))).toEqual(original);
+  });
+
+  it("round-trips mappings once there are some", () => {
+    const app = tempApp();
+    const withMappings = {
+      ...doc({ students: 1, entries: 1 }),
+      importMappings: { "routine session": "cat-1", "email to parent": "cat-2" },
+    };
+    writeJson(app.dataFile, withMappings);
+
+    expect(loadDoc()).toEqual(withMappings);
   });
 });
 

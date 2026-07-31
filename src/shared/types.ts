@@ -50,8 +50,25 @@ export interface Settings {
   schoolYearStartMonth: number;
 }
 
-/** Bumped to 2 when notes became HTML rather than plain text. */
-export const DATA_VERSION = 2;
+/**
+ * What the import workbench has been told a type phrase means: the normalized
+ * phrase (see `normalizePhrase` in shared/import/phrases.ts) mapped to one of
+ * her category ids.
+ *
+ * Kept in the document rather than in `userData/config.json` because it is
+ * about her caseload, not about this Mac. It has to ride encryption, the
+ * snapshots, the second location and a data-folder move, and above all it has
+ * to travel with the categories it names — a mapping that outlived a restore
+ * would point at category ids that no longer exist, and would categorise
+ * silently and wrongly rather than visibly not at all.
+ */
+export type ImportMappings = Record<string, string>;
+
+/**
+ * Bumped to 2 when notes became HTML rather than plain text, and to 3 when the
+ * import workbench started remembering what her type phrases mean.
+ */
+export const DATA_VERSION = 3;
 
 export interface DataDoc {
   version: typeof DATA_VERSION;
@@ -59,6 +76,12 @@ export interface DataDoc {
   rev: number;
   settings: Settings;
   categories: Category[];
+  /**
+   * Absent until the first import decides something, which is why it is
+   * optional rather than an empty object: a document that has never imported
+   * anything should look exactly as it did before this field existed.
+   */
+  importMappings?: ImportMappings;
   students: Student[];
   entries: Entry[];
 }

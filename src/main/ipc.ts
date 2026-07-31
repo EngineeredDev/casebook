@@ -117,8 +117,25 @@ function isDataDoc(candidate: unknown): candidate is DataDoc {
     Array.isArray(d.categories) &&
     Array.isArray(d.students) &&
     Array.isArray(d.entries) &&
-    typeof d.settings === "object"
+    typeof d.settings === "object" &&
+    hasValidMappings(d)
   );
+}
+
+/**
+ * The import mappings, if there are any, are a flat string-to-string object.
+ *
+ * Checked here rather than trusted because this is the one field the renderer
+ * writes from parsed document text rather than from a form — the phrase comes
+ * out of her Google Doc — and a shape that isn't this one would be written
+ * straight into data.json and then read back forever. An array passes
+ * `typeof === "object"`, hence the explicit rejection.
+ */
+function hasValidMappings(d: DataDoc): boolean {
+  if (d.importMappings === undefined) return true;
+  if (typeof d.importMappings !== "object" || d.importMappings === null) return false;
+  if (Array.isArray(d.importMappings)) return false;
+  return Object.values(d.importMappings).every((id) => typeof id === "string");
 }
 
 /**

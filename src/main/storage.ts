@@ -103,6 +103,14 @@ function plainToHtml(text: string): string {
 }
 
 /**
+ * A document mid-migration, which by definition is not a `DataDoc` yet — its
+ * version is whichever era wrote it. `DataDoc & { version: number }` would not
+ * do: the intersection narrows straight back to the current version and the
+ * chain below stops compiling against its own earlier steps.
+ */
+type Versioned = Omit<DataDoc, "version"> & { version: number };
+
+/**
  * Enough of a shape to migrate and then use. Deliberately looser than
  * `isDataDoc` in ipc.ts, which guards documents arriving from the renderer and
  * so insists on the current version — a file on disk is allowed to be older.
@@ -113,7 +121,7 @@ function plainToHtml(text: string): string {
  * that isn't the thing it claims to be is exactly as unusable as one that isn't
  * valid JSON, and should fail in the same place.
  */
-function looksLikeDoc(raw: unknown): raw is DataDoc & { version: number } {
+function looksLikeDoc(raw: unknown): raw is Versioned {
   if (typeof raw !== "object" || raw === null) return false;
   const d = raw as DataDoc;
   return (
@@ -127,12 +135,11 @@ function looksLikeDoc(raw: unknown): raw is DataDoc & { version: number } {
   );
 }
 
-function migrate(raw: DataDoc & { version: number }): DataDoc {
-  if (raw.version === DATA_VERSION) return raw;
-  if (raw.version !== 1) throw new Error(`Unsupported data version: ${raw.version}`);
+/** v1 → v2: notes were plain text and became HTML. */
+function notesToHtml(raw: Versioned): Versioned {
   return {
     ...raw,
-    version: DATA_VERSION,
+    version: 2,
     entries: raw.entries.map((e: Entry) => {
       if (typeof e.note !== "string" || !e.note.trim()) {
         const { note: _drop, ...rest } = e;
@@ -143,8 +150,39 @@ function migrate(raw: DataDoc & { version: number }): DataDoc {
   };
 }
 
+/**
+ * v2 → v3: the import workbench gained somewhere to remember what her type
+ * phrases mean. Nothing to convert — a document that has never imported
+ * anything simply has no mappings, and leaving the field absent rather than
+ * writing an empty object keeps a migrated file byte-identical to an
+ * unmigrated one apart from the version.
+ */
+function addImportMappings(raw: Versioned): Versioned {
+  return { ...raw, version: 3 };
+}
+
+/**
+ * Forward one step at a time, so a document from any era arrives at the
+ * current one. A chain rather than a switch on the source version: the v1
+ * document that has been sitting in someone's backups folder since before
+ * notes were HTML has to pass through v2's conversion on its way to v3, and a
+ * flat mapping from 1 to 3 would either duplicate that work or forget it.
+ */
+function migrate(raw: Versioned): DataDoc {
+  let doc: Versioned = raw;
+  if (doc.version === 1) doc = notesToHtml(doc);
+  if (doc.version === 2) doc = addImportMappings(doc);
+  // Anything left is either from the future — a newer Casebook wrote it — or a
+  // version that never existed. Both are refusals rather than guesses.
+  if (doc.version !== DATA_VERSION) throw new Error(`Unsupported data version: ${raw.version}`);
+  // Returned by identity rather than rebuilt, because `loadDoc` tells "this was
+  // migrated" from "this was already current" by reference — and a fresh object
+  // every launch would snapshot and re-save a document nothing had changed.
+  return doc as DataDoc;
+}
+
 /** Decode, parse and validate one file. Throws for every way it can fail. */
-function readDocumentFile(path: string): DataDoc & { version: number } {
+function readDocumentFile(path: string): Versioned {
   const raw: unknown = JSON.parse(codec.decode(readFileSync(path)));
   if (!looksLikeDoc(raw)) throw new Error("it isn't a Casebook data file.");
   return raw;
