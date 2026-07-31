@@ -22,8 +22,9 @@ import {
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import type { ImportResult, LegacyInstall, RetireResult } from "../shared/api.ts";
+import { writeFileAtomic } from "./atomic.ts";
 import { backupDir, dataDir, dataFile } from "./paths.ts";
-import { copyMissingBackups, dayStamp, writeFileAtomic } from "./storage.ts";
+import { copyMissingBackups, dayStamp } from "./storage.ts";
 
 const LAUNCH_AGENT_LABEL = "com.casebook.server";
 /**

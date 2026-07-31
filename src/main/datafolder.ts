@@ -17,9 +17,10 @@ import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { mkdirSync } from "node:fs";
 import { isAbsolute, join, sep } from "node:path";
 import type { RelocateResult } from "../shared/api.ts";
+import { writeFileAtomic } from "./atomic.ts";
 import { readConfig, writeConfig } from "./config.ts";
 import { backupDir, dataDir, dataFile } from "./paths.ts";
-import { copyMissingBackups, writeFileAtomic } from "./storage.ts";
+import { copyMissingBackups } from "./storage.ts";
 
 function isInside(candidate: string, parent: string): boolean {
   return candidate === parent || candidate.startsWith(parent + sep);
@@ -76,9 +77,8 @@ export function relocateData(target: string): RelocateResult {
     };
     for (const name of copiedBackups) remove(join(targetBackups, name));
     if (wroteDataFile) remove(targetFile);
-    // writeFileAtomic renames a sibling into place; a rename that failed after
-    // the write leaves it behind.
-    remove(targetFile + ".tmp");
+    // The scratch file writeFileAtomic renames into place needs no sweeping up
+    // here: it names it uniquely and removes its own if the rename fails.
   };
 
   let contents: string;
