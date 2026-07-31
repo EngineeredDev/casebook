@@ -5,76 +5,78 @@ Local-first time tracking for a school-based clinician. Answers the question
 therapy, IEP meetings, parent contact, documentation, crisis response, and the
 rest — so caseload conversations can happen with numbers instead of vibes.
 
-Everything lives in one folder. No accounts, no cloud, no install. The app is a
-single compiled executable that serves a browser UI at
-`http://casebook.localhost:4321`
-and stores all data in a human-readable `data.json` next to the executable.
+A Mac app. No accounts, no cloud, nothing listening on a port. All data lives in
+one folder — `~/Casebook` — as a human-readable `data.json` beside a `backups/`
+directory.
 
-## Running it (for the clinician)
+## Installing it (for the clinician)
 
-1. Download the file for your computer from the
-   [latest build](https://github.com/EngineeredDev/casebook/releases/tag/latest):
-
-   | Your computer                     | Download                                                                                                                  |
-   | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-   | Mac, Apple silicon (M1 and later) | [`Casebook-mac-arm.zip`](https://github.com/EngineeredDev/casebook/releases/download/latest/Casebook-mac-arm.zip)         |
-   | Mac, Intel                        | [`Casebook-mac-intel.zip`](https://github.com/EngineeredDev/casebook/releases/download/latest/Casebook-mac-intel.zip)     |
-   | Windows                           | [`Casebook-windows-x64.zip`](https://github.com/EngineeredDev/casebook/releases/download/latest/Casebook-windows-x64.zip) |
-
-2. Unzip it and double-click `Casebook`. Your browser opens the app.
-3. That's it. Your data is the `data.json` file next to the app — copy that one
-   file to back up everything. The app also keeps a rolling 30 days of daily
-   snapshots in `backups/`.
-
-That build tracks `main`, so the links above always give you the current app and
-never change. Keep the app wherever you unzipped it — it writes its data beside
-itself, so moving it later means taking `data.json` and `backups/` along too.
-
-First-run notes:
-
-- **macOS**: unsigned app — right-click → Open the first time (or
-  `xattr -d com.apple.quarantine Casebook` if it was downloaded).
-- **Windows**: SmartScreen will warn — "More info" → "Run anyway".
-- If the machine is district-managed and blocks unsigned executables, that's a
-  known risk; test this **before** relying on it (see Smoke test below).
-
-Double-clicking twice is safe — a second launch notices the running copy and
-just reopens the browser tab.
-
-### Keeping it running in the background (macOS)
-
-Double-clicking launches the app through Terminal, so that window has to stay
-open — closing it stops the server. This installs it to run from login instead,
-with no window at all, and replaces steps 1 and 2 above:
+Paste this into Terminal:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/EngineeredDev/casebook/main/scripts/install-macos.sh | sh
 ```
 
-It downloads the right build for your Mac (Apple silicon or Intel) into
-`~/Applications/Casebook`, registers a LaunchAgent, starts the app, and confirms
-it is answering. From then on the address is a bookmark that always works and
-the executable never needs double-clicking again. A browser tab still opens at
-each login, which is the app's normal startup behaviour.
+It downloads the app, puts it in `/Applications`, and opens it. Casebook is then
+an ordinary Mac app: it's in the Dock, in Spotlight, and it opens when you open
+it.
 
-Re-run it to upgrade: same command. It replaces the executable wherever the
-current copy lives — including a non-default folder — and leaves `data.json` and
-`backups/` where they are. To remove the agent, add `-s -- --uninstall` to the
-pipe above, or run `sh scripts/install-macos.sh --uninstall` from a checkout.
-Your data survives either way.
+Apple silicon (M1 and later) only. Run the same command again to upgrade —
+your data is never touched. To remove it, add `-s -- --uninstall` to the pipe.
 
-Pass a path (`sh scripts/install-macos.sh dist/mac-arm/Casebook`) to register a
-copy you already have instead of downloading one.
+**Why Terminal rather than a download?** Because it is genuinely the easier
+path here, not the technical one. Casebook is signed, but not by a certificate
+Apple recognises — that costs $99/year and this app has one user. macOS treats
+files downloaded by a _browser_ as suspect and files downloaded by `curl` as
+ordinary, so this command sidesteps a dialog the download route has to argue
+with. See below.
 
-## Smoke test for a locked-down school machine
+### If you would rather click something
 
-Put `Casebook` on the target machine — either download above, or
-`dist/<platform>/Casebook` from a local build — and run it. If it
-prints `Casebook running at http://casebook.localhost:4321` and the
-page loads,
-you're clear. If IT policy blocks it, the fallback plan is repackaging the same
-frontend as a single HTML file using the File System Access API (storage layer
-swap only — not built yet).
+Download `Casebook-mac-arm64.dmg` from the
+[latest release](https://github.com/EngineeredDev/casebook/releases/latest),
+open it, and drag Casebook to Applications. The first launch takes four extra
+steps, once, ever:
+
+1. Double-click Casebook. macOS says **"Apple could not verify…"**. Click
+   **Done** — not Move to Trash.
+2. Open **System Settings → Privacy & Security**, scroll down, and click
+   **Open Anyway** next to the message about Casebook.
+3. Double-click Casebook again and confirm.
+4. Enter your Mac password.
+
+This is Gatekeeper doing its job: it cannot tell an app signed by nobody from a
+malicious one, so it asks you to vouch for it. Right-click → Open no longer
+works for this — macOS 15 removed that shortcut.
+
+### Your data, and backing it up
+
+Everything Casebook knows is in **`~/Casebook`** — that's a folder called
+`Casebook` in your home folder. Copy that folder and you have copied everything:
+the current data and a rolling 30 days of daily snapshots.
+
+The app and the data are separate things. Deleting the app does not touch your
+data; replacing the app on upgrade does not touch it either. Settings → _Show in
+Finder_ opens the folder, and _Move to another folder…_ relocates it (copying
+and verifying before it switches over, and leaving the old copy for you to
+delete once you're happy).
+
+Coming from the older Casebook — the one that opened in a browser tab? Open the
+new app and it will find your old data, offer to bring it across, and offer to
+stop the old one starting at login. Let it do that rather than deleting anything
+yourself.
+
+## A locked-down school Mac is still the open question
+
+If the target machine is district-managed, **test there before relying on any of
+this.** MDM can block Terminal outright and can remove the Open Anyway button
+entirely, which closes both paths above with no override available. Nothing
+about the app being a Mac app rather than a browser tab changes that risk in
+either direction.
+
+If IT policy blocks it, the fallback is repackaging the same frontend as a
+single HTML file using the File System Access API — a storage-layer swap, not a
+rewrite. Not built.
 
 ## Concepts
 
@@ -144,112 +146,73 @@ then switches back. Also available:
 - **Backup JSON** — the whole data file, timestamped. Contains notes; it's for
   restoring, not for handing to anyone.
 
-## Hosted demo
-
-For showing the app to someone without handing them a binary to run:
-<https://casebook-demo-production.up.railway.app>
-
-This is a demo, not a deployment of the product — the product is still the
-local executable above. Two things follow from that:
-
-- **The API is unauthenticated**, exactly as it is locally, so anyone with the
-  link can read _and_ change what they see. Only ever point it at the seeded
-  caseload in `seed/demo-data.json` (invented students, placeholder notes).
-  Never a real one.
-- **Nothing entered there survives.** `seed/demo-data.json` is baked into the
-  image as `data.json`, so every container start — including a restart after a
-  visitor edits something — comes back up on the same known-good caseload.
-
-```sh
-docker build -t casebook:demo .
-docker run --rm -e PORT=8080 -p 8080:8080 casebook:demo
-railway up                    # redeploy after a change
-```
-
-Every push to `main` also publishes this image to GHCR (amd64 and arm64), so it
-can be run without a checkout:
-
-```sh
-docker run --rm -e PORT=8080 -p 8080:8080 ghcr.io/engineereddev/casebook:latest
-```
-
-`Dockerfile` runs the app from source under Bun rather than shipping a compiled
-binary, because `bun build --compile` embeds the frontend but also flips the app
-into executable mode — data next to the binary, browser auto-launch — neither of
-which a container wants. `railway.json` pins the Dockerfile builder and points
-the healthcheck at `/api/health`.
-
-The demo is the one place the server binds beyond loopback. It does so only when
-`PORT` is set _and_ the process isn't a compiled binary, so the executable that
-lands on a clinician's machine cannot be talked into answering the network by a
-stray environment variable. See the comment on `HOST` in `src/server.ts`.
+Each of these opens a save dialog, so the file lands where you put it.
 
 ## Development
 
-Requires [mise](https://mise.jdx.dev) (pins Bun) — or any Bun ≥ 1.3.
+Requires [mise](https://mise.jdx.dev) (pins Node) — or any recent Node.
 
 ```sh
-bun install
-bun run dev          # http://casebook.localhost:4321, hot reload
+npm install
+npm run dev      # Electron window, hot reload
+npm run check    # typecheck, lint, format
+npm run dist     # dist/Casebook-mac-arm64.{zip,dmg}
 ```
 
-Dev mode stores `data.json` in the repo root (gitignored). Delete it to reset.
-The current one contains seeded demo data.
+A development build keeps `data.json` in the repo root (gitignored) rather than
+in `~/Casebook`, so working on the app cannot touch real records. Delete it to
+reset.
 
-```sh
-bun run build:all    # dist/{mac-arm,mac-intel,windows}/
-```
+Releasing is a tag: see [RELEASING.md](RELEASING.md).
 
-Cross-compiles from any machine via `bun build --compile`. Each binary embeds
-the entire frontend; the only files it creates are `data.json` and `backups/`
-beside itself.
-
-### Releases
-
-`.github/workflows/release.yml` runs `bun run check` and then the same three
-builds on every push to `main`, and force-moves the `latest` prerelease onto
-that commit — so the download links above always serve the current build without
-ever changing. Push a `v*` tag to cut a permanent numbered release from the same
-steps.
-
-The Mac binaries build on a macOS runner because `scripts/sign-mac.sh` needs
-`codesign`, which exists nowhere else; one arm64 runner covers both Macs, since
-ad-hoc signing seals a Mach-O regardless of its architecture. Windows
-cross-compiles on Linux, having nothing to sign. Each binary is zipped before
-upload — GitHub's artifact packing drops the execute bit, which would leave the
-recipient with a file macOS won't run.
+The app icon is generated from `build/icon.svg` by
+`npx electron scripts/make-icon.cjs`; `build/icon.icns` is committed, so that
+only needs running when the mark changes.
 
 ### Architecture
 
-- `src/server.ts` — Bun.serve: static frontend via HTML imports + a 3-route API
-  (`GET/PUT /api/data`, `GET /api/health`). Whole-document saves with a
-  revision counter; concurrent-window conflicts return 409. Bound to `127.0.0.1`
-  and `[::1]` — the API is unauthenticated, so it must not answer the network.
-  The browser is pointed at `casebook.localhost`, which RFC 6761 reserves for
-  loopback: no hosts-file entry, no admin rights, and unlike mDNS nothing is
-  advertised to the network. Both loopback families are bound because that name
-  resolves to `::1` before `127.0.0.1` on macOS.
-  A second launch does not start a second instance — it probes `/api/health`,
-  finds the running copy, re-opens its tab and exits.
-  The page route is a catch-all (`"/*"`) so a reload on a client-side route like
-  `/students/<id>` returns the app rather than a 404; Bun matches
-  most-specific-first, so `/api/*` and the bundled assets are unaffected.
-- `src/storage.ts` — atomic writes (temp file + rename), daily rotating backups,
-  and the data-version migration (v1 → v2 turned plain-text notes into HTML,
-  snapshotting the old file to `backups/data-pre-v2-<date>.json`).
-- `src/frontend/` — React 19 + [Mantine](https://mantine.dev) (UI + charts).
+Three processes, Electron-standard. There is no HTTP server and nothing binds a
+port — the unauthenticated loopback API the browser version needed is gone
+rather than ported.
+
+- `src/main/` — the Node side, and the only thing that touches the disk.
+  - `index.ts` sets up the app, the single-instance lock (a second launch
+    focuses the existing window), and the global permission denials.
+  - `storage.ts` — atomic writes (temp file + rename), daily rotating backups,
+    and the data-version migration (v1 → v2 turned plain-text notes into HTML,
+    snapshotting the old file to `backups/data-pre-v2-<date>.json`).
+  - `ipc.ts` — the whole main-process API. Holds the one in-memory copy of the
+    document; the revision counter keeps it and the renderer's copy honest, and
+    a save whose write fails does not advance it. What was HTTP 409 is now a
+    typed `{conflict: true}` result.
+  - `renderer.ts` — serves the built frontend over a custom `app://` protocol
+    with an SPA fallback, so reloading `/students/<id>` returns the app rather
+    than a 404. Also where the CSP lives.
+  - `paths.ts` / `config.ts` / `datafolder.ts` — where the data folder is, and
+    moving it. `~/Casebook` by default: visible, Time-Machine-covered, and not
+    TCC-protected, which `~/Documents` is — macOS gates that folder behind a
+    permission prompt keyed to the app's code signature, and an ad-hoc signature
+    has no stable identity, so every update could re-trigger it.
+  - `legacy.ts` — finding the pre-Electron install, copying its data across, and
+    retiring its LaunchAgent.
+- `src/preload/index.ts` — the `contextBridge` surface, and the only route
+  between the two. `contextIsolation` and `sandbox` are on, `nodeIntegration`
+  off, and every IPC handler checks the sender's frame.
+- `src/shared/` — `types.ts` (the data document) and `api.ts` (the IPC
+  contract), imported by both sides.
+- `src/renderer/` — React 19 + [Mantine](https://mantine.dev) (UI + charts).
   `lib/aggregate.ts` holds all rollup math; `lib/palette.ts` is the validated
   chart palette (light + dark), and `theme.tsx` ties Mantine's primary color to
   the same blue the charts use. `app.css` carries only what Mantine doesn't:
   the two series colors, number formatting, and the print rules.
-- `src/frontend/lib/router.tsx` — ~130 lines of router, no dependency. Seven
+- `src/renderer/lib/router.tsx` — ~130 lines of router, no dependency. Seven
   routes and one dynamic segment don't need a path matcher, they need a union
   type, so the page switch is exhaustiveness-checked and `studentId` is a
   `string` rather than `string | undefined`. `lib/urlState.ts` puts view state in
   the query string, omitting each param when it holds its default and falling
   back rather than throwing on a bad value.
   Why not react-router: see the comment at the top of that file.
-- `src/frontend/lib/search.ts` — the Timeline's query language: an index built
+- `src/renderer/lib/search.ts` — the Timeline's query language: an index built
   once per document (parsing note HTML is the expensive part, so it does not
   happen per keystroke) and a parser for the `field:value` / `-negated` /
   `"quoted"` syntax. Deliberately not fuzzy — newest-first order is the point of
@@ -264,8 +227,26 @@ recipient with a file macOS won't run.
 | `/students/:id` | `?range` `?attr` `?notes=1`                                                                 |
 | `/reports`      | `?range` `?attr`                                                                            |
 
+### Packaging
+
+`electron-builder.yml` produces a zip and a DMG, arm64 only. Three things there
+are load-bearing and quiet when they break, so CI asserts all of them on every
+build:
+
+- **`identity: "-"`** — ad-hoc signing. Not a preference: macOS kills an
+  unsigned arm64 binary on exec. `hardenedRuntime` stays off, because it buys
+  nothing without notarization and electron-builder mis-signs when the two are
+  combined.
+- **Fuses** — `runAsNode`, `enableNodeOptionsEnvironmentVariable` and
+  `enableNodeCliInspectArguments` are compiled off at package time, closing the
+  "run this app as a plain Node process" hole. Irreversible from outside the
+  binary, and unrecoverable if a build ships without them.
+- **Artifact names carry no version**, so
+  `releases/latest/download/Casebook-mac-arm64.zip` is a URL the install script
+  can construct without asking an API what the current version is.
+
 Mantine needs no PostCSS here — its prebuilt stylesheets are imported in
-`index.tsx` and Bun bundles them directly.
+`index.tsx` and Vite bundles them directly.
 
 Notes use [Tiptap](https://tiptap.dev) via `@mantine/tiptap`. Everything used is
 MIT and runs entirely offline; Tiptap's paid tiers only cover their cloud
