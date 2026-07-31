@@ -35,6 +35,7 @@ import {
   Modal,
   NumberInput,
   Select,
+  Loader,
   Stack,
   Text,
   Textarea,
@@ -51,6 +52,7 @@ import {
   IconCopyMinus,
   IconFileImport,
   IconScissors,
+  IconSparkles,
 } from "@tabler/icons-react";
 import { useStore } from "../store.tsx";
 import type { Category, ImportMappings } from "../../shared/types.ts";
@@ -58,6 +60,7 @@ import type { ParsedEntry } from "../../shared/import/types.ts";
 import { parseImport } from "../../shared/import/parse.ts";
 import { normalizePhrase, resolvePhrase } from "../../shared/import/phrases.ts";
 import { isBlankNote, noteExtensions } from "../lib/notes.ts";
+import { api, bridgeMessage } from "../lib/api.ts";
 import { fmtDuration, fmtFullDate } from "../lib/time.ts";
 import { navigate } from "../lib/router.tsx";
 import { ReadOnlyNote } from "./NoteView.tsx";
@@ -101,6 +104,27 @@ export function ImportPage() {
   const [editingNote, setEditingNote] = useState<number | null>(null);
   const [justCommitted, setJustCommitted] = useState<number | null>(null);
 
+  /**
+   * What the model proposed, kept apart from what she decided.
+   *
+   * Two separate stores rather than one merged map, because the difference has
+   * to survive all the way to the badge on the row. Her decisions always win,
+   * and anything still resting on a suggestion is shown as resting on one.
+   */
+  const [aiMappings, setAiMappings] = useState<ImportMappings>({});
+  const [aiRows, setAiRows] = useState<Record<number, string>>({});
+  const [aiProgress, setAiProgress] = useState<{ done: number; total: number } | null>(null);
+  const [aiTrouble, setAiTrouble] = useState<string | null>(null);
+  const [modelReady, setModelReady] = useState(false);
+
+  useEffect(() => {
+    api()
+      .getModelStatus()
+      .then((status) => setModelReady(status.state === "ready"))
+      .catch(() => setModelReady(false));
+    return api().onModelStatus((status) => setModelReady(status.state === "ready"));
+  }, []);
+
   const parsed = useMemo(
     () =>
       source
@@ -123,6 +147,9 @@ export function ImportPage() {
     setConfirmed({});
     setPhraseMinutes({});
     setJustCommitted(null);
+    setAiMappings({});
+    setAiRows({});
+    setAiTrouble(null);
     setMappings({ ...doc.importMappings });
   };
 
@@ -134,13 +161,19 @@ export function ImportPage() {
 
   /** The category a row lands in: her override, else the mapping table. */
   const categoryFor = useCallback(
-    (entry: ParsedEntry, edit: RowEdit): Category | null => {
-      if (edit.categoryId) return categories.find((c) => c.id === edit.categoryId) ?? null;
-      if (!entry.typePhrase) return null;
-      const hit = resolvePhrase(entry.typePhrase, mappings, categories);
-      return hit ? (categories.find((c) => c.id === hit.categoryId) ?? null) : null;
+    (entry: ParsedEntry, edit: RowEdit, line: number): Category | null => {
+      const byId = (id: string) => categories.find((c) => c.id === id) ?? null;
+      if (edit.categoryId) return byId(edit.categoryId);
+      if (entry.typePhrase) {
+        // Spread order is the policy: a decision she made overrides a
+        // suggestion for the same phrase, always.
+        const hit = resolvePhrase(entry.typePhrase, { ...aiMappings, ...mappings }, categories);
+        return hit ? byId(hit.categoryId) : null;
+      }
+      const guessed = aiRows[line];
+      return guessed ? byId(guessed) : null;
     },
-    [categories, mappings],
+    [categories, mappings, aiMappings, aiRows],
   );
 
   const minutesFor = useCallback(
@@ -164,7 +197,7 @@ export function ImportPage() {
     return parsed.entries.map((entry) => {
       const line = entry.chunk.startLine;
       const edit = edits[line] ?? {};
-      const category = categoryFor(entry, edit);
+      const category = categoryFor(entry, edit, line);
       const minutes = minutesFor(entry, edit, category);
       const date = edit.date ?? entry.date;
       const note = edit.note ?? entry.note;
@@ -183,10 +216,24 @@ export function ImportPage() {
         return true;
       });
 
+      /**
+       * Whether this row's category is still the model's opinion. Such a row is
+       * never "ready", however complete it looks — the eval put per-entry
+       * classification at 81%, and a row nobody has agreed with yet has not
+       * been reviewed just because every field is filled in.
+       */
+      const key = entry.typePhrase ? normalizePhrase(entry.typePhrase) : null;
+      const fromAi =
+        edit.categoryId === undefined &&
+        !!category &&
+        (key
+          ? aiMappings[key] !== undefined && mappings[key] === undefined
+          : aiRows[line] !== undefined);
+
       const status: RowStatus =
         !date || !category || (!category.untimed && minutes <= 0)
           ? "incomplete"
-          : unresolved.length > 0
+          : unresolved.length > 0 || fromAi
             ? "check"
             : "ready";
 
@@ -199,9 +246,31 @@ export function ImportPage() {
             e.date === date && e.categoryId === category.id && e.studentIds.includes(studentId),
         );
 
-      return { entry, line, edit, category, minutes, date, note, unresolved, status, duplicate };
+      return {
+        entry,
+        line,
+        edit,
+        category,
+        minutes,
+        date,
+        note,
+        unresolved,
+        status,
+        duplicate,
+        fromAi,
+      };
     });
-  }, [parsed, edits, categoryFor, minutesFor, studentId, doc.entries]);
+  }, [
+    parsed,
+    edits,
+    categoryFor,
+    minutesFor,
+    studentId,
+    doc.entries,
+    aiMappings,
+    aiRows,
+    mappings,
+  ]);
 
   const ready = rows.filter((r) => confirmed[r.line] && r.status !== "incomplete");
 
@@ -215,6 +284,89 @@ export function ImportPage() {
       else next[line] = true;
       return next;
     });
+
+  /**
+   * Ask the model for the two things the rules cannot supply: a category for a
+   * phrase nobody has decided on, and a category for an entry that carries no
+   * phrase at all.
+   *
+   * Sequential, because the inference host runs a single-job queue — firing
+   * these off together would queue behind each other anyway, and the progress
+   * count would be a lie. Every answer lands in a suggestion store, never in
+   * her decisions, and every affected row stays in "check".
+   */
+  const fillGaps = async () => {
+    if (!parsed) return;
+    setAiTrouble(null);
+
+    const decided = { ...aiMappings, ...mappings };
+    const phrases = parsed.phrases.filter((use) => !resolvePhrase(use.phrase, decided, categories));
+    const untyped = rows.filter(
+      (row) => !row.entry.typePhrase && row.edit.categoryId === undefined,
+    );
+
+    const forModel = categories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      group: c.group,
+      untimed: c.untimed,
+    }));
+    const total = phrases.length + untyped.length;
+    if (total === 0) return;
+    setAiProgress({ done: 0, total });
+
+    let done = 0;
+    const step = () => {
+      done += 1;
+      setAiProgress({ done, total });
+    };
+
+    try {
+      /* eslint-disable no-await-in-loop */
+      for (const use of phrases) {
+        const samples = parsed.entries
+          .filter((e) => e.typePhrase && normalizePhrase(e.typePhrase) === use.key)
+          .map((e) => e.chunk.text);
+        const result = await api().suggestCategory({
+          kind: "suggest-mapping",
+          phrase: use.phrase,
+          samples,
+          categories: forModel,
+        });
+        if (!("ok" in result)) {
+          setAiTrouble(result.message);
+          break;
+        }
+        if (result.value.categoryId) {
+          const id = result.value.categoryId;
+          setAiMappings((was) => ({ ...was, [use.key]: id }));
+        }
+        step();
+      }
+
+      for (const row of untyped) {
+        const result = await api().suggestCategory({
+          kind: "classify-entry",
+          samples: [row.entry.chunk.text],
+          categories: forModel,
+        });
+        if (!("ok" in result)) {
+          setAiTrouble(result.message);
+          break;
+        }
+        if (result.value.categoryId) {
+          const id = result.value.categoryId;
+          setAiRows((was) => ({ ...was, [row.line]: id }));
+        }
+        step();
+      }
+      /* eslint-enable no-await-in-loop */
+    } catch (error) {
+      setAiTrouble(bridgeMessage(error));
+    } finally {
+      setAiProgress(null);
+    }
+  };
 
   const commit = useCallback(() => {
     if (!studentId || ready.length === 0) return;
@@ -332,11 +484,29 @@ export function ImportPage() {
               w={220}
               size="xs"
             />
+            {modelReady && (
+              <Button
+                variant="light"
+                leftSection={aiProgress ? <Loader size={14} /> : <IconSparkles size={16} />}
+                disabled={aiProgress !== null}
+                onClick={() => void fillGaps()}
+              >
+                {aiProgress
+                  ? `Suggesting ${aiProgress.done}/${aiProgress.total}`
+                  : "Suggest the gaps"}
+              </Button>
+            )}
             <Button variant="subtle" color="gray" onClick={startOver}>
               Start over
             </Button>
           </Group>
         </Group>
+        {aiTrouble && (
+          <Alert mt="sm" color="ember" variant="light" title="The AI helper couldn't finish">
+            {aiTrouble} Everything already filled in is unaffected, and the rest can be set by hand
+            as usual.
+          </Alert>
+        )}
         {parsed.preamble && (
           <Alert mt="sm" variant="light" color="gray" title="Text above the first entry">
             <Text size="xs" style={{ whiteSpace: "pre-wrap" }}>
@@ -351,6 +521,7 @@ export function ImportPage() {
 
       <MappingCard
         phrases={parsed.phrases}
+        aiMappings={aiMappings}
         undecided={undecided.length}
         categories={categories}
         mappings={mappings}
@@ -546,6 +717,7 @@ function StudentSelect({
 
 function MappingCard({
   phrases,
+  aiMappings,
   undecided,
   categories,
   mappings,
@@ -555,6 +727,7 @@ function MappingCard({
   assumedByPhrase,
 }: {
   phrases: { phrase: string; key: string; count: number }[];
+  aiMappings: ImportMappings;
   undecided: number;
   categories: Category[];
   mappings: ImportMappings;
@@ -565,6 +738,7 @@ function MappingCard({
 }) {
   if (phrases.length === 0) return null;
   const options = categories.map((c) => ({ value: c.id, label: c.name }));
+  const merged = { ...aiMappings, ...mappings };
 
   return (
     <Card>
@@ -584,10 +758,12 @@ function MappingCard({
 
       <Stack gap="xs">
         {phrases.map((use) => {
-          const hit = resolvePhrase(use.phrase, mappings, categories);
-          // An exact decision scores 1. Anything less is this page's guess, and
-          // it is shown as a guess rather than silently accepted.
-          const guessed = !!hit && hit.score < 1;
+          const hit = resolvePhrase(use.phrase, merged, categories);
+          // Three provenances, and the difference is worth showing: she decided
+          // it, the model proposed it, or this page matched it off the category
+          // name. Only the first is a decision.
+          const fromAi = mappings[use.key] === undefined && aiMappings[use.key] !== undefined;
+          const guessed = !fromAi && !!hit && hit.score < 1;
           const assumed = assumedByPhrase[use.key] ?? 0;
           return (
             <Group key={use.key} gap="xs" wrap="nowrap" align="flex-end">
@@ -595,9 +771,10 @@ function MappingCard({
                 <Text size="sm" fw={500} truncate>
                   {use.phrase}
                 </Text>
-                <Text size="xs" c="dimmed">
+                <Text size="xs" c={fromAi ? "grape" : "dimmed"}>
                   {use.count} {use.count === 1 ? "entry" : "entries"}
-                  {guessed ? " · suggested from the name, check it" : ""}
+                  {fromAi ? " · suggested by the AI helper, check it" : ""}
+                  {guessed ? " · matched from the category name, check it" : ""}
                 </Text>
               </Box>
               <Select
@@ -653,6 +830,8 @@ interface Row {
   unresolved: string[];
   status: RowStatus;
   duplicate: boolean;
+  /** The category is still the model's opinion — nobody has agreed with it yet. */
+  fromAi: boolean;
 }
 
 function ReviewRow({
@@ -707,6 +886,18 @@ function ReviewRow({
             <Badge size="xs" color={STATUS_COLOR[status]} variant="light">
               {status}
             </Badge>
+            {row.fromAi && (
+              <Tooltip label="Suggested by the AI helper from the text on the left. Check it — this is the part it is least reliable at.">
+                <Badge
+                  size="xs"
+                  color="grape"
+                  variant="light"
+                  leftSection={<IconSparkles size={11} />}
+                >
+                  AI guess
+                </Badge>
+              </Tooltip>
+            )}
             {row.unresolved.map((flag) => (
               <Badge key={flag} size="xs" variant="outline" color="gray">
                 {FLAG_LABEL[flag] ?? flag}
