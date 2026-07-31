@@ -1,17 +1,9 @@
 name: Build and release
 
-# Nothing is built here at the moment.
-#
-# The jobs that compiled the Bun executables, pushed the demo image and
-# force-moved the `latest` prerelease all described a product that no longer
-# exists in this tree: there is no server.ts to compile and no Bun to compile it
-# with. They come back — as one electron-builder job producing a signed .app —
-# when the Electron packaging work lands. Until then the `latest` release
-# already published on GitHub stays exactly as it is, which is what people who
-# have Casebook installed are running.
-#
-# Keeping the trigger and the check job means main is still verified on every
-# push, and the diff that restores releasing is confined to this file.
+# Every push to main is built so packaging breakage shows up on the commit that
+# caused it, but only a tag is published. See RELEASING.md — the split matters,
+# because a published release is what the in-app updater offers to everyone
+# already running Casebook.
 on:
   push:
     branches: [main]
@@ -26,14 +18,82 @@ permissions:
   contents: read
 
 jobs:
-  check:
-    name: Typecheck, lint, format
-    runs-on: ubuntu-latest
+  build:
+    name: Build, verify, release
+    # macOS, and not negotiable: codesign exists nowhere else, and an unsigned
+    # arm64 bundle is killed the moment it is executed.
+    runs-on: macos-latest
+    permissions:
+      # Only the publish step needs this, and only on a tag.
+      contents: write
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-node@v6
         with:
           node-version: latest # as mise.toml pins it
           cache: npm
+
       - run: npm ci
+
       - run: npm run check
+
+      - name: Tag must match package.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          packaged=$(node -p "require('./package.json').version")
+          if [ "$tag" != "$packaged" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $packaged."
+            echo "The app would report $packaged while the release claimed $tag, and the"
+            echo "updater would offer the same update forever. See RELEASING.md."
+            exit 1
+          fi
+          echo "Releasing $packaged."
+
+      - run: npm run dist
+
+      # The three properties the whole distribution story rests on, none of
+      # which announce themselves when they break. Ad-hoc signing is what makes
+      # the app runnable on Apple silicon at all; the fuses are compiled in at
+      # package time and are unrecoverable afterwards.
+      - name: Verify signature and fuses
+        run: |
+          app="dist/mac-arm64/Casebook.app"
+          codesign -dv --verbose=4 "$app" 2>&1 | grep -q "Signature=adhoc" \
+            || { echo "::error::$app is not ad-hoc signed."; exit 1; }
+          codesign --verify --deep --strict "$app" \
+            || { echo "::error::$app failed signature verification."; exit 1; }
+          fuses=$(npx @electron/fuses read --app "$app")
+          echo "$fuses"
+          for fuse in RunAsNode EnableNodeOptionsEnvironmentVariable EnableNodeCliInspectArguments; do
+            echo "$fuses" | grep -q "$fuse is Disabled" \
+              || { echo "::error::Fuse $fuse is not disabled."; exit 1; }
+          done
+
+      # Untagged builds go no further than here. Downloadable for testing,
+      # invisible to the updater, gone in a fortnight.
+      - name: Keep the build for testing
+        if: "!startsWith(github.ref, 'refs/tags/v')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: casebook-mac-arm64-${{ github.sha }}
+          path: |
+            dist/Casebook-mac-arm64.zip
+            dist/Casebook-mac-arm64.dmg
+          retention-days: 14
+
+      # A real release, which is the only thing /releases/latest/download
+      # resolves to and so the only thing the install script and the updater
+      # can see.
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Casebook ${GITHUB_REF_NAME#v}" \
+            --generate-notes \
+            dist/Casebook-mac-arm64.zip \
+            dist/Casebook-mac-arm64.dmg
