@@ -50,7 +50,14 @@
       // The Node side has no DOM. Linting it as a browser would accept a stray
       // `document` or `localStorage` in the main process, which the tsconfig
       // split (see tsconfig.json) exists to reject.
-      "files": ["src/main/**", "src/preload/**", "electron.vite.config.ts", "scripts/**"],
+      "files": [
+        "src/main/**",
+        "src/preload/**",
+        "src/test/**",
+        "electron.vite.config.ts",
+        "vitest.config.ts",
+        "scripts/**"
+      ],
       "env": { "browser": false, "node": true }
     }
   ]
