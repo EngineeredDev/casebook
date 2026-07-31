@@ -51,6 +51,10 @@ jobs:
           fi
           echo "Releasing $packaged."
 
+      # `--publish never` is inside the script, and load-bearing: electron-builder
+      # sniffs for CI and starts publishing on its own otherwise, which fails for
+      # want of a token it should never have been given. Releases are cut by the
+      # explicit gh step below, where the conditions are visible.
       - run: npm run dist
 
       # The three properties the whole distribution story rests on, none of
