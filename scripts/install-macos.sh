@@ -1,45 +1,89 @@
 #!/bin/sh
-# Install Casebook on macOS and run it in the background, from login, with no
-# Terminal window.
+# Install Casebook on macOS.
 #
-# Double-clicking the executable launches it *through* Terminal.app: the window
-# has to stay open, and closing it takes the server down. This hands the process
-# to launchd instead — no window, no dock icon, and it comes back at every
-# login, so the browser can reach the app whenever the clinician wants it.
+# Downloads the latest release, extracts Casebook.app into /Applications and
+# opens it. This is the recommended way in, for one specific reason: a file
+# fetched by curl never gets the com.apple.quarantine attribute, because only
+# quarantine-aware apps — browsers, Mail — set it. No quarantine means
+# Gatekeeper never engages, so there is no "Apple could not verify" dialog to
+# argue with, and no App Translocation running the app from a read-only mount
+# where it could not update itself.
 #
-# The agent claims the base port at login, ahead of any manual launch, which is
-# what keeps http://casebook.localhost:4321 a bookmark that always works.
+# Casebook is ad-hoc signed and will never be notarized; there is no Apple
+# Developer certificate behind this project. Downloading the .dmg from the
+# releases page works too, and costs one trip through System Settings →
+# Privacy & Security → Open Anyway. See the README.
 #
-# usage: install-macos.sh                  download the latest build and install
-#        install-macos.sh /path/to/Casebook   use a copy you already have
+# usage: install-macos.sh                                    download and install
+#        install-macos.sh /path/to/Casebook-mac-arm64.zip    install a local build
 #        install-macos.sh --uninstall
 #
-# Re-run it to upgrade: the download is repeated, the binary replaced in place,
-# and data.json left alone.
+# Re-run it to upgrade. Your data lives in ~/Casebook and is never touched by
+# this script — not on upgrade, not on uninstall.
 set -e
 
 REPO="EngineeredDev/casebook"
-LABEL="com.casebook.server"
-PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
-DOMAIN="gui/$(id -u)"
-LOG="$HOME/Library/Logs/casebook.log"
-DEFAULT_DIR="$HOME/Applications/Casebook"
+ASSET="Casebook-mac-arm64.zip"
+APP="Casebook.app"
+URL="https://github.com/$REPO/releases/latest/download/$ASSET"
+
+# The pre-Electron Casebook: a bare executable started by a LaunchAgent at every
+# login. Only ever removed on --uninstall, and deliberately left alone when
+# installing — the new app looks for it on first run and offers to bring the
+# data across before anything is deleted.
+OLD_LABEL="com.casebook.server"
+OLD_PLIST="$HOME/Library/LaunchAgents/$OLD_LABEL.plist"
 
 usage() {
-  echo "usage: install-macos.sh [/path/to/Casebook]"
+  echo "usage: install-macos.sh [/path/to/$ASSET]"
   echo "       install-macos.sh --uninstall"
 }
 
-# bootout fails when nothing is loaded; that is the normal first-install case.
-stop_agent() {
-  launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+# Where an already-installed copy is, if it is anywhere.
+installed_at() {
+  for dir in /Applications "$HOME/Applications"; do
+    [ -d "$dir/$APP" ] && {
+      echo "$dir/$APP"
+      return 0
+    }
+  done
+  return 1
+}
+
+# Nothing can be replaced while it is running, and macOS will happily delete a
+# running bundle out from under itself and leave it running.
+quit_casebook() {
+  osascript -e 'tell application "Casebook" to quit' 2>/dev/null || true
+  i=0
+  while [ "$i" -lt 10 ]; do
+    pgrep -x Casebook >/dev/null 2>&1 || return 0
+    sleep 1
+    i=$((i + 1))
+  done
+  pkill -x Casebook 2>/dev/null || true
+  sleep 1
+}
+
+retire_old_launchagent() {
+  [ -f "$OLD_PLIST" ] || return 0
+  launchctl bootout "gui/$(id -u)/$OLD_LABEL" 2>/dev/null || true
+  rm -f "$OLD_PLIST"
+  echo "Removed the old $OLD_LABEL login item."
 }
 
 case "$1" in
   --uninstall)
-    stop_agent
-    rm -f "$PLIST"
-    echo "Removed $LABEL. The app, data.json and backups/ are untouched."
+    quit_casebook
+    if app=$(installed_at); then
+      rm -rf "$app"
+      echo "Removed $app."
+    else
+      echo "Casebook.app wasn't in /Applications or ~/Applications."
+    fi
+    retire_old_launchagent
+    echo
+    echo "Your data is untouched, in ~/Casebook. Delete that folder yourself if"
+    echo "you really want it gone — nothing else will."
     exit 0
     ;;
   -h | --help)
@@ -49,9 +93,21 @@ case "$1" in
 esac
 
 [ "$(uname -s)" = Darwin ] || {
-  echo "This installer is macOS-only (launchd)." >&2
+  echo "Casebook is macOS-only." >&2
   exit 1
 }
+
+# uname reports x86_64 for a shell running under Rosetta, which would make an
+# Apple-silicon Mac look like the wrong target for an arm64 build. This flag
+# describes the hardware.
+[ "$(sysctl -n hw.optional.arm64 2>/dev/null)" = "1" ] || {
+  echo "This build is for Apple silicon (M1 and later) and this Mac is Intel." >&2
+  echo "Building for Intel is a one-line change — open an issue." >&2
+  exit 1
+}
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT INT TERM
 
 if [ -n "$1" ]; then
   [ -f "$1" ] || {
@@ -59,128 +115,68 @@ if [ -n "$1" ]; then
     usage >&2
     exit 1
   }
-  # launchd expands nothing — no ~, no $HOME, no relative paths — and the app
-  # derives its data directory from this same path, so resolve it once, here.
-  dir=$(cd "$(dirname "$1")" && pwd -P)
-  app="$dir/$(basename "$1")"
-  download=""
-  case "$dir" in
-    "$HOME/Downloads"*)
-      echo "WARNING: that copy lives in Downloads, and Casebook writes data.json" >&2
-      echo "and backups/ beside itself. macOS can clear old downloads, and this" >&2
-      echo "agent would keep pointing at the deleted path. Move the app somewhere" >&2
-      echo "permanent and re-run this, or run it with no argument to install into" >&2
-      echo "$DEFAULT_DIR." >&2
-      ;;
-  esac
+  zip=$1
 else
-  # An existing install wins over the default location. Re-running this script
-  # is how you upgrade, and quietly relocating the app would strand the
-  # data.json sitting next to the old copy.
-  #
-  # plutil prints its complaint on *stdout*, so a failed extract is captured as
-  # if it were the path — and that text starts with the plist's own path, which
-  # makes it look absolute. Trust the exit status, then confirm the answer names
-  # a real directory before anything gets written there.
-  app=""
-  if [ -f "$PLIST" ] && found=$(plutil -extract ProgramArguments.0 raw -o - "$PLIST" 2>/dev/null); then
-    [ -d "$(dirname "$found")" ] && app="$found"
-  fi
-  [ -n "$app" ] || app="$DEFAULT_DIR/Casebook"
-  dir=$(dirname "$app")
-  download=1
+  # /releases/latest/download resolves to the newest release that is not a
+  # prerelease, so this URL is both stable and always current. Untagged CI
+  # builds are invisible to it on purpose — see RELEASING.md.
+  zip="$tmp/$ASSET"
+  echo "Downloading Casebook"
+  curl -fL --progress-bar -o "$zip" "$URL"
 fi
 
-# Nothing can replace the file while it is executing, so the running copy goes
-# first — for an upgrade this is also what frees the port for the new one.
-stop_agent
-pkill -x "$(basename "$app")" 2>/dev/null || true
-
-if [ -n "$download" ]; then
-  # uname reports x86_64 for a shell running under Rosetta, which would fetch
-  # the Intel build onto an Apple-silicon Mac. This flag describes the hardware.
-  if [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" = "1" ]; then
-    asset="Casebook-mac-arm.zip"
-  else
-    asset="Casebook-mac-intel.zip"
-  fi
-  # The `latest` release is force-moved onto every push to main, so this URL is
-  # stable and always current — see .github/workflows/release.yml.
-  url="https://github.com/$REPO/releases/download/latest/$asset"
-
-  tmp=$(mktemp -d)
-  trap 'rm -rf "$tmp"' EXIT INT TERM
-
-  echo "Downloading $asset"
-  curl -fL --progress-bar -o "$tmp/$asset" "$url"
-  unzip -q -o "$tmp/$asset" -d "$tmp"
-  [ -f "$tmp/Casebook" ] || {
-    echo "Unexpected archive layout: no Casebook inside $asset." >&2
-    exit 1
-  }
-
-  mkdir -p "$dir"
-  # Replaces the executable only. Anything else in the folder — data.json,
-  # backups/ — is what an upgrade exists to preserve.
-  mv -f "$tmp/Casebook" "$app"
-  echo "Installed to $app"
-fi
-
-chmod +x "$app"
-# Gatekeeper prompts a *user* about a quarantined download. launchd has no one
-# to prompt, so an unquarantined binary is the difference between starting at
-# login and failing silently at every login.
-xattr -d com.apple.quarantine "$app" 2>/dev/null || true
-
-# A path is arbitrary text going into XML; a username with & or < would
-# otherwise write a plist that launchd refuses to parse.
-xml_escape() {
-  printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
+# ditto rather than unzip: it is the tool that round-trips a signed bundle with
+# its symlinks, execute bits and signature intact. unzip mangles all three, and
+# the result is an app that will not launch.
+ditto -x -k "$zip" "$tmp/extracted"
+[ -d "$tmp/extracted/$APP" ] || {
+  echo "Unexpected archive layout: no $APP inside $(basename "$zip")." >&2
+  exit 1
 }
 
-mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
+# Admin accounts can write to /Applications without elevation, which is where an
+# app belongs. A standard account cannot, and ~/Applications works just as well
+# — the app finds its own data either way.
+if [ -w /Applications ]; then
+  dest=/Applications
+else
+  dest="$HOME/Applications"
+  mkdir -p "$dest"
+  echo "No write access to /Applications, installing to $dest instead."
+fi
 
-cat > "$PLIST" <<PLIST_EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>$LABEL</string>
-  <key>ProgramArguments</key>
-  <array><string>$(xml_escape "$app")</string></array>
-  <key>RunAtLoad</key><true/>
-  <!-- Crashes restart; clean exits do not. A launch that finds the port already
-       taken hands off to the running copy and exits 0 on purpose, and a bare
-       KeepAlive would respawn that forever, opening a browser tab each time. -->
-  <key>KeepAlive</key>
-  <dict><key>SuccessfulExit</key><false/></dict>
-  <key>StandardOutPath</key><string>$(xml_escape "$LOG")</string>
-  <key>StandardErrorPath</key><string>$(xml_escape "$LOG")</string>
-</dict>
-</plist>
-PLIST_EOF
+# An existing copy might be in the *other* location, and leaving it there would
+# mean two Casebooks and a coin flip over which one opens.
+if existing=$(installed_at); then
+  quit_casebook
+  rm -rf "$existing"
+fi
 
-launchctl bootstrap "$DOMAIN" "$PLIST"
+ditto "$tmp/extracted/$APP" "$dest/$APP"
 
-# The app opens a browser on start, so a tab is about to appear. Confirm the
-# server is actually answering rather than trusting that bootstrap succeeded.
-i=0
-while [ "$i" -lt 20 ]; do
-  if curl -fsS --max-time 1 http://127.0.0.1:4321/api/health 2>/dev/null |
-    grep -q '"app":"casebook"'; then
-    echo
-    echo "Casebook is running at http://casebook.localhost:4321"
-    echo "Data file: $dir/data.json"
-    echo
-    echo "It starts on its own at every login. Bookmark the address above —"
-    echo "the executable never needs double-clicking again."
-    echo "Upgrade later by re-running this. To remove it: install-macos.sh --uninstall"
-    exit 0
-  fi
-  sleep 1
-  i=$((i + 1))
-done
+# Belt and braces. A curl download carries no quarantine, but this script also
+# accepts a zip from anywhere, and a quarantined bundle gets translocated to a
+# read-only mount where the in-app updater cannot replace it.
+xattr -dr com.apple.quarantine "$dest/$APP" 2>/dev/null || true
 
-echo "Installed, but nothing answered on port 4321 within 20s." >&2
-echo "Check $LOG" >&2
-exit 1
+# A truncated download extracts cleanly and then fails at launch with a dialog
+# that explains nothing. The signature is a whole-bundle checksum; use it as one.
+codesign --verify --deep --strict "$dest/$APP" 2>/dev/null || {
+  echo "The downloaded app failed its signature check and was not installed." >&2
+  rm -rf "$dest/$APP"
+  exit 1
+}
+
+open "$dest/$APP"
+
+echo
+echo "Casebook is installed at $dest/$APP and starting now."
+echo "Your data lives in ~/Casebook."
+echo
+if [ -f "$OLD_PLIST" ]; then
+  echo "The older Casebook is still on this Mac. The app will offer to bring its"
+  echo "data across and tidy it up when it opens — let it do that rather than"
+  echo "deleting anything yourself."
+  echo
+fi
+echo "Run this again to upgrade. To remove it: install-macos.sh --uninstall"
