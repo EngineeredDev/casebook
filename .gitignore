@@ -4,7 +4,16 @@ out/
 dist/
 # Implementation specs — kept locally, not published.
 docs/
+# The dev data folder is pinned to the repo root (see paths.ts), so her actual
+# records sit here while the app runs. `data.json` alone was not enough once
+# encryption shipped: the encrypted document, the outgoing copy kept beside it,
+# and the wrapped data key are all written here too, and committing the last of
+# those alongside the first would put the ciphertext and its key in the same
+# public repository.
 data.json
+data.json.prev
+*.enc
+keyfile.json
 backups/
 *.tmp
 .DS_Store
