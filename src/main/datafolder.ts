@@ -6,9 +6,14 @@
  * with the config pointing at a folder that does not hold a complete copy of
  * her work. Deleting the old one is her call, made later, with both copies in
  * front of her.
+ *
+ * A failure anywhere leaves both folders as they were found — the source
+ * untouched throughout, the target cleared of whatever got as far as being
+ * written. "Nothing was moved" is then a true thing to tell her, and trying
+ * again is a matter of trying again.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { mkdirSync } from "node:fs";
 import { isAbsolute, join, sep } from "node:path";
 import type { RelocateResult } from "../shared/api.ts";
@@ -44,13 +49,47 @@ export function relocateData(target: string): RelocateResult {
     return { error: `${target} already has a data.json in it. Pick an empty folder.` };
   }
 
+  const targetBackups = join(target, "backups");
+  let copiedBackups: string[] = [];
+  let wroteDataFile = false;
+
+  /**
+   * Take back exactly what this function put there, and nothing else.
+   *
+   * Without it a half-finished copy leaves a data.json in the target, which the
+   * guard above then reads as "already has data in it, pick an empty folder" —
+   * so the obvious next move, trying the same folder again, is the one move
+   * that cannot work. The failure would be permanent and only fixable in
+   * Finder, which is a poor reward for a full disk.
+   *
+   * Deletes are best-effort: this runs on a path where the disk is already
+   * misbehaving, and the message it returns to is about the original failure,
+   * not about the tidy-up.
+   */
+  const undo = (): void => {
+    const remove = (path: string) => {
+      try {
+        unlinkSync(path);
+      } catch {
+        // Nothing useful to do; the caller's error is the one that matters.
+      }
+    };
+    for (const name of copiedBackups) remove(join(targetBackups, name));
+    if (wroteDataFile) remove(targetFile);
+    // writeFileAtomic renames a sibling into place; a rename that failed after
+    // the write leaves it behind.
+    remove(targetFile + ".tmp");
+  };
+
   let contents: string;
   try {
     contents = readFileSync(sourceFile, "utf8");
     mkdirSync(target, { recursive: true });
     writeFileAtomic(targetFile, contents);
-    copyMissingBackups(backupDir(), join(target, "backups"));
+    wroteDataFile = true;
+    copiedBackups = copyMissingBackups(backupDir(), targetBackups);
   } catch (error) {
+    undo();
     return { error: `Couldn't copy your data there — ${(error as Error).message}` };
   }
 
@@ -62,9 +101,11 @@ export function relocateData(target: string): RelocateResult {
   try {
     written = readFileSync(targetFile, "utf8");
   } catch (error) {
+    undo();
     return { error: `The copy couldn't be read back — ${(error as Error).message}` };
   }
   if (written !== contents) {
+    undo();
     return { error: "The copy didn't match the original, so nothing was changed." };
   }
 

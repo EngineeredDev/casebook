@@ -136,22 +136,28 @@ export function saveDoc(doc: DataDoc): void {
  * untouched. Same-named files are left alone rather than overwritten: two
  * folders can hold a `data-2026-03-14.json` from different installs, and the
  * one already in the destination is the one this app has been keeping.
+ *
+ * Returns the names it actually wrote — which is what lets a caller that fails
+ * partway through take back exactly what it put there and nothing else.
  */
-export function copyMissingBackups(from: string, to: string): void {
+export function copyMissingBackups(from: string, to: string): string[] {
   let names: string[];
   try {
     names = readdirSync(from);
   } catch {
-    return; // No backups/ in the source. Nothing to bring over.
+    return []; // No backups/ in the source. Nothing to bring over.
   }
   const wanted = names.filter((name) => name.endsWith(".json"));
-  if (wanted.length === 0) return;
+  if (wanted.length === 0) return [];
   mkdirSync(to, { recursive: true });
+  const copied: string[] = [];
   for (const name of wanted) {
     const dest = join(to, name);
     if (existsSync(dest)) continue;
     copyFileSync(join(from, name), dest);
+    copied.push(name);
   }
+  return copied;
 }
 
 /** Copy today's first pre-write state into backups/, pruning to the newest N. */
