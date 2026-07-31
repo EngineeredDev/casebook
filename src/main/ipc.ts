@@ -120,11 +120,26 @@ export function registerIpc(): void {
   handle("doc:get", (): DataDoc => currentDoc());
 
   handle("doc:save", (candidate: unknown): SaveResult => {
-    if (!doc) return { error: "Casebook hasn't finished opening your data.", retryable: true };
+    /**
+     * Read rather than refuse when the cache is empty. `legacy:import` drops it
+     * deliberately, and a save already in flight when that happens used to come
+     * back `retryable: true` to a renderer whose retry path only ever re-sends
+     * the same document — five attempts that could not succeed, then a "Save
+     * failed" whose Retry button ran the sixth. Reloading here turns that into
+     * an ordinary conflict, which the renderer already knows how to report.
+     */
+    let current: DataDoc;
+    try {
+      current = currentDoc();
+    } catch (error) {
+      // The file is unreadable. Worth retrying — a volume that just went away
+      // may come back — and the message names the path.
+      return { error: (error as Error).message, retryable: true };
+    }
     if (!isDataDoc(candidate)) return { error: "Malformed document", retryable: false };
-    if (candidate.rev !== doc.rev) return { conflict: true, currentRev: doc.rev };
+    if (candidate.rev !== current.rev) return { conflict: true, currentRev: current.rev };
 
-    const next: DataDoc = { ...candidate, rev: doc.rev + 1 };
+    const next: DataDoc = { ...candidate, rev: current.rev + 1 };
     try {
       backupIfNeeded();
       saveDoc(next);
@@ -274,10 +289,9 @@ export function registerIpc(): void {
 
   handle("legacy:retire", (dir: unknown): RetireResult => {
     if (typeof dir !== "string") return { error: "That isn't a folder Casebook can read." };
-    // Deleting things needs the same precondition importing did, checked here
-    // rather than trusted from the renderer: this has to still be an old
-    // install, in a folder that still contains one.
-    if (!describeInstall(dir)) return { error: `There's no Casebook install in ${dir}.` };
+    // retireInstall re-describes the folder itself before touching anything, so
+    // the "is this still an old install" precondition is enforced next to the
+    // deletes rather than trusted from here — or from the renderer.
     return retireInstall(dir);
   });
 }

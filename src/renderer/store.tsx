@@ -92,6 +92,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const result = await api().saveDoc(current);
       if ("conflict" in result) {
+        // Nothing here can resolve it — the alert offers a reload, which is the
+        // only move that can't lose the file's version — but which two
+        // revisions disagreed is the difference between diagnosing this later
+        // and guessing at it.
+        console.warn(
+          `Save conflict: sent rev ${current.rev}, the data file is at rev ${result.currentRev}.`,
+        );
         setSaveState("conflict");
         return;
       }

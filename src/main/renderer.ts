@@ -136,7 +136,10 @@ export function serveRenderer(): void {
 
     const file = resolveWithin(root, pathname);
     if (file && isFile(file)) return serveFile(file);
-    if (!extname(pathname)) return serveFile(indexHtml);
+    // "Names a file" is decided on the decoded path, the same string
+    // resolveWithin looked for. Testing the raw one would read `%2E` as an
+    // ordinary character and 404 a client route the router would have handled.
+    if (!extname(file ?? pathname)) return serveFile(indexHtml);
     return new Response("Not found", { status: 404 });
   });
 }
