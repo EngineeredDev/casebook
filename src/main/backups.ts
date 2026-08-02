@@ -24,6 +24,7 @@ import { readConfig, writeConfig } from "./config.ts";
 import { mirrorStatus, reconcile } from "./mirror.ts";
 import { backupDir } from "./paths.ts";
 import {
+  forceSnapshot,
   listSnapshots,
   LockedError,
   mirrorSources,
@@ -182,10 +183,19 @@ export function restore(
   let preserved: string | null = null;
   try {
     if (current) {
-      // Reachable: the live file is fine and this is a deliberate roll-back
-      // from Settings. The snapshot of the current state is what makes it
-      // undoable, and it is written through the ordinary tiers.
-      saveDoc(current, current);
+      /**
+       * Reachable: the live file is fine and this is a deliberate roll-back
+       * from Settings. The snapshot of the current state is what makes it
+       * undoable, and the panel promises that undo twice on screen.
+       *
+       * Forced rather than written through the ordinary tiers, because the
+       * tiers can decline. If today's daily already exists and the interval
+       * isn't due, `saveDoc` produces no listable snapshot at all — the
+       * outgoing state lands only in `data.json.prev`, which the very next
+       * ordinary edit overwrites. The promise on screen would then be false
+       * exactly once: after a restore she wanted to take back.
+       */
+      forceSnapshot(current, "restore");
     } else {
       preserved = preserveUnreadable();
     }

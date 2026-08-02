@@ -136,7 +136,12 @@ function isDataDoc(candidate: unknown): candidate is DataDoc {
     Array.isArray(d.categories) &&
     Array.isArray(d.students) &&
     Array.isArray(d.entries) &&
+    // `!== null` is not pedantry: typeof null is "object", so without it a
+    // document with null settings saves happily and then fails the stricter
+    // check on the way back in at next launch — a file the app wrote and
+    // cannot read.
     typeof d.settings === "object" &&
+    d.settings !== null &&
     hasValidMappings(d)
   );
 }
