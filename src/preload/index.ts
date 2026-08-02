@@ -10,7 +10,7 @@
 
 import { contextBridge, ipcRenderer } from "electron";
 import type { CasebookApi, UpdateInfo } from "../shared/api.ts";
-import type { AiState, ModelStatus } from "../shared/llm.ts";
+import type { AiState, ModelStatus, SummaryChunk } from "../shared/llm.ts";
 
 const api: CasebookApi = {
   getDoc: () => ipcRenderer.invoke("doc:get"),
@@ -96,8 +96,8 @@ const api: CasebookApi = {
     return () => ipcRenderer.removeListener("llm:ai-state", forward);
   },
 
-  onSummaryChunk: (listener: (chunk: string) => void) => {
-    const forward = (_event: unknown, chunk: string) => listener(chunk);
+  onSummaryChunk: (listener: (chunk: SummaryChunk) => void) => {
+    const forward = (_event: unknown, chunk: SummaryChunk) => listener(chunk);
     ipcRenderer.on("llm:summary-chunk", forward);
     return () => ipcRenderer.removeListener("llm:summary-chunk", forward);
   },

@@ -40,6 +40,7 @@ import type {
   LlmResult,
   MemoryAdvice,
   ModelStatus,
+  SummaryChunk,
   SummaryRequest,
 } from "../shared/llm.ts";
 import {
@@ -226,7 +227,7 @@ export interface Broadcast {
    * that never existed.
    */
   aiState(state: AiState): void;
-  summaryChunk(chunk: string): void;
+  summaryChunk(chunk: SummaryChunk): void;
 }
 
 export function registerIpc(broadcast: Broadcast): void {
@@ -696,7 +697,12 @@ export function registerIpc(broadcast: Broadcast): void {
     if (!isSummaryRequest(request)) {
       return Promise.resolve({ unavailable: "crashed", message: "Malformed request." });
     }
-    return summarize(request, broadcast.summaryChunk);
+    // The id the renderer minted, put back on every chunk on its way out. The
+    // host's own job id never leaves this process, and would mean nothing to a
+    // listener anyway.
+    return summarize(request, (text) =>
+      broadcast.summaryChunk({ requestId: request.requestId, text }),
+    );
   });
 
   handle("legacy:retire", (dir: unknown): RetireResult => {
@@ -731,6 +737,10 @@ function isSummaryRequest(value: unknown): value is SummaryRequest {
   if (typeof value !== "object" || value === null) return false;
   const r = value as SummaryRequest;
   return (
+    // Required, not optional: an untagged request would stream chunks nothing
+    // could claim, and the summary would silently never appear.
+    typeof r.requestId === "string" &&
+    r.requestId.length > 0 &&
     typeof r.studentName === "string" &&
     typeof r.windowLabel === "string" &&
     Array.isArray(r.notes) &&

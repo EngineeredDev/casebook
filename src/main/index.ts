@@ -62,6 +62,8 @@ function start(): void {
         window.webContents.send("llm:ai-state", state);
       }
     },
+    // Still every window, and now every chunk says which request it belongs
+    // to, because "every window" is exactly the problem it had to solve.
     summaryChunk: (chunk) => {
       for (const window of BrowserWindow.getAllWindows()) {
         window.webContents.send("llm:summary-chunk", chunk);

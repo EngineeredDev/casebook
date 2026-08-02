@@ -141,8 +141,15 @@ export function NotesSummary({
   const [text, setText] = useState("");
   const [running, setRunning] = useState(false);
   const [trouble, setTrouble] = useState<string | null>(null);
-  /** Streamed chunks land here without re-rendering through state on each one. */
-  const buffer = useRef("");
+  /**
+   * The run this view is currently showing, and the text accumulated for it.
+   *
+   * A ref rather than state because chunks arrive many times a second and none
+   * of them is a reason to re-render twice. Null means nothing on screen
+   * belongs to a run any more — she has changed student or window — and every
+   * chunk still in flight is now somebody else's.
+   */
+  const active = useRef<{ id: string; text: string } | null>(null);
 
   useEffect(() => {
     api()
@@ -152,9 +159,29 @@ export function NotesSummary({
     return api().onModelStatus((status) => setReady(status.state === "ready"));
   }, []);
 
+  /**
+   * Subscribed for as long as this view exists, rather than for the length of
+   * a run. Chunks are broadcast to every window and an abandoned job goes on
+   * producing them, so the guarantee has to come from the id on each chunk —
+   * and a subscription tied to a run outlives the run anyway, because the only
+   * thing that ended it was `finally`.
+   */
+  useEffect(
+    () =>
+      api().onSummaryChunk((chunk) => {
+        const run = active.current;
+        if (!run || run.id !== chunk.requestId) return;
+        run.text += chunk.text;
+        setText(run.text);
+      }),
+    [],
+  );
+
   // A summary describes one student over one window. Both of those changing
-  // must clear it, or she is reading last student's answer under this one's name.
+  // must clear it, or she is reading last student's answer under this one's
+  // name — including the rest of an answer that is still arriving.
   useEffect(() => {
+    active.current = null;
     setText("");
     setTrouble(null);
   }, [student.id, window_]);
@@ -165,26 +192,27 @@ export function NotesSummary({
   const label = WINDOWS.find((w) => w.value === window_)?.label ?? "";
 
   const run = async () => {
+    const requestId = crypto.randomUUID();
+    active.current = { id: requestId, text: "" };
     setRunning(true);
     setTrouble(null);
     setText("");
-    buffer.current = "";
-    const off = api().onSummaryChunk((chunk) => {
-      buffer.current += chunk;
-      setText(buffer.current);
-    });
     try {
       const result = await api().summarizeNotes({
+        requestId,
         studentName: student.name,
         windowLabel: label,
         notes,
       });
+      // She may have changed student or window while this was running, in which
+      // case the question on screen is no longer the one this answers. The
+      // whole answer is as capable of landing under the wrong name as a chunk.
+      if (active.current?.id !== requestId) return;
       if ("ok" in result) setText(result.value);
       else setTrouble(result.message);
     } catch (error) {
-      setTrouble(bridgeMessage(error));
+      if (active.current?.id === requestId) setTrouble(bridgeMessage(error));
     } finally {
-      off();
       setRunning(false);
     }
   };

@@ -109,10 +109,33 @@ export type LlmResult<T> =
 
 /** A grounded, never-persisted narrative summary of some notes (LLM-3). */
 export interface SummaryRequest {
+  /**
+   * Who asked. Minted by the renderer, echoed on every chunk of the answer.
+   *
+   * Not redundant with the host's own numeric job id, which never leaves the
+   * main process. Chunks are broadcast to every window, and jobs being
+   * *executed* one at a time is not the same as their output being *addressed*
+   * — a listener that has moved on to another student is still a listener.
+   */
+  requestId: string;
   studentName: string;
   /** Dated plain-text notes, oldest first. Already stripped of HTML. */
   notes: { date: string; text: string }[];
   windowLabel: string;
+}
+
+/**
+ * One piece of a streamed summary, and the request it belongs to.
+ *
+ * The id is the whole reason this is an object rather than a string. Without
+ * it, navigating away from one student mid-stream and starting another's
+ * summary put the first child's narrative under the second child's name — the
+ * remaining chunks of the abandoned job going to whichever component happened
+ * to be listening. In a clinical tool that is the worst thing a stream can do.
+ */
+export interface SummaryChunk {
+  requestId: string;
+  text: string;
 }
 
 /* ---------- the wire between the main process and the inference host ---------- */

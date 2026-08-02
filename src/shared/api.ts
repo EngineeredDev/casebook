@@ -16,6 +16,7 @@ import type {
   LlmResult,
   MemoryAdvice,
   ModelStatus,
+  SummaryChunk,
   SummaryRequest,
 } from "./llm.ts";
 
@@ -378,8 +379,15 @@ export interface CasebookApi {
    */
   summarizeNotes(request: SummaryRequest): Promise<LlmResult<string>>;
   /**
-   * Text as the summary is generated. Only one summary runs at a time — the
-   * inference host has a single job queue — so these need no correlation id.
+   * Text as the summary is generated, tagged with the request that asked for
+   * it. Listeners must check the id and ignore anything that isn't theirs.
+   *
+   * These used to be bare strings, on the reasoning that the inference host
+   * runs one job at a time so no correlation was needed. That conflates
+   * execution with addressing: the chunks go to every window, an abandoned run
+   * keeps producing them, and a component that has moved on to another student
+   * is still subscribed. The result was one child's narrative rendering under
+   * another child's name.
    */
-  onSummaryChunk(listener: (chunk: string) => void): () => void;
+  onSummaryChunk(listener: (chunk: SummaryChunk) => void): () => void;
 }
