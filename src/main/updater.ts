@@ -14,6 +14,17 @@
  * verify against and there is not going to be one. This trusts GitHub over
  * HTTPS, pinned to one repository. That is acceptable for a tool with one user
  * and would not be for anything wider.
+ *
+ * Revisited at review time (2026-08-02) and reaffirmed. Publishing SHA-256
+ * checksums in the same GitHub release was considered and rejected: it adds
+ * nothing against the threat that motivates it, since whoever can publish a
+ * release can publish its checksums too, and the ad-hoc codesign check already
+ * catches truncation and corruption. Real publisher authentication means
+ * embedding a verification key in the app and signing releases in CI with a
+ * managed secret — meaningful work plus key-management liability, for an app
+ * whose fallback installer trusts exactly the same root. Revisit the moment
+ * distribution widens beyond one user; artifact attestations are the
+ * reasonable middle step if this repo ever has other consumers.
  */
 
 import { app } from "electron";

@@ -18,20 +18,29 @@ permissions:
   contents: read
 
 jobs:
+  # Read-only, and runs on every push. Nothing in here can write to the
+  # repository, which is the point: the twelve minutes of npm install, build and
+  # packaging — the part that executes the most third-party code — has no token
+  # worth stealing. Publishing is a separate job below, gated on a tag.
   build:
-    name: Build, verify, release
+    name: Build and verify
     # macOS, and not negotiable: codesign exists nowhere else, and an unsigned
     # arm64 bundle is killed the moment it is executed.
     runs-on: macos-latest
-    permissions:
-      # Only the publish step needs this, and only on a tag.
-      contents: write
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v6
+      # Actions are pinned by commit rather than by tag. A tag is a moving
+      # pointer the action's owner can repoint at any time, so `@v7` is a
+      # standing invitation to run code nobody here has looked at — on a runner
+      # that packages the app people install.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: latest # as mise.toml pins it
+          # This job never pushes. Leaving the token in .git/config would leave
+          # it readable by every script npm runs for the rest of the job.
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "26" # as mise.toml pins it
           cache: npm
 
       - run: npm ci
@@ -63,7 +72,7 @@ jobs:
       # `--publish never` is inside the script, and load-bearing: electron-builder
       # sniffs for CI and starts publishing on its own otherwise, which fails for
       # want of a token it should never have been given. Releases are cut by the
-      # explicit gh step below, where the conditions are visible.
+      # explicit publish job below, where the conditions are visible.
       - run: npm run dist
 
       # The three properties the whole distribution story rests on, none of
@@ -77,18 +86,22 @@ jobs:
             || { echo "::error::$app is not ad-hoc signed."; exit 1; }
           codesign --verify --deep --strict "$app" \
             || { echo "::error::$app failed signature verification."; exit 1; }
-          fuses=$(npx @electron/fuses read --app "$app")
+          # The locally installed copy, from devDependencies. A bare `npx
+          # @electron/fuses` fetched whatever the registry served at that moment
+          # and ran it against the bundle about to be released.
+          fuses=$(./node_modules/.bin/electron-fuses read --app "$app")
           echo "$fuses"
           for fuse in RunAsNode EnableNodeOptionsEnvironmentVariable EnableNodeCliInspectArguments; do
             echo "$fuses" | grep -q "$fuse is Disabled" \
               || { echo "::error::Fuse $fuse is not disabled."; exit 1; }
           done
 
-      # Untagged builds go no further than here. Downloadable for testing,
-      # invisible to the updater, gone in a fortnight.
-      - name: Keep the build for testing
-        if: "!startsWith(github.ref, 'refs/tags/v')"
-        uses: actions/upload-artifact@v4
+      # Kept whether or not this is a release. On an untagged build it is a
+      # downloadable for testing, invisible to the updater, gone in a fortnight;
+      # on a tag it is what the publish job attaches, so the bytes that were
+      # verified above are the bytes that ship.
+      - name: Keep the build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: casebook-mac-arm64-${{ github.sha }}
           path: |
@@ -96,11 +109,39 @@ jobs:
             dist/Casebook-mac-arm64.dmg
           retention-days: 14
 
+  # The only job that can write to the repository, and it exists only on a tag.
+  # It does no npm install and runs no build tooling — it downloads what `build`
+  # already verified and attaches it to a release.
+  publish:
+    name: Publish the release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # v8 fails the run on a download digest mismatch rather than warning, which
+      # is the property that makes "the bytes that were verified are the bytes
+      # that ship" a claim rather than a hope.
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: casebook-mac-arm64-${{ github.sha }}
+          path: dist
+
+      # Regenerated rather than carried across from the build job: it is a pure
+      # function of CHANGELOG.md at this commit, and the build already proved
+      # the section exists.
+      - name: Release notes
+        run: node scripts/release-notes.mjs "${GITHUB_REF_NAME#v}" > "$RUNNER_TEMP/notes.md"
+
       # A real release, which is the only thing /releases/latest/download
       # resolves to and so the only thing the install script and the updater
       # can see.
-      - name: Publish the release
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

@@ -1,2 +1,5 @@
+# Pinned to a major rather than "latest", and matched by .github/workflows/release.yml.
+# "latest" meant the version that packaged a release could change between two
+# builds of the same commit, with nothing in the history saying so.
 [tools]
-node = "latest"
+node = "26"

@@ -145,6 +145,20 @@ else
   echo "No write access to /Applications, installing to $dest instead."
 fi
 
+# A truncated download extracts cleanly and then fails at launch with a dialog
+# that explains nothing. The signature is a whole-bundle checksum; use it as one.
+#
+# Checked here, on the extracted copy, *before* anything already installed is
+# removed. This used to run on the installed bundle after the old one had been
+# deleted, which meant a bad download left the Mac with no Casebook on it at all
+# — recoverable by re-running this script, but a frightening way to find out.
+# Nothing has been touched yet at this point, so failing costs nothing.
+codesign --verify --deep --strict "$tmp/extracted/$APP" 2>/dev/null || {
+  echo "The downloaded app failed its signature check, so nothing was changed." >&2
+  echo "Your existing Casebook and your data are untouched. Try the download again." >&2
+  exit 1
+}
+
 # An existing copy might be in the *other* location, and leaving it there would
 # mean two Casebooks and a coin flip over which one opens.
 if existing=$(installed_at); then
@@ -158,14 +172,6 @@ ditto "$tmp/extracted/$APP" "$dest/$APP"
 # accepts a zip from anywhere, and a quarantined bundle gets translocated to a
 # read-only mount where the in-app updater cannot replace it.
 xattr -dr com.apple.quarantine "$dest/$APP" 2>/dev/null || true
-
-# A truncated download extracts cleanly and then fails at launch with a dialog
-# that explains nothing. The signature is a whole-bundle checksum; use it as one.
-codesign --verify --deep --strict "$dest/$APP" 2>/dev/null || {
-  echo "The downloaded app failed its signature check and was not installed." >&2
-  rm -rf "$dest/$APP"
-  exit 1
-}
 
 open "$dest/$APP"
 
