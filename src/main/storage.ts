@@ -11,6 +11,7 @@ import {
 import { basename, join } from "node:path";
 import type { MassDeletion, SnapshotSummary } from "../shared/api.ts";
 import { DATA_VERSION, emptyDoc, type DataDoc, type Entry } from "../shared/types.ts";
+import { validateDoc } from "../shared/validate.ts";
 import { writeFileAtomic } from "./atomic.ts";
 import { backupDir, dataDir, dataDirIsConfigured, dataFile } from "./paths.ts";
 import type { MirrorSource } from "./mirror.ts";
@@ -112,8 +113,9 @@ type Versioned = Omit<DataDoc, "version"> & { version: number };
 
 /**
  * Enough of a shape to migrate and then use. Deliberately looser than
- * `isDataDoc` in ipc.ts, which guards documents arriving from the renderer and
- * so insists on the current version — a file on disk is allowed to be older.
+ * `validateDoc` in shared/validate.ts, which guards documents arriving from the
+ * renderer and so insists on the current version — a file on disk is allowed to
+ * be older, and is run past the full validator only after it has been migrated.
  *
  * Without this, a data.json that parses as JSON but isn't a Casebook document
  * travels all the way to the renderer, where the first `doc.students.length`
@@ -235,6 +237,21 @@ export function loadDoc(): DataDoc {
 
   const raw = readDocumentFile(path);
   const doc = migrate(raw);
+
+  /**
+   * Reported, never refused.
+   *
+   * A file that is already on disk is the only copy of her work there is, and
+   * refusing to open it because one entry in the middle has a malformed date
+   * would turn a recoverable annoyance into a locked-out app. The save guard is
+   * where a bad document gets stopped; this is where one that got past an older
+   * version of that guard — or past a migration — says so, in the log, at the
+   * moment it is first read.
+   */
+  for (const problem of validateDoc(doc).fatal) {
+    console.warn(`${basename(path)} has a problem in it: ${problem}`);
+  }
+
   if (doc !== raw) {
     // A dedicated snapshot, not one of the tiers — those are keyed to the day
     // and the quarter-hour, and either could already exist, which would leave a

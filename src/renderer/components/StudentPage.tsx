@@ -111,6 +111,19 @@ export function StudentPage({ studentId }: { studentId: string }) {
 
   const student = doc.students.find((s) => s.id === studentId) ?? null;
 
+  /**
+   * The name field, held locally so that emptying it to retype it is not the
+   * same act as saving an empty name. See the input for what that used to do.
+   */
+  const [name, setName] = useState(student?.name ?? "");
+  // Following the record, but only when it is a different record. Re-syncing on
+  // every change to `student` would overwrite what she is in the middle of
+  // typing with what the last keystroke happened to persist.
+  useEffect(() => {
+    setName(doc.students.find((s) => s.id === studentId)?.name ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentId]);
+
   const inRange = useMemo(() => filterEntries(doc.entries, range.range), [doc.entries, range]);
   const mine = useMemo(() => studentEntries(inRange, studentId), [inRange, studentId]);
   const withNotes = useMemo(() => mine.filter((e) => !!e.note), [mine]);
@@ -244,20 +257,42 @@ export function StudentPage({ studentId }: { studentId: string }) {
             <Grid.Col span={{ base: 12, sm: 6 }}>
               <TextInput
                 label="Name"
-                value={student.name}
-                onChange={(e) => updateStudent(student.id, { name: e.currentTarget.value })}
+                value={name}
+                onChange={(e) => {
+                  const next = e.currentTarget.value;
+                  setName(next);
+                  // A blank field is a moment in the middle of retyping a name,
+                  // not a name. Every keystroke of clearing one used to be
+                  // persisted, so stopping there — or navigating away — left a
+                  // nameless student on the roster with entries attached to
+                  // them, and nothing on the page said so.
+                  if (next.trim()) updateStudent(student.id, { name: next.trim() });
+                }}
+                onBlur={() => {
+                  // She emptied it and left. Show what is actually on the
+                  // record, which is the last real name she typed.
+                  if (!name.trim()) setName(student.name);
+                }}
               />
             </Grid.Col>
             <Grid.Col span={{ base: 6, sm: 3 }}>
               <NumberInput
                 label="Mandated min/week"
                 min={0}
+                // A mandate is whole minutes a week. Mantine allows decimals by
+                // default, and "22.5" in this box makes every compliance
+                // percentage on the caseload report slightly and unaccountably
+                // wrong. The ceiling is a school week, generously.
+                max={2400}
+                allowDecimal={false}
+                allowNegative={false}
+                clampBehavior="strict"
                 disabled={!student.iep}
                 placeholder={student.iep ? "e.g. 30" : "IEP only"}
                 value={student.mandatedMinutesPerWeek ?? ""}
                 onChange={(v) =>
                   updateStudent(student.id, {
-                    mandatedMinutesPerWeek: v === "" ? null : Number(v),
+                    mandatedMinutesPerWeek: v === "" ? null : Math.round(Number(v)),
                   })
                 }
               />

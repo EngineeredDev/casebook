@@ -32,7 +32,8 @@ import type {
   UpdateInstallResult,
   UpdateState,
 } from "../shared/api.ts";
-import { DATA_VERSION, type DataDoc } from "../shared/types.ts";
+import type { DataDoc } from "../shared/types.ts";
+import { docRefusal } from "../shared/validate.ts";
 import type {
   AiState,
   CategoryReply,
@@ -124,47 +125,6 @@ function handle<A extends unknown[], R>(
 }
 
 /**
- * Shape check on the way in. The renderer is the only thing that sends
- * documents and it sends whole ones, so this is a guard against a bug rather
- * than against an attacker — but it is the last point at which a malformed
- * document can be stopped before it reaches the file everything depends on.
- */
-function isDataDoc(candidate: unknown): candidate is DataDoc {
-  if (typeof candidate !== "object" || candidate === null) return false;
-  const d = candidate as DataDoc;
-  return (
-    d.version === DATA_VERSION &&
-    typeof d.rev === "number" &&
-    Array.isArray(d.categories) &&
-    Array.isArray(d.students) &&
-    Array.isArray(d.entries) &&
-    // `!== null` is not pedantry: typeof null is "object", so without it a
-    // document with null settings saves happily and then fails the stricter
-    // check on the way back in at next launch — a file the app wrote and
-    // cannot read.
-    typeof d.settings === "object" &&
-    d.settings !== null &&
-    hasValidMappings(d)
-  );
-}
-
-/**
- * The import mappings, if there are any, are a flat string-to-string object.
- *
- * Checked here rather than trusted because this is the one field the renderer
- * writes from parsed document text rather than from a form — the phrase comes
- * out of her Google Doc — and a shape that isn't this one would be written
- * straight into data.json and then read back forever. An array passes
- * `typeof === "object"`, hence the explicit rejection.
- */
-function hasValidMappings(d: DataDoc): boolean {
-  if (d.importMappings === undefined) return true;
-  if (typeof d.importMappings !== "object" || d.importMappings === null) return false;
-  if (Array.isArray(d.importMappings)) return false;
-  return Object.values(d.importMappings).every((id) => typeof id === "string");
-}
-
-/**
  * Read lazily, so a data file that cannot be parsed becomes an error the
  * renderer can show and offer to retry, rather than a main process that dies
  * before there is a window to say so in. The old server had no such option: it
@@ -250,8 +210,24 @@ export function registerIpc(broadcast: Broadcast): void {
       // may come back — and the message names the path.
       return { error: (error as Error).message, retryable: true };
     }
-    if (!isDataDoc(candidate)) return { error: "Malformed document", retryable: false };
-    if (candidate.rev !== current.rev) return { conflict: true, currentRev: current.rev };
+    /**
+     * The last point at which a malformed document can be stopped before it
+     * reaches the file everything else depends on. The renderer is the only
+     * thing that sends documents, so this guards against a bug in code we
+     * wrote rather than against an attacker — but the check used to be five
+     * `Array.isArray` calls and stopped at the top level, so an entry holding
+     * `"30"` minutes, or a date of `"next Tuesday"`, or no id at all, went to
+     * disk unremarked. See shared/validate.ts for the per-item rules and for
+     * why dangling references are a warning rather than a refusal.
+     *
+     * The reason is named rather than swallowed into "Malformed document":
+     * this is unreachable without a bug, and the message is the only thing
+     * that will ever say which one.
+     */
+    const refusal = docRefusal(candidate);
+    if (refusal) return { error: `Malformed document — ${refusal}.`, retryable: false };
+    const incoming = candidate as DataDoc;
+    if (incoming.rev !== current.rev) return { conflict: true, currentRev: current.rev };
 
     /**
      * The app removes one entry at a time and has no "delete everything"
@@ -261,11 +237,11 @@ export function registerIpc(broadcast: Broadcast): void {
      * window either way, so nothing is lost by asking.
      */
     if (confirmed !== true) {
-      const losing = massDeletion(current, candidate);
+      const losing = massDeletion(current, incoming);
       if (losing) return { confirmDeletion: losing };
     }
 
-    const next: DataDoc = { ...candidate, rev: current.rev + 1 };
+    const next: DataDoc = { ...incoming, rev: current.rev + 1 };
     try {
       // `current` becomes data.json.prev — the outgoing version, which bounds
       // the damage of a save that lands but shouldn't have to a single save.
