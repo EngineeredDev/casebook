@@ -37,6 +37,7 @@ import { isSchoolLevel } from "../lib/aggregate.ts";
 import { addDaysYmd, fmtDuration, fmtFullDate, todayYmd } from "../lib/time.ts";
 import { navigate, useLocation, useSearchParams } from "../lib/router.tsx";
 import { useDateParam, type LogNavState } from "../lib/urlState.ts";
+import { clearDraft, readDraft, writeDraft } from "../lib/draft.ts";
 import { DeleteEntryModal, IepBadge, Seg } from "./ui.tsx";
 import { NoteEditor } from "./NoteEditor.tsx";
 import { isBlankNote, noteExcerpt } from "../lib/notes.ts";
@@ -211,13 +212,21 @@ export function LogPage() {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
   const [date, setDate] = useDateParam();
-  const [studentIds, setStudentIds] = useState<string[]>([]);
-  const [scope, setScope] = useState<Scope>("student");
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [minutes, setMinutes] = useState<number | null>(30);
-  const [customMinutes, setCustomMinutes] = useState<number | "">("");
-  const [startTime, setStartTime] = useState("");
-  const [note, setNote] = useState("");
+  /**
+   * Whatever was half-typed last time this page was mounted, read once.
+   *
+   * Read at initialisation rather than restored by an effect, so the first
+   * paint already has it — an effect would show her an empty form and then
+   * fill it, which looks like the app losing her note and finding it again.
+   */
+  const [restored] = useState(readDraft);
+  const [studentIds, setStudentIds] = useState<string[]>(restored?.studentIds ?? []);
+  const [scope, setScope] = useState<Scope>(restored?.scope ?? "student");
+  const [categoryId, setCategoryId] = useState<string | null>(restored?.categoryId ?? null);
+  const [minutes, setMinutes] = useState<number | null>(restored?.minutes ?? 30);
+  const [customMinutes, setCustomMinutes] = useState<number | "">(restored?.customMinutes ?? "");
+  const [startTime, setStartTime] = useState(restored?.startTime ?? "");
+  const [note, setNote] = useState(restored?.note ?? "");
   /** Backfilling a student's history means logging a run of entries for the same
    *  student, so their selection survives the reset that follows each save. */
   const [keepStudents, setKeepStudents] = useState(false);
@@ -240,6 +249,39 @@ export function LogPage() {
   const editingEntry = editingId ? (doc.entries.find((e) => e.id === editingId) ?? null) : null;
   const editingMissing = !!editingId && !editingEntry;
   const { returnTo, focus, student: seedStudent } = (location.state ?? {}) as LogNavState;
+
+  /**
+   * The day the restored draft was being written for.
+   *
+   * The date is the one form field that already survived a navigation, because
+   * it lives in the URL — but only while she is on this page. Coming back to a
+   * bare `/log` would otherwise pair a note written for a Tuesday in March with
+   * today's date, and saving it would file the session on the wrong day without
+   * ever looking wrong. An explicit `?date=` in the URL wins: that is someone
+   * asking for a particular day right now.
+   */
+  useEffect(() => {
+    const wanted = restored?.date;
+    if (!wanted || editingId || params.get("date") || wanted === todayYmd()) return;
+    setDate(wanted);
+    // Once, on the mount that restored the draft. Re-running would fight the
+    // date picker every time she changed the day.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * Everything typed into the form, held outside the React tree so that
+   * unmounting this page — a navigation, a reload, a lock — cannot take it.
+   *
+   * Edits are excluded. An edit fills these same fields from an entry that is
+   * already on disk, so recording it as a draft would report unsaved work for
+   * as long as an edit link was open, and a warning that is always on is a
+   * warning nobody reads.
+   */
+  useEffect(() => {
+    if (editingId) return;
+    writeDraft({ date, studentIds, scope, categoryId, minutes, customMinutes, startTime, note });
+  }, [editingId, date, studentIds, scope, categoryId, minutes, customMinutes, startTime, note]);
 
   // Keyed on location.key, not on `focus`, so pressing "Log time" while already
   // here refocuses rather than doing nothing.
@@ -315,6 +357,11 @@ export function LogPage() {
     setCustomMinutes("");
     setStartTime("");
     setNote("");
+    // Straight away rather than waiting for the effect above, which runs after
+    // the next render — and `submit` navigates away on some paths, so there
+    // may not be one. A saved entry left behind as a draft would come back as
+    // a duplicate of itself the next time she opened the log.
+    clearDraft();
   };
 
   const resetForm = (opts?: { keep?: boolean }) => {

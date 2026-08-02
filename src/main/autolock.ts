@@ -21,6 +21,16 @@ import { isEnabled, isUnlocked, lock } from "./encryption.ts";
 /** How often to ask. Coarse on purpose — this is a timer, not a stopwatch. */
 const POLL_MS = 30 * 1000;
 
+/**
+ * How long a lid-close will wait for a save that is already on its way.
+ *
+ * Comfortably more than the renderer's 500 ms debounce and short enough that
+ * nobody could reach the Mac in it. Bounded rather than conditional: a save
+ * that never lands must not be able to leave the app unlocked, which is what
+ * skipping the lock outright — the idle timer's answer — would allow here.
+ */
+const FLUSH_GRACE_MS = 1500;
+
 let timer: ReturnType<typeof setInterval> | null = null;
 let announce: (() => void) | null = null;
 /**
@@ -56,10 +66,36 @@ export function startAutoLock(options: {
 
   // Whatever the idle delay says, these mean she has left. Both are free to
   // honour and both are moments a passphrase is expected to matter.
-  powerMonitor.on("lock-screen", () => lockAndTell());
-  powerMonitor.on("suspend", () => lockAndTell());
+  powerMonitor.on("lock-screen", () => lockAfterFlush());
+  powerMonitor.on("suspend", () => lockAfterFlush());
+  /**
+   * The backstop for the grace period above. A Mac that suspends before the
+   * timer fires runs it on the way back up instead, which is still before
+   * anybody has typed anything — macOS asks for its own password first.
+   * Harmless when the suspend path already locked: `lockAndTell` checks.
+   */
+  powerMonitor.on("resume", () => lockAndTell());
 
   restartTimer();
+}
+
+/**
+ * Lock, but not out from under a save that is half a second from landing.
+ *
+ * These two events used to lock immediately and unconditionally, unlike the
+ * idle timer, which checks. So closing the lid within the renderer's debounce
+ * window stranded the edit: the queued flush found the folder locked, and the
+ * document it was holding had already been dropped from the window. Half a
+ * second wide, and it is precisely the half-second after typing the last thing
+ * before walking away — which is the whole population of lid-closes.
+ */
+function lockAfterFlush(): void {
+  if (!isEnabled() || !isUnlocked()) return;
+  if (!hasPendingEdits()) {
+    lockAndTell();
+    return;
+  }
+  setTimeout(lockAndTell, FLUSH_GRACE_MS).unref?.();
 }
 
 function restartTimer(): void {

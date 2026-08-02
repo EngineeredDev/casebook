@@ -14,6 +14,7 @@ import type { Category, DataDoc, Entry, ImportMappings, Student } from "../share
 import { RecoveryScreen } from "./components/RecoveryScreen.tsx";
 import { UnlockScreen } from "./components/UnlockScreen.tsx";
 import { api, bridgeMessage } from "./lib/api.ts";
+import { hasUnsavedDraft, watchDraft } from "./lib/draft.ts";
 
 /**
  * `blocked` is the deletion tripwire: the main process refused a save that
@@ -300,17 +301,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [retrySave]);
 
   /**
-   * Keep the main process told whether anything is still on its way to disk, so
-   * that closing the window can ask first. `beforeunload` did this in the
+   * Keep the main process told whether there is work it would be closing over,
+   * so that closing the window can ask first. `beforeunload` did this in the
    * browser and does not translate: Electron honours the cancellation but shows
    * no dialog, so the window would simply refuse to close and never say why.
    *
-   * Every moment either fact can change is a render that changed `doc` or
-   * `saveState`, so those are the dependencies.
+   * Three of the four facts here are about a save in flight, and change on a
+   * render that changed `doc` or `saveState`. The fourth is a note being typed
+   * into the log form, which is not in this document at all and never causes a
+   * render here — so the draft holder says when its answer changes, and this
+   * re-reports. Without it the header said "Saved", and close, reload and the
+   * idle lock all went ahead over a half-written note.
    */
   useEffect(() => {
     if (!doc) return;
-    void api().setUnsaved(dirtyRef.current || inFlightRef.current || saveState !== "saved");
+    const report = () =>
+      void api().setUnsaved(
+        dirtyRef.current || inFlightRef.current || saveState !== "saved" || hasUnsavedDraft(),
+      );
+    report();
+    return watchDraft(report);
   }, [doc, saveState]);
 
   const addStudent = useCallback(
