@@ -25,7 +25,7 @@
  */
 
 import { existsSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 /** Why a destination couldn't be used, in the terms the UI has to explain. */
 export type TargetTrouble =
@@ -54,6 +54,9 @@ export type TargetStatus = { reachable: true } | { reachable: false; trouble: Ta
  * Async and error-typed throughout, because the next implementation is an HTTP
  * API where every one of these is a request that can fail in ways a local
  * folder cannot.
+ *
+ * Every `name` below is a bare filename and an implementation is entitled to
+ * refuse anything else — see `refuseName`.
  */
 export interface BackupTarget {
   /** What to call this destination on screen. */
@@ -62,10 +65,42 @@ export interface BackupTarget {
   status(): Promise<TargetStatus>;
   /** Write, replacing whatever is there. Throws `TargetError`. */
   put(name: string, contents: Buffer): Promise<void>;
-  /** Size of a file this target was told about, or null if it isn't there. Never throws. */
+  /**
+   * Size of a file this target was told about, or null if it isn't there.
+   * Nothing the destination does makes this fail — a missing file and a drive
+   * that has gone away are both "it isn't there" — but a name that isn't a
+   * filename is refused rather than answered.
+   */
   stat(name: string): Promise<{ size: number } | null>;
   /** Remove by name. Absent is success — the end state is what matters. */
   delete(name: string): Promise<void>;
+}
+
+/**
+ * Whether a name may be joined onto the destination folder, as the error to
+ * reject with — or null when it is fine.
+ *
+ * Every name that gets this far came out of the mirror manifest, which this app
+ * wrote and nothing else reads, so a separator in one is not somebody attacking:
+ * whoever could edit that file could already delete anything of hers directly,
+ * as her. It is a manifest that got damaged — a truncated write, a bad sector, a
+ * sync service that merged two copies of it — and the cost of trusting it anyway
+ * is that `join` quietly resolves `../../Documents/caseload.docx` into a real
+ * path outside the folder she picked, which `delete` then unlinks. The folder
+ * she picked is the only place this class may touch, so that is checked on the
+ * way in rather than assumed about the file.
+ *
+ * `basename(name) === name` is the whole test: it rejects separators, absolute
+ * paths and trailing slashes at once. `.` and `..` survive it — `basename("..")`
+ * is `".."` — so they are named, and an empty name is too, because it joins to
+ * the folder itself.
+ */
+function refuseName(dir: string, name: string): TargetError | null {
+  if (name.length > 0 && name !== "." && name !== ".." && basename(name) === name) return null;
+  return new TargetError(
+    "unknown",
+    `${JSON.stringify(name)} isn't a file name, so nothing in ${dir} was touched.`,
+  );
 }
 
 /** Map a Node filesystem error onto something worth saying to a person. */
@@ -107,6 +142,8 @@ export class LocalFolderTarget implements BackupTarget {
   }
 
   put(name: string, contents: Buffer): Promise<void> {
+    const refusal = refuseName(this.dir, name);
+    if (refusal) return Promise.reject(refusal);
     try {
       writeWithoutReading(join(this.dir, name), contents);
       return Promise.resolve();
@@ -120,6 +157,10 @@ export class LocalFolderTarget implements BackupTarget {
   }
 
   stat(name: string): Promise<{ size: number } | null> {
+    // Refused rather than answered with null, which the reconciler would read as
+    // "not copied yet" and follow with a `put` of the same bad name.
+    const refusal = refuseName(this.dir, name);
+    if (refusal) return Promise.reject(refusal);
     try {
       return Promise.resolve({ size: statSync(join(this.dir, name)).size });
     } catch {
@@ -130,6 +171,11 @@ export class LocalFolderTarget implements BackupTarget {
   }
 
   delete(name: string): Promise<void> {
+    // The one that has to hold even though "absent is success" below would
+    // happily swallow it. This is the call that unlinks, and a bad name reaching
+    // it is the only mistake in this file that cannot be taken back.
+    const refusal = refuseName(this.dir, name);
+    if (refusal) return Promise.reject(refusal);
     try {
       unlinkSync(join(this.dir, name));
     } catch (error) {

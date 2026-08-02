@@ -48,6 +48,10 @@ function start(): void {
   // Reaching a clean start is the only evidence that a swapped-in update
   // actually works, and the only thing that authorises deleting the bundle it
   // replaced. Before any window, so a crash later still counts as "it started".
+  //
+  // Unguarded on purpose: it swallows its own failures, and it has to, because
+  // nothing on this path would catch one. A damaged pending-update.json must
+  // cost a line in the log, never the launch.
   settlePendingUpdate();
 
   serveRenderer();

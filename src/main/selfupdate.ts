@@ -52,6 +52,15 @@ function pendingFile(): string {
 }
 
 /**
+ * Where the bundle being replaced is renamed to. One function rather than two
+ * string literals, because settling recomputes this instead of obeying the path
+ * it was left, and the two answers have to be the same answer.
+ */
+function oldBundlePath(bundle: string): string {
+  return `${bundle}.old`;
+}
+
+/**
  * The .app directory, from the executable inside it. Returns null anywhere the
  * layout is not a bundle — a development run, most obviously, where there is
  * nothing to replace.
@@ -153,7 +162,7 @@ export async function installUpdate(info: UpdateInfo): Promise<UpdateInstallResu
   if (!bundle) return { error: "A development build doesn't update itself." };
 
   const work = join(app.getPath("temp"), `casebook-update-${info.version}`);
-  const oldBundle = `${bundle}.old`;
+  const oldBundle = oldBundlePath(bundle);
   const cleanUp = () => rmSync(work, { recursive: true, force: true });
 
   try {
@@ -220,6 +229,30 @@ export async function installUpdate(info: UpdateInfo): Promise<UpdateInstallResu
 }
 
 /**
+ * The bookkeeping file as it comes back off disk, or null if it is not one.
+ *
+ * Validated field by field rather than cast, because a cast here is a lie the
+ * next line acts on: `rmSync(undefined, { recursive: true })` throws, and it
+ * throws during launch. This file is written by the outgoing process in the
+ * seconds before it asks to be replaced, which is the worst moment on record for
+ * a write to be cut short — so arriving damaged is the case to plan for, not the
+ * exotic one.
+ */
+function readPending(path: string): PendingUpdate | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null) return null;
+  const { from, to, oldBundle, at } = parsed as Partial<Record<keyof PendingUpdate, unknown>>;
+  if (typeof from !== "string" || typeof to !== "string") return null;
+  if (typeof oldBundle !== "string" || typeof at !== "string") return null;
+  return { from, to, oldBundle, at };
+}
+
+/**
  * Called once on a clean start. If the previous run swapped the bundle, this is
  * the launch that proves the new one works, and the only thing that authorises
  * deleting the copy it replaced.
@@ -228,29 +261,62 @@ export async function installUpdate(info: UpdateInfo): Promise<UpdateInstallResu
  * end up being what started. The old copy is deliberately left on disk in that
  * case: it is the way back, and this is not the code that should be deciding to
  * throw it away.
+ *
+ * Never throws, and that is load-bearing rather than tidy. It runs between
+ * `whenReady` and the first window, with nothing above it to catch anything, so
+ * an exception escaping here is not a failed update — it is an app that stops
+ * opening at all, over a note about an update that already succeeded. Whatever
+ * goes wrong is worth a line in the log and nothing more.
  */
 export function settlePendingUpdate(): void {
+  try {
+    settle();
+  } catch (error) {
+    console.error("Couldn't settle a pending update:", error);
+  }
+}
+
+function settle(): void {
   const path = pendingFile();
   if (!existsSync(path)) return;
 
-  let pending: PendingUpdate;
-  try {
-    pending = JSON.parse(readFileSync(path, "utf8")) as PendingUpdate;
-  } catch {
+  const pending = readPending(path);
+  if (!pending) {
+    // Nothing can be concluded from it, so it goes. Only the note is discarded:
+    // whichever bundle is on disk stays there under its own name, and the worst
+    // case is a `Casebook.app.old` nobody ever deletes.
+    console.warn("pending-update.json didn't say anything usable, so it was discarded.");
     rmSync(path, { force: true });
     return;
   }
 
-  if (pending.to === app.getVersion()) {
-    rmSync(pending.oldBundle, { recursive: true, force: true });
+  if (pending.to !== app.getVersion()) {
+    console.warn(
+      `An update to ${pending.to} was staged but this is ${app.getVersion()}. ` +
+        `Leaving ${pending.oldBundle} in place — it is the copy to go back to.`,
+    );
     rmSync(path, { force: true });
-    console.log(`Updated from ${pending.from} to ${pending.to}.`);
     return;
   }
 
-  console.warn(
-    `An update to ${pending.to} was staged but this is ${app.getVersion()}. ` +
-      `Leaving ${pending.oldBundle} in place — it is the copy to go back to.`,
-  );
+  // The delete is recursive, and the path for it is computed here rather than
+  // read out of the file. What the file provides is the *authorisation* — an
+  // update happened, and this launch proves it worked — and letting the same
+  // file also choose the target means an `oldBundle` that got mangled between
+  // being written and being read aims `rm -r` at whatever it now says.
+  // Recomputing costs nothing and leaves exactly one path deletable.
+  const bundle = appBundlePath();
+  const expected = bundle === null ? null : oldBundlePath(bundle);
+  if (expected === null || pending.oldBundle !== expected) {
+    console.warn(
+      `pending-update.json points at ${pending.oldBundle}, which isn't ` +
+        `${expected ?? "a path this build can work out"}. Leaving it where it is.`,
+    );
+    rmSync(path, { force: true });
+    return;
+  }
+
+  rmSync(expected, { recursive: true, force: true });
   rmSync(path, { force: true });
+  console.log(`Updated from ${pending.from} to ${pending.to}.`);
 }

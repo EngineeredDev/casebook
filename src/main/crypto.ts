@@ -40,6 +40,12 @@ import { createCipheriv, createDecipheriv, randomBytes, scrypt } from "node:cryp
  */
 const KDF = { name: "scrypt", N: 2 ** 17, r: 8, p: 1, keyLength: 32 } as const;
 const KDF_MAXMEM = 192 * 1024 * 1024;
+/**
+ * scrypt's parallelism multiplies the work and asks for no extra memory, so the
+ * memory ceiling above says nothing about it. 16 is far above the 1 this app has
+ * ever written and still finishes while she is looking at the screen.
+ */
+const KDF_MAXP = 16;
 
 const SALT_BYTES = 16;
 const DEK_BYTES = 32;
@@ -61,6 +67,8 @@ const HEADER_BYTES = MAGIC.length + 1;
 
 /** 16 bytes of key material, which is 26 characters once encoded. */
 const RECOVERY_BYTES = 16;
+/** That 26, derived rather than typed, so what is checked and what is printed agree. */
+const RECOVERY_CHARS = Math.ceil((RECOVERY_BYTES * 8) / 5);
 /** Crockford's alphabet: no I, L, O or U — nothing that can be misread aloud or in handwriting. */
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
@@ -335,10 +343,15 @@ export function canonicalRecoveryKey(typed: string): string {
     .replace(/[\s-]/g, "")
     .replace(/[IL]/g, "1")
     .replace(/O/g, "0");
-  if (cleaned.length === 0 || ![...cleaned].every((c) => CROCKFORD.includes(c))) {
+  // Exactly 26, not "at least one". A key is one length and only one, so a
+  // half-typed one is a transcription mistake — and saying so is the difference
+  // between "check what you typed" and "that isn't the sheet for this data",
+  // which is the whole reason malformed and wrong are separate failures. Any
+  // other length reached the KDF and came back as the second sentence.
+  if (cleaned.length !== RECOVERY_CHARS || ![...cleaned].every((c) => CROCKFORD.includes(c))) {
     throw new CryptoError(
       "malformed-recovery-key",
-      "That doesn't look like a recovery key. It's 26 letters and digits, in groups of five.",
+      `That doesn't look like a recovery key. It's ${String(RECOVERY_CHARS)} letters and digits, in groups of five.`,
     );
   }
   return cleaned;
@@ -382,6 +395,15 @@ export function parseKeyfile(raw: unknown): Keyfile {
   // more memory than the process can have, which fails as a crash rather than
   // as a message about a file.
   if (128 * kdf.N * kdf.r > KDF_MAXMEM) return bad("asks for more memory than Casebook allows.");
+  // That line bounds N and r and nothing else. p buys time at no memory cost, so
+  // a keyfile naming a large one is the failure with no symptom: she types the
+  // passphrase, and the unlock screen sits there. Not a crash, not a message —
+  // an app that has stopped answering, with no reason on screen to act on.
+  if (kdf.p > KDF_MAXP) return bad("asks for more work than Casebook allows.");
+  // Any other length derives something AES-256 will not take, and the complaint
+  // comes from inside node:crypto as a bare "Invalid key length" — thrown on the
+  // unlock screen, carrying nothing that names the file it came out of.
+  if (kdf.keyLength !== KDF.keyLength) return bad("derives a key of a size AES-256 can't use.");
 
   if (typeof wraps !== "object" || wraps === null) return bad("has no wrapped keys in it.");
   for (const which of ["passphrase", "recovery"] as const) {
@@ -390,6 +412,21 @@ export function parseKeyfile(raw: unknown): Keyfile {
     for (const field of ["salt", "nonce", "tag", "ciphertext"] as const) {
       if (typeof entry[field] !== "string" || entry[field].length === 0) {
         return bad(`has a bad ${which} ${field}.`);
+      }
+    }
+    // Sizes, not just presence. Base64 decoding never fails — `Buffer.from`
+    // drops whatever it cannot read and hands back the rest — so a wrap that was
+    // truncated or mangled in transit arrives as a short buffer that looks
+    // perfectly well-formed here. Left unchecked it reaches `createDecipheriv`,
+    // where a nonce of the wrong length and a tag of the wrong length are both
+    // raw exceptions rather than the "keyfile.json is damaged" she needs to see.
+    for (const [field, size] of [
+      ["salt", SALT_BYTES],
+      ["nonce", NONCE_BYTES],
+      ["tag", TAG_BYTES],
+    ] as const) {
+      if (Buffer.from(entry[field], "base64").length !== size) {
+        return bad(`has a ${which} ${field} of the wrong length.`);
       }
     }
   }

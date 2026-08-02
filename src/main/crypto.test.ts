@@ -165,6 +165,30 @@ describe("unlocking", () => {
     // silently accepting it would mean two spellings of the same key.
     expect(() => canonicalRecoveryKey("UUUUU-UUUUU-UUUUU-UUUUU-UUUUUU")).toThrow(CryptoError);
   });
+
+  it("wants all 26 characters, which is what it says it wants", () => {
+    // A key is one length and only one, so anything shorter or longer is a
+    // transcription mistake and has to be told apart from a key off the wrong
+    // sheet — that distinction is the entire reason there are two failure kinds.
+    // Any length used to be accepted, so someone who typed four groups and
+    // pressed return was told the key was wrong, which sends her looking for a
+    // different sheet instead of at the line she is on.
+    const raw = shared.recoveryKey.replace(/-/g, "");
+    expect(failureKindOf(() => canonicalRecoveryKey(raw.slice(0, 25)))).toBe(
+      "malformed-recovery-key",
+    );
+    expect(failureKindOf(() => canonicalRecoveryKey(raw.slice(0, 5)))).toBe(
+      "malformed-recovery-key",
+    );
+    expect(failureKindOf(() => canonicalRecoveryKey(`${raw}Z`))).toBe("malformed-recovery-key");
+    expect(failureKindOf(() => canonicalRecoveryKey(`${raw}${raw}`))).toBe(
+      "malformed-recovery-key",
+    );
+
+    // And the real thing, at full length, still normalizes to itself.
+    expect(canonicalRecoveryKey(shared.recoveryKey)).toBe(raw);
+    expect(raw).toHaveLength(26);
+  });
 });
 
 describe("changing the passphrase", () => {
@@ -312,6 +336,81 @@ describe("reading a keyfile off disk", () => {
       expect(
         failureKindOf(() => parseKeyfile(candidate)),
         why,
+      ).toBe("corrupt");
+    }
+  });
+
+  it("refuses a keyfile that would take an afternoon to open", () => {
+    // The memory ceiling bounds N and r and says nothing about p, which buys
+    // time for free. This is the damage with no symptom to report: not a crash
+    // and not a message, just a passphrase she typed correctly and an unlock
+    // screen that never comes back, on the one file she cannot work around.
+    for (const p of [17, 1024, 2 ** 20, Number.MAX_SAFE_INTEGER]) {
+      expect(
+        failureKindOf(() => parseKeyfile({ ...shared.keyfile, kdf: { ...shared.keyfile.kdf, p } })),
+        `p=${String(p)}`,
+      ).toBe("corrupt");
+    }
+  });
+
+  it("refuses a key size AES-256 can't take", () => {
+    // A 16-byte key derives fine and then reaches `createDecipheriv`, which
+    // answers with a bare "Invalid key length" from inside node:crypto — an
+    // unhandled error on the unlock screen, wearing nothing that names the file
+    // it came out of or suggests what to do about it.
+    for (const keyLength of [16, 24, 31, 33, 64]) {
+      expect(
+        failureKindOf(() =>
+          parseKeyfile({ ...shared.keyfile, kdf: { ...shared.keyfile.kdf, keyLength } }),
+        ),
+        `keyLength=${String(keyLength)}`,
+      ).toBe("corrupt");
+    }
+  });
+
+  it("refuses wraps whose parts decode to the wrong number of bytes", () => {
+    // Base64 that isn't base64 does not fail — `Buffer.from` drops what it
+    // cannot read and returns the rest — so every one of these looks like a
+    // perfectly good string and only stops being one after it is decoded. A
+    // short nonce and a short tag are both raw exceptions out of node:crypto
+    // rather than a sentence about a damaged file, and a salt of the wrong
+    // length derives a key that will never open anything, which reads to her as
+    // a passphrase she has apparently forgotten.
+    const b64 = (bytes: number): string => Buffer.alloc(bytes, 7).toString("base64");
+    const cases: Record<string, Record<string, string>> = {
+      "a short salt": { salt: b64(8) },
+      "a long salt": { salt: b64(32) },
+      "a short nonce": { nonce: b64(8) },
+      "a nonce sized like a block": { nonce: b64(16) },
+      "a short tag": { tag: b64(8) },
+      "a long tag": { tag: b64(32) },
+      "a salt that isn't base64 at all": { salt: "!!!!!!!!!!!!!!!!!!!!!!!!" },
+    };
+    for (const [why, patch] of Object.entries(cases)) {
+      const candidate = {
+        ...shared.keyfile,
+        wraps: {
+          ...shared.keyfile.wraps,
+          passphrase: { ...shared.keyfile.wraps.passphrase, ...patch },
+        },
+      };
+      expect(
+        failureKindOf(() => parseKeyfile(candidate)),
+        why,
+      ).toBe("corrupt");
+
+      // And the same damage in the recovery wrap, which is the half nobody looks
+      // at until it is the only way in.
+      const recovery = {
+        ...shared.keyfile,
+        wraps: {
+          ...shared.keyfile.wraps,
+          recovery: { ...shared.keyfile.wraps.recovery, ...patch },
+        },
+      };
+      expect(
+        failureKindOf(() => parseKeyfile(recovery)),
+        `recovery: ${why}`,
       ).toBe("corrupt");
     }
   });
