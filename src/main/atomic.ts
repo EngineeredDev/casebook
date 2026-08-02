@@ -52,31 +52,72 @@ export function writeFileAtomic(path: string, contents: string | Buffer): void {
   // Already bytes when it arrives from the encrypting codec; utf8 otherwise.
   const payload = Buffer.isBuffer(contents) ? contents : Buffer.from(contents, "utf8");
 
-  const fd = openSync(tmp, "w");
   try {
-    writeSync(fd, payload);
-    // Before the rename, deliberately. A failure here means the temp file's
-    // contents are in doubt, and renaming a doubtful file over a good one is
-    // the single worst move available.
-    fsyncSync(fd);
-  } finally {
-    closeSync(fd);
+    const fd = openSync(tmp, "w");
+    try {
+      writeAll(fd, payload);
+      // Before the rename, deliberately. A failure here means the temp file's
+      // contents are in doubt, and renaming a doubtful file over a good one is
+      // the single worst move available.
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
+  } catch (error) {
+    // Every failure path unlinks, not just the rename's. A write or fsync that
+    // threw leaves exactly the corpse the rename path already knew not to
+    // leave, in the folder the user is told to go and look at.
+    discard(tmp);
+    throw error;
   }
 
   try {
     renameSync(tmp, path);
   } catch (error) {
-    // Leaving the scratch file behind would litter the data folder with one
-    // more corpse per failed save, in the folder the user is told to look at.
-    try {
-      unlinkSync(tmp);
-    } catch {
-      // The original error is the one worth reporting.
-    }
+    discard(tmp);
     throw error;
   }
 
   syncDirectory(dirname(path));
+}
+
+/**
+ * Write the whole buffer, however many calls that takes.
+ *
+ * `writeSync` returns how many bytes it actually wrote, and is under no
+ * obligation for that to be all of them. Discarding the return value means a
+ * short write is followed by a perfectly successful fsync and a perfectly
+ * successful rename — and a truncated file replaces a good one, reporting
+ * success, which is the exact failure this whole module exists to prevent.
+ *
+ * Rare on a local regular file (ENOSPC arriving mid-write, RLIMIT_FSIZE), but
+ * this is the keystone under every save, snapshot, keyfile and config write,
+ * and Node's own `fs.writeFileSync` loops here for the same reason.
+ *
+ * Zero progress is treated as a failure rather than looped on: a `writeSync`
+ * that accepts nothing and does not throw will not accept anything next time
+ * either, and spinning forever inside a save is worse than a save that fails.
+ */
+function writeAll(fd: number, payload: Buffer): void {
+  let written = 0;
+  while (written < payload.length) {
+    const n = writeSync(fd, payload, written, payload.length - written);
+    if (n <= 0) {
+      throw new Error(
+        `Wrote only ${written} of ${payload.length} bytes and then stopped making progress.`,
+      );
+    }
+    written += n;
+  }
+}
+
+/** Remove a scratch file, never at the expense of the error being reported. */
+function discard(tmp: string): void {
+  try {
+    unlinkSync(tmp);
+  } catch {
+    // The original error is the one worth reporting.
+  }
 }
 
 /**
