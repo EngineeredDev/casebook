@@ -80,7 +80,7 @@ export function planPasses(notes: SummaryRequest["notes"]): SummaryRequest["note
   let current: SummaryRequest["notes"] = [];
   let month = "";
   let size = 0;
-  for (const note of notes) {
+  for (const note of divide(notes)) {
     const noteMonth = note.date.slice(0, 7);
     const wouldOverflow = size + note.text.length > CHARS_PER_PASS;
     // A new pass starts at a month boundary, but only once there is enough in
@@ -100,6 +100,82 @@ export function planPasses(notes: SummaryRequest["notes"]): SummaryRequest["note
   }
   if (current.length > 0) passes.push(current);
   return passes;
+}
+
+/**
+ * Break up any single note that is too long to be a pass on its own.
+ *
+ * The grouping above can only decide *where between notes* to cut, so one note
+ * longer than the budget went through whole — and a single oversized pass is
+ * the failure this whole file exists to prevent: the context silently drops
+ * what does not fit, and the summary then describes the surviving half as
+ * though it were the term.
+ *
+ * A hand-typed note reaching 9,000 characters is roughly 1,500 words, so this
+ * is a tail case rather than an ordinary one. It is still reachable — a pasted
+ * email thread, a long IEP meeting write-up — and the failure is silent.
+ *
+ * The pieces keep the note's date, because the date is what every claim in the
+ * summary has to be citable against. They are cut on a blank line where there
+ * is one, so a paragraph is not split down the middle.
+ */
+function divide(notes: SummaryRequest["notes"]): SummaryRequest["notes"] {
+  if (notes.every((note) => note.text.length <= CHARS_PER_PASS)) return notes;
+  return notes.flatMap((note) =>
+    note.text.length <= CHARS_PER_PASS
+      ? [note]
+      : cut(note.text).map((text) => ({ date: note.date, text })),
+  );
+}
+
+/** Text in budget-sized pieces, preferring a paragraph break to a hard cut. */
+function cut(text: string): string[] {
+  const pieces: string[] = [];
+  let rest = text;
+  while (rest.length > CHARS_PER_PASS) {
+    const window = rest.slice(0, CHARS_PER_PASS);
+    // Only a break in the last third counts. One at character 40 of 9,000 would
+    // technically be a paragraph boundary and would make no progress worth
+    // having.
+    const at = window.lastIndexOf("\n\n");
+    const end = at > CHARS_PER_PASS * 0.66 ? at : CHARS_PER_PASS;
+    pieces.push(rest.slice(0, end).trimEnd());
+    rest = rest.slice(end).trimStart();
+  }
+  if (rest.length > 0) pieces.push(rest);
+  return pieces;
+}
+
+/**
+ * Group per-period summaries into reduces that fit.
+ *
+ * `reducePrompt` used to concatenate every part it was given, however many
+ * there were — so a long enough window overflowed the context at the *reduce*
+ * step, after every individual pass had been careful not to. It takes an
+ * "Everything" range covering several years to reach, which is exactly the
+ * range somebody opens when they want the whole picture.
+ *
+ * More than one group means the caller folds a layer and asks again. Returning
+ * a single group is the common case and means one reduce will do.
+ */
+export function planReduce(parts: string[]): string[][] {
+  const groups: string[][] = [];
+  let current: string[] = [];
+  let size = 0;
+  for (const part of parts) {
+    // Always at least one part per group, so a single part larger than the
+    // budget yields a group rather than an empty one and the caller's fold
+    // still makes progress.
+    if (current.length > 0 && size + part.length > CHARS_PER_PASS) {
+      groups.push(current);
+      current = [];
+      size = 0;
+    }
+    current.push(part);
+    size += part.length;
+  }
+  if (current.length > 0) groups.push(current);
+  return groups;
 }
 
 /** The second stage: summarise what the per-period summaries said. */

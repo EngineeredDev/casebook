@@ -30,6 +30,23 @@ import {
 const INTERVAL_MS = 15 * 60 * 1000;
 
 /**
+ * Everything here is synchronous, on the main process, and that is a decision
+ * rather than an oversight.
+ *
+ * The arithmetic: her document is at most a few megabytes, so `JSON.stringify`
+ * is a fraction of a millisecond and `F_FULLFSYNC` — 15–30 ms per file, see
+ * atomic.ts — dominates whatever this costs. Saves are debounced at 500 ms and
+ * the renderer is never blocked, because the IPC is async on its side. Moving
+ * storage to a worker or a utility process would be real complexity bought
+ * against a stall nobody can perceive.
+ *
+ * The budget that would change the answer: revisit if serialization ever
+ * exceeds ~50 ms, or the document exceeds ~20 MB. Neither is reachable from a
+ * caseload; both are reachable from a bug that duplicates entries, which is
+ * worth noticing for its own sake.
+ */
+
+/**
  * How documents become bytes on the way to disk.
  *
  * A seam rather than a branch, so that nothing in this file has to know whether

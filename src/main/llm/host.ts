@@ -49,6 +49,7 @@ import type {
 } from "../../shared/llm.ts";
 import {
   planPasses,
+  planReduce,
   reducePrompt,
   summaryPrompt,
   SUMMARY_SYSTEM_PROMPT,
@@ -181,7 +182,7 @@ async function answerSummary(id: number, request: SummaryRequest): Promise<strin
     );
   }
 
-  const parts: string[] = [];
+  let parts: string[] = [];
   /*
    * Sequential, and it must stay that way: there is one context sequence and
    * one model. `Promise.all` here would interleave prompts into the same
@@ -194,6 +195,35 @@ async function answerSummary(id: number, request: SummaryRequest): Promise<strin
         chat.prompt(summaryPrompt({ ...request, notes }), { temperature: 0, maxTokens: 500 }),
       ),
     );
+  }
+
+  /**
+   * Fold until one reduce will fit.
+   *
+   * Every individual pass was careful to stay inside the context, and then the
+   * reduce concatenated all of them regardless — so a long enough window
+   * overflowed at the last step, where the truncation is least visible and
+   * would be described as the whole picture. Reachable with an "Everything"
+   * range covering several years, which is precisely the range somebody chooses
+   * when they want the whole picture.
+   *
+   * `planReduce` always puts at least one part in a group, so the loop cannot
+   * spin: either the group count falls or it is already one.
+   */
+  for (let groups = planReduce(parts); groups.length > 1; groups = planReduce(parts)) {
+    const folded: string[] = [];
+    for (const group of groups) {
+      folded.push(
+        await withSession(SUMMARY_SYSTEM_PROMPT, (chat) =>
+          chat.prompt(reducePrompt(group, request.windowLabel), {
+            temperature: 0,
+            maxTokens: 500,
+          }),
+        ),
+      );
+    }
+    if (folded.length >= parts.length) break; // No progress; take what we have.
+    parts = folded;
   }
   /* eslint-enable no-await-in-loop */
 
