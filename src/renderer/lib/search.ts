@@ -10,6 +10,7 @@
  *     student:casey iep       Casey's IEP-related entries
  *     note:guardian           the word appears in the note specifically
  *     has:note is:group       group sessions that carry a note
+ *     is:school               meetings and lessons with no student on them
  *     after:2026-05 -cat:doc  since May, excluding documentation
  *
  * Every term must match — terms AND together — and a leading "-" negates one.
@@ -22,6 +23,7 @@
  */
 
 import type { Category, DataDoc, Entry, Student } from "../../shared/types.ts";
+import { isSchoolLevel } from "./aggregate.ts";
 import { noteExcerpt } from "./notes.ts";
 import { fmtDayLabel } from "./time.ts";
 
@@ -89,7 +91,7 @@ export function buildIndex(doc: DataDoc): IndexedEntry[] {
 
 type TextField = "student" | "category" | "note";
 type DateOp = "before" | "after" | "on";
-type Flag = "note" | "group" | "untimed" | "timed" | "iep";
+type Flag = "note" | "group" | "school" | "student" | "untimed" | "timed" | "iep";
 
 type Term =
   | { kind: "text"; value: string; negated: boolean }
@@ -116,10 +118,17 @@ const DATE_OPS: Record<string, DateOp> = {
   date: "on",
 };
 
+/**
+ * Keyed on what follows `is:`/`has:`, which is a different namespace from
+ * TEXT_FIELDS above — `student:casey` names a student, `is:student` asks
+ * whether there is one at all, and the two never collide.
+ */
 const FLAGS: Record<string, Flag> = {
   note: "note",
   notes: "note",
   group: "group",
+  school: "school",
+  student: "student",
   untimed: "untimed",
   timed: "timed",
   iep: "iep",
@@ -206,6 +215,30 @@ export interface Match {
   inNote: boolean;
 }
 
+/**
+ * Split out of `matchEntry` rather than extending the ternary chain that used
+ * to live there: seven flags nested three deep in a single expression is
+ * exactly where a wrong branch goes unnoticed.
+ */
+function matchFlag(flag: Flag, idx: IndexedEntry): boolean {
+  switch (flag) {
+    case "note":
+      return !!idx.note;
+    case "group":
+      return idx.entry.studentIds.length > 1;
+    case "school":
+      return isSchoolLevel(idx.entry);
+    case "student":
+      return !isSchoolLevel(idx.entry);
+    case "untimed":
+      return idx.untimed;
+    case "timed":
+      return !idx.untimed;
+    case "iep":
+      return idx.iep;
+  }
+}
+
 /** Null when the entry fails any term; otherwise where the match landed. */
 export function matchEntry(query: ParsedQuery, idx: IndexedEntry): Match | null {
   let inNote = false;
@@ -244,16 +277,7 @@ export function matchEntry(query: ParsedQuery, idx: IndexedEntry): Match | null 
         break;
       }
       case "flag":
-        hit =
-          term.flag === "note"
-            ? !!idx.note
-            : term.flag === "group"
-              ? idx.entry.studentIds.length > 1
-              : term.flag === "untimed"
-                ? idx.untimed
-                : term.flag === "timed"
-                  ? !idx.untimed
-                  : idx.iep;
+        hit = matchFlag(term.flag, idx);
         break;
     }
 

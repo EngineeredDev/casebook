@@ -9,6 +9,10 @@ import { listWeeks, weekStartYmd, type DateRange } from "./time.ts";
 export type Attribution = "service" | "share";
 
 export function minutesForStudent(entry: Entry, attribution: Attribution): number {
+  // The zero case is school-level work. Every caller computes this before its
+  // loop over `studentIds` — a loop that then does not run — so the value is
+  // discarded rather than used, and the guard is what keeps that a harmless
+  // dead number instead of an Infinity looking for somewhere to land.
   if (attribution === "service" || entry.studentIds.length === 0) return entry.minutes;
   return entry.minutes / entry.studentIds.length;
 }
@@ -36,7 +40,15 @@ export function effectiveRange(entries: Entry[], range: DateRange): DateRange | 
   return from <= to ? { from, to } : null;
 }
 
-/** Number of Monday-weeks the (clamped) range spans — the divisor for per-week averages. */
+/**
+ * Number of Monday-weeks the (clamped) range spans — the divisor for per-week
+ * averages.
+ *
+ * School-level entries clamp the range like any others, which is the single
+ * place that time touches a per-student number: a week she spent entirely in
+ * meetings still counts as a week, and as one her students were seen for zero
+ * minutes in. Averaging over it reports that rather than dropping the week.
+ */
 export function weekCount(entries: Entry[], range: DateRange): number {
   const eff = effectiveRange(entries, range);
   if (!eff) return 0;
@@ -58,6 +70,19 @@ export function isUntimed(categoryId: string, categories: Category[]): boolean {
 }
 
 /**
+ * Work no single student's name belongs on — a crisis-team meeting, a classroom
+ * lesson, a duty period, an hour spent building next term's schedule.
+ *
+ * It is real clock time, so it counts toward every total that claims to be one;
+ * it has no student, so it counts toward no per-student number at all. Both
+ * halves of that are the point: a caseload's cost is understated exactly by the
+ * labour a headcount cannot hold.
+ */
+export function isSchoolLevel(entry: Entry): boolean {
+  return entry.studentIds.length === 0;
+}
+
+/**
  * Entries that carry no minutes by design. Counted rather than summed — they are
  * invisible to every hours-based rollup, so this is the only place they surface.
  */
@@ -73,6 +98,17 @@ export function clockTotals(entries: Entry[], categories: Category[]): GroupTota
     t[categoryGroupOf(e.categoryId, categories)] += e.minutes;
   }
   return t;
+}
+
+/**
+ * The school-level slice of a range on its own.
+ *
+ * Every per-student view excludes this time by construction, so any page
+ * showing a total and a per-student breakdown side by side has a gap between
+ * them that needs a number to explain it. Without this the two just disagree.
+ */
+export function schoolLevelTotals(entries: Entry[], categories: Category[]): GroupTotals {
+  return clockTotals(entries.filter(isSchoolLevel), categories);
 }
 
 export interface WeekGroupRow {
@@ -335,7 +371,11 @@ export function mandateComparison(
 
 export interface WeeklySummaryRow {
   week: string;
-  student: Student;
+  /**
+   * Null on the school-level row — the week's meetings, lessons and systems
+   * time, which no student column can hold. At most one such row per week.
+   */
+  student: Student | null;
   direct: number;
   indirect: number;
   total: number;
@@ -343,7 +383,14 @@ export interface WeeklySummaryRow {
   untimed: number;
 }
 
-/** One row per student per week (weeks with time only) — the pivot-table-friendly export. */
+/**
+ * One row per student per week, plus one school-level row per week that has
+ * any — the pivot-table-friendly export.
+ *
+ * That extra row is what makes the file sum back to real clock time. Without it
+ * a "weekly totals" export silently drops a whole category of work, which is
+ * the bug this feature exists to fix, faithfully reproduced in a spreadsheet.
+ */
 export function weeklySummaryRows(
   entries: Entry[],
   students: Student[],
@@ -353,32 +400,59 @@ export function weeklySummaryRows(
   // filtered to the range. Kept so the signature matches its sibling exports.
   _range: DateRange,
 ): WeeklySummaryRow[] {
+  /** Stands in for a student id on the school-level row. Ids are UUIDs, so "" cannot collide. */
+  const SCHOOL = "";
   const key = (w: string, sid: string) => `${w}|${sid}`;
   const acc = new Map<string, WeeklySummaryRow>();
   const byId = new Map(students.map((s) => [s.id, s]));
+
+  const bump = (
+    w: string,
+    sid: string,
+    student: Student | null,
+    group: "direct" | "indirect",
+    untimed: boolean,
+    minutes: number,
+  ) => {
+    let row = acc.get(key(w, sid));
+    if (!row) {
+      row = { week: w, student, direct: 0, indirect: 0, total: 0, untimed: 0 };
+      acc.set(key(w, sid), row);
+    }
+    if (untimed) {
+      row.untimed += 1;
+      return;
+    }
+    row[group] += minutes;
+    row.total += minutes;
+  };
+
   for (const e of entries) {
     const w = weekStartYmd(e.date);
-    const per = minutesForStudent(e, attribution);
     const group = categoryGroupOf(e.categoryId, categories);
     const untimed = isUntimed(e.categoryId, categories);
+
+    if (isSchoolLevel(e)) {
+      // Minutes as logged, with no attribution applied: attribution divides a
+      // session among the students who attended it, and there are none here.
+      bump(w, SCHOOL, null, group, untimed, e.minutes);
+      continue;
+    }
+    const per = minutesForStudent(e, attribution);
     for (const sid of e.studentIds) {
       const student = byId.get(sid);
       if (!student) continue;
-      let row = acc.get(key(w, sid));
-      if (!row) {
-        row = { week: w, student, direct: 0, indirect: 0, total: 0, untimed: 0 };
-        acc.set(key(w, sid), row);
-      }
-      if (untimed) {
-        row.untimed += 1;
-        continue;
-      }
-      row[group] += per;
-      row.total += per;
+      bump(w, sid, student, group, untimed, per);
     }
   }
+
   return [...acc.values()].toSorted(
-    (a, b) => a.week.localeCompare(b.week) || a.student.name.localeCompare(b.student.name),
+    (a, b) =>
+      a.week.localeCompare(b.week) ||
+      // School-level closes out its week: it is the row that is not a student,
+      // so it reads as a subtotal under the names it is not one of.
+      Number(!a.student) - Number(!b.student) ||
+      (a.student?.name ?? "").localeCompare(b.student?.name ?? ""),
   );
 }
 

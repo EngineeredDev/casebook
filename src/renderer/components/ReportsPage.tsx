@@ -26,6 +26,7 @@ import {
   mandateComparison,
   perCategoryTotals,
   perStudentTotals,
+  schoolLevelTotals,
   untimedCount,
   weekCount,
   weeklyByGroup,
@@ -73,6 +74,10 @@ export function ReportsPage() {
     [entries, doc.categories],
   );
   const untimed = useMemo(() => untimedCount(entries, doc.categories), [entries, doc.categories]);
+  const schoolLevel = useMemo(
+    () => schoolLevelTotals(entries, doc.categories),
+    [entries, doc.categories],
+  );
   const weekly = useMemo(
     () =>
       weeklyByGroup(entries, doc.categories, range.range).map((r) => ({
@@ -144,6 +149,7 @@ export function ReportsPage() {
       [
         "Week of",
         "Student",
+        "Scope",
         "IEP",
         "Direct min",
         "Indirect min",
@@ -151,10 +157,15 @@ export function ReportsPage() {
         "Total hours",
         "Untimed events",
       ],
+      // A school-level row leaves Student and IEP genuinely empty rather than
+      // carrying a marker like "(none)", which would sort and filter as though
+      // it were somebody's name. "Scope" is what identifies the row, so an
+      // empty name cell can never be mistaken for missing data.
       ...rows.map((r) => [
         r.week,
-        r.student.name,
-        r.student.iep ? "Y" : "N",
+        r.student?.name ?? "",
+        r.student ? "Student" : "School-level",
+        r.student ? (r.student.iep ? "Y" : "N") : "",
         Math.round(r.direct),
         Math.round(r.indirect),
         Math.round(r.total),
@@ -181,6 +192,11 @@ export function ReportsPage() {
       ...sorted.map((e) => [
         e.date,
         e.startTime ?? "",
+        // School-level entries fall out of this as an empty cell, which is the
+        // wanted answer — a literal like "(none)" would sort and filter as a
+        // student name. Empty is unambiguous here because a student who was
+        // deleted still prints as "(deleted)" rather than as nothing, and a
+        // group size of 0 says the same thing in the next column.
         e.studentIds
           .map((id) => doc.students.find((s) => s.id === id)?.name ?? "(deleted)")
           .join("; "),
@@ -361,6 +377,17 @@ export function ReportsPage() {
           <Text size="xs" c="dimmed" mt={6}>
             {note}
           </Text>
+          {/* This table and the "Total time" tile above it no longer agree once
+              there is school-level work, because nothing in a per-student table
+              can hold it. Printed on paper with no way to ask, an unexplained
+              gap between two totals reads as an arithmetic error. */}
+          {schoolLevel.total > 0 && (
+            <Text size="xs" c="dimmed" mt={2}>
+              Excludes {toHours(schoolLevel.total)}h of school-level work — meetings, lessons and
+              systems time with no student attached. It is counted in the totals above and in Time
+              by category below.
+            </Text>
+          )}
         </Box>
 
         {mandates.length > 0 && (

@@ -15,9 +15,12 @@ import { ReadOnlyNote } from "./NoteView.tsx";
  */
 function PastNotes({
   studentIds,
+  schoolLevel,
   excludeEntryId,
 }: {
   studentIds: string[];
+  /** Distinguishes "no student, deliberately" from "no student picked yet". */
+  schoolLevel: boolean;
   excludeEntryId: string | null;
 }) {
   const { doc } = useStore();
@@ -37,6 +40,15 @@ function PastNotes({
     [doc.entries, studentIds, excludeEntryId],
   );
 
+  // Both states have an empty picker behind them, and the wrong message turns a
+  // finished school-level entry into what looks like an unfinished one.
+  if (schoolLevel) {
+    return (
+      <Text size="sm" c="dimmed">
+        School-level work isn't attached to a student, so there's no history to read alongside it.
+      </Text>
+    );
+  }
   if (studentIds.length === 0) {
     return (
       <Text size="sm" c="dimmed">
@@ -102,6 +114,7 @@ export function NoteEditor({
   canSubmit,
   submitLabel,
   studentIds,
+  schoolLevel,
   editingId,
   date,
 }: {
@@ -112,6 +125,7 @@ export function NoteEditor({
   canSubmit: boolean;
   submitLabel: string;
   studentIds: string[];
+  schoolLevel: boolean;
   editingId: string | null;
   date: string;
 }) {
@@ -227,7 +241,7 @@ export function NoteEditor({
         title={
           <Group gap="xs" wrap="nowrap">
             <Text fw={600} size="sm">
-              {names || "Note"}
+              {names || (schoolLevel ? "School-level" : "Note")}
             </Text>
             <Text size="sm" c="dimmed">
               {fmtFullDate(date)}
@@ -259,7 +273,11 @@ export function NoteEditor({
               Past notes
             </Text>
             <Box style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
-              <PastNotes studentIds={studentIds} excludeEntryId={editingId} />
+              <PastNotes
+                studentIds={studentIds}
+                schoolLevel={schoolLevel}
+                excludeEntryId={editingId}
+              />
             </Box>
           </Stack>
         </Flex>

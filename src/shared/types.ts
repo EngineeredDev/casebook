@@ -31,7 +31,13 @@ export interface Entry {
   date: string;
   minutes: number;
   categoryId: string;
-  /** One or more students; >1 means a group session. */
+  /**
+   * The students this entry is attributable to. More than one is a group
+   * session. None is school-level work — a crisis-team meeting, an SEL lesson,
+   * staff PD, a duty period — which is real logged time that belongs to the
+   * week rather than to anyone on the roster. Empty is a deliberate state the
+   * Log page makes you choose, never the residue of an unfinished form.
+   */
   studentIds: string[];
   /** Optional clock time, HH:MM (24h), for future timeline views. */
   startTime?: string | null;

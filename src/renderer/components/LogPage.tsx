@@ -27,15 +27,17 @@ import {
   IconClock,
   IconClockOff,
   IconPencil,
+  IconSchool,
   IconTrash,
   IconUsers,
 } from "@tabler/icons-react";
 import { useStore } from "../store.tsx";
 import type { Entry, Student } from "../../shared/types.ts";
+import { isSchoolLevel } from "../lib/aggregate.ts";
 import { addDaysYmd, fmtDuration, fmtFullDate, todayYmd } from "../lib/time.ts";
 import { navigate, useLocation, useSearchParams } from "../lib/router.tsx";
 import { useDateParam, type LogNavState } from "../lib/urlState.ts";
-import { DeleteEntryModal, IepBadge } from "./ui.tsx";
+import { DeleteEntryModal, IepBadge, Seg } from "./ui.tsx";
 import { NoteEditor } from "./NoteEditor.tsx";
 import { isBlankNote, noteExcerpt } from "../lib/notes.ts";
 
@@ -43,6 +45,19 @@ const DURATION_PRESETS = [5, 10, 15, 20, 30, 45, 60, 90];
 
 const CREATE_PLAIN = "$create";
 const CREATE_IEP = "$create-iep";
+
+/**
+ * Who an entry is about. "school" is the only route to an entry with no
+ * students on it — the picker cannot be emptied into that state by itself — so
+ * an unattributed entry is always something she chose and never something a
+ * half-filled form produced on her behalf.
+ */
+type Scope = "student" | "school";
+
+const SCOPE_OPTIONS: { key: Scope; label: string }[] = [
+  { key: "student", label: "Student(s)" },
+  { key: "school", label: "School-level" },
+];
 
 /**
  * "Optional" rides inline with the label rather than using `description`, which
@@ -62,10 +77,13 @@ function StudentPicker({
   selectedIds,
   onChange,
   inputRef,
+  disabled,
 }: {
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   inputRef?: React.RefObject<HTMLInputElement | null>;
+  /** School-level mode. Shown rather than hidden, so the state is legible. */
+  disabled?: boolean;
 }) {
   const { doc, addStudent } = useStore();
   const [search, setSearch] = useState("");
@@ -106,7 +124,11 @@ function StudentPicker({
   return (
     <Combobox store={combobox} onOptionSubmit={handleSubmit} withinPortal={false}>
       <Combobox.DropdownTarget>
-        <PillsInput onClick={() => combobox.openDropdown()} size="sm">
+        <PillsInput
+          onClick={() => !disabled && combobox.openDropdown()}
+          size="sm"
+          disabled={disabled}
+        >
           <Pill.Group>
             {selected.map((s) => (
               <Pill
@@ -122,8 +144,15 @@ function StudentPicker({
               <PillsInput.Field
                 ref={inputRef}
                 value={search}
-                placeholder={selected.length ? "Add another student…" : "Type a student's name…"}
-                onFocus={() => combobox.openDropdown()}
+                disabled={disabled}
+                placeholder={
+                  disabled
+                    ? "No student — school-level"
+                    : selected.length
+                      ? "Add another student…"
+                      : "Type a student's name…"
+                }
+                onFocus={() => !disabled && combobox.openDropdown()}
                 onBlur={() => combobox.closeDropdown()}
                 onChange={(event) => {
                   combobox.openDropdown();
@@ -183,6 +212,7 @@ export function LogPage() {
   const location = useLocation();
   const [date, setDate] = useDateParam();
   const [studentIds, setStudentIds] = useState<string[]>([]);
+  const [scope, setScope] = useState<Scope>("student");
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [minutes, setMinutes] = useState<number | null>(30);
   const [customMinutes, setCustomMinutes] = useState<number | "">("");
@@ -193,6 +223,17 @@ export function LogPage() {
   const [keepStudents, setKeepStudents] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Entry | null>(null);
   const studentInputRef = useRef<HTMLInputElement>(null);
+  /**
+   * Bumped to ask for the student picker back. Focusing it straight from a
+   * handler would be a no-op coming out of school-level mode — the input is
+   * still disabled at that point, and only stops being so on the re-render the
+   * handler's own state updates cause.
+   */
+  const [focusRequest, setFocusRequest] = useState(0);
+
+  useEffect(() => {
+    if (focusRequest) studentInputRef.current?.focus();
+  }, [focusRequest]);
 
   /** The entry under edit lives in the URL, so an edit link is shareable and survives reload. */
   const editingId = params.get("edit");
@@ -210,7 +251,12 @@ export function LogPage() {
   // still on /log has to re-seed. An edit link wins over a seed — it fills every
   // field below, including the students, and must not be half-overwritten.
   useEffect(() => {
-    if (seedStudent && !editingId) setStudentIds([seedStudent]);
+    if (!seedStudent || editingId) return;
+    setStudentIds([seedStudent]);
+    // Arriving from a student's page is unambiguously about that student, so it
+    // takes the form out of school-level mode too. Seeding a picker that is
+    // disabled and empty on screen would look like the seed had been dropped.
+    setScope("student");
   }, [location.key, seedStudent, editingId]);
 
   const categories = doc.categories.filter((c) => !c.archived);
@@ -224,9 +270,20 @@ export function LogPage() {
   const pickedMinutes = customMinutes === "" ? minutes : Number(customMinutes);
   const effectiveMinutes = untimed ? 0 : pickedMinutes;
   const valid =
-    studentIds.length > 0 &&
+    (scope === "school" || studentIds.length > 0) &&
     !!categoryId &&
     (untimed || (!!pickedMinutes && pickedMinutes > 0 && Number.isFinite(pickedMinutes)));
+
+  /**
+   * The one door into school-level, and it clears the picker on the way
+   * through. Nothing else in the form can empty the selection, so an entry with
+   * no students is always a decision and never a leftover.
+   */
+  const changeScope = (next: Scope) => {
+    setScope(next);
+    if (next === "school") setStudentIds([]);
+    else setFocusRequest((n) => n + 1);
+  };
 
   const dayEntries = useMemo(
     () =>
@@ -245,7 +302,14 @@ export function LogPage() {
   ).length;
 
   const clearFields = ({ keep = false } = {}) => {
-    if (!keep) setStudentIds([]);
+    // Scope rides with the students it governs: keeping them keeps the mode, so
+    // a run of school-level entries chains the same way a run for one student
+    // does. Clearing them returns to the student default rather than leaving
+    // the next entry silently unattributed.
+    if (!keep) {
+      setStudentIds([]);
+      setScope("student");
+    }
     setCategoryId(null);
     setMinutes(30);
     setCustomMinutes("");
@@ -268,6 +332,10 @@ export function LogPage() {
     const entry = doc.entries.find((e) => e.id === editingId);
     if (!entry) return;
     setStudentIds(entry.studentIds);
+    // Read off the entry rather than left at whatever the form was showing, so
+    // opening a school-level entry for edit and saving it again cannot quietly
+    // re-attribute it — or, the other way round, strip a student off one.
+    setScope(isSchoolLevel(entry) ? "school" : "student");
     setCategoryId(entry.categoryId);
     setStartTime(entry.startTime ?? "");
     setNote(entry.note ?? "");
@@ -290,7 +358,10 @@ export function LogPage() {
       date,
       minutes: effectiveMinutes!,
       categoryId: categoryId!,
-      studentIds,
+      // Derived from the scope rather than read straight off the picker: there
+      // is then no ordering of state updates in which a selection left over
+      // from a moment ago can be written onto a school-level entry.
+      studentIds: scope === "school" ? [] : studentIds,
       startTime: startTime || null,
       // "<p></p>" is a non-empty string but an empty note.
       note: isBlankNote(note) ? undefined : note,
@@ -310,7 +381,7 @@ export function LogPage() {
     resetForm({ keep });
     // Holding the students means the category is the next field to fill, so
     // refocusing the picker would only reopen its dropdown over the form.
-    if (!keep) studentInputRef.current?.focus();
+    if (!keep) setFocusRequest((n) => n + 1);
     return true;
   };
 
@@ -472,21 +543,46 @@ export function LogPage() {
               </Box>
 
               <Box>
-                <Text component="label" size="sm" fw={500} display="block" mb={4}>
-                  Student(s)
-                </Text>
+                <Group justify="space-between" align="center" mb={4} wrap="nowrap">
+                  <Text component="label" size="sm" fw={500}>
+                    Who
+                  </Text>
+                  <Seg options={SCOPE_OPTIONS} value={scope} onChange={changeScope} />
+                </Group>
                 <StudentPicker
                   selectedIds={studentIds}
                   onChange={setStudentIds}
                   inputRef={studentInputRef}
+                  disabled={scope === "school"}
                 />
-                {studentIds.length > 1 && (
-                  <Alert variant="light" color="gray" mt="xs" p="xs" icon={<IconUsers size={16} />}>
+                {scope === "school" ? (
+                  <Alert
+                    variant="light"
+                    color="gray"
+                    mt="xs"
+                    p="xs"
+                    icon={<IconSchool size={16} />}
+                  >
                     <Text size="xs">
-                      Group session — the time counts once toward your day, and per-student views
-                      can show it in full or split.
+                      School-level — a meeting, a classroom lesson, staff time, coverage. The
+                      minutes count toward your day and your totals, and toward no student's record.
                     </Text>
                   </Alert>
+                ) : (
+                  studentIds.length > 1 && (
+                    <Alert
+                      variant="light"
+                      color="gray"
+                      mt="xs"
+                      p="xs"
+                      icon={<IconUsers size={16} />}
+                    >
+                      <Text size="xs">
+                        Group session — the time counts once toward your day, and per-student views
+                        can show it in full or split.
+                      </Text>
+                    </Alert>
+                  )
                 )}
               </Box>
 
@@ -515,6 +611,7 @@ export function LogPage() {
                 canSubmit={valid}
                 submitLabel={editingId ? "Save changes" : "Log entry"}
                 studentIds={studentIds}
+                schoolLevel={scope === "school"}
                 editingId={editingId}
                 date={date}
               />
@@ -571,6 +668,7 @@ export function LogPage() {
               <Stack gap={2}>
                 {dayEntries.map((e) => {
                   const cat = doc.categories.find((c) => c.id === e.categoryId);
+                  const schoolLevel = isSchoolLevel(e);
                   const names = e.studentIds
                     .map((id) => doc.students.find((s) => s.id === id)?.name ?? "(deleted)")
                     .join(", ");
@@ -594,8 +692,15 @@ export function LogPage() {
                       </Text>
                       <span className={`cat-dot ${cat?.group ?? "indirect"}`} />
                       <Box style={{ flex: 1, minWidth: 0 }}>
-                        <Text size="sm" truncate>
-                          {names}
+                        {/* Named where a student would be named, so the row is
+                            legibly about something rather than missing a name. */}
+                        <Text
+                          size="sm"
+                          truncate
+                          c={schoolLevel ? "dimmed" : undefined}
+                          fs={schoolLevel ? "italic" : undefined}
+                        >
+                          {schoolLevel ? "School-level" : names}
                         </Text>
                         <Text size="xs" c="dimmed" truncate>
                           {cat?.name ?? "(deleted)"}

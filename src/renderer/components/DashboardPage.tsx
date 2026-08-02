@@ -10,6 +10,7 @@ import {
   mandateComparison,
   perCategoryTotals,
   perStudentTotals,
+  schoolLevelTotals,
   studentWeekMatrix,
   untimedCount,
   weekCount,
@@ -102,6 +103,11 @@ export function DashboardPage() {
 
   const untimed = useMemo(() => untimedCount(entries, doc.categories), [entries, doc.categories]);
 
+  const schoolLevel = useMemo(
+    () => schoolLevelTotals(entries, doc.categories),
+    [entries, doc.categories],
+  );
+
   const mandates = useMemo(
     () => mandateComparison(entries, doc.students, doc.categories, range.range),
     [entries, doc.students, doc.categories, range],
@@ -141,7 +147,14 @@ export function DashboardPage() {
       {/* Tiles that stand for a set of entries open that set on the Timeline,
           filtered and dated to match. "Avg per week" and "Students seen" don't:
           neither is a list of entries, so neither has a list to open. */}
-      <SimpleGrid cols={{ base: 2, sm: 3, lg: untimed ? 6 : 5 }} spacing="sm">
+      <SimpleGrid
+        cols={{
+          base: 2,
+          sm: 3,
+          lg: 5 + (untimed > 0 ? 1 : 0) + (schoolLevel.total > 0 ? 1 : 0),
+        }}
+        spacing="sm"
+      >
         <StatTile
           label="Total time"
           value={`${toHours(totals.total)}h`}
@@ -164,10 +177,14 @@ export function DashboardPage() {
           sub={`${toHours(totals.direct)}h of ${toHours(totals.total)}h`}
           to={totals.direct ? timelinePath(range, { group: "direct" }) : undefined}
         />
+        {/* "Student time", not "tracked time": the denominator is the sum of the
+            per-student totals, which school-level work is absent from. The two
+            were the same number until school-level entries existed, and the old
+            label would now quietly overstate the IEP share of her week. */}
         <StatTile
           label="IEP workload"
           value={iepShare == null ? "—" : `${iepShare.pct}%`}
-          sub="share of tracked time"
+          sub="share of student time"
           to={iepShare?.minutes ? timelinePath(range, { q: "is:iep" }) : undefined}
         />
         {untimed > 0 && (
@@ -176,6 +193,18 @@ export function DashboardPage() {
             value={untimed}
             sub="no-shows and the like"
             to={timelinePath(range, { q: "is:untimed" })}
+          />
+        )}
+        {/* Appears only once there is some, like the untimed tile. This is the
+            one place the week's unattributed labour is visible as a number —
+            every other view on this page is per-student and cannot hold it,
+            which is the understatement the whole feature exists to correct. */}
+        {schoolLevel.total > 0 && (
+          <StatTile
+            label="School-level"
+            value={`${toHours(schoolLevel.total)}h`}
+            sub="no student attached"
+            to={timelinePath(range, { q: "is:school" })}
           />
         )}
       </SimpleGrid>

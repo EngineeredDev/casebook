@@ -34,6 +34,7 @@ import {
 } from "@tabler/icons-react";
 import { useStore } from "../store.tsx";
 import type { Entry } from "../../shared/types.ts";
+import { isSchoolLevel } from "../lib/aggregate.ts";
 import { buildIndex, matchEntry, parseQuery, type IndexedEntry } from "../lib/search.ts";
 import { fmtDayHeading, fmtDuration, fmtMonthLabel, monthStartYmd, toHours } from "../lib/time.ts";
 import { Link, navigate, studentPath, useLocation } from "../lib/router.tsx";
@@ -73,6 +74,7 @@ const SEARCH_HELP: [string, string][] = [
   ["note:guardian", "the word appears in the note specifically"],
   ["has:note", "only entries carrying a note"],
   ["is:group", "sessions with more than one student"],
+  ["is:school", "no student on it — also is:student"],
   ["is:untimed", "no-shows and cancellations"],
   ["is:iep", "entries for an IEP student"],
   ["after:2026-05", "on or after — also before:, on:"],
@@ -547,31 +549,41 @@ function TimelineRow({
             )}
           </Group>
 
-          <Text size="xs" c="dimmed">
-            {entry.studentIds.map((id, i) => {
-              const student = students.find((s) => s.id === id);
-              return (
-                <span key={id}>
-                  {i > 0 && ", "}
-                  {student ? (
-                    <Anchor
-                      component={Link}
-                      to={studentPath(id)}
-                      size="xs"
-                      c="dimmed"
-                      underline="hover"
-                    >
-                      <Highlight component="span" size="xs" highlight={highlight}>
-                        {student.name}
-                      </Highlight>
-                    </Anchor>
-                  ) : (
-                    "(deleted)"
-                  )}
-                </span>
-              );
-            })}
-          </Text>
+          {/* Quiet and italic rather than a badge: this line is the row's cast
+              of names, and school-level work belongs in that slot saying what
+              it is — not sitting there as an empty space that reads as a
+              student who failed to load. */}
+          {isSchoolLevel(entry) ? (
+            <Text size="xs" c="dimmed" fs="italic">
+              School-level
+            </Text>
+          ) : (
+            <Text size="xs" c="dimmed">
+              {entry.studentIds.map((id, i) => {
+                const student = students.find((s) => s.id === id);
+                return (
+                  <span key={id}>
+                    {i > 0 && ", "}
+                    {student ? (
+                      <Anchor
+                        component={Link}
+                        to={studentPath(id)}
+                        size="xs"
+                        c="dimmed"
+                        underline="hover"
+                      >
+                        <Highlight component="span" size="xs" highlight={highlight}>
+                          {student.name}
+                        </Highlight>
+                      </Anchor>
+                    ) : (
+                      "(deleted)"
+                    )}
+                  </span>
+                );
+              })}
+            </Text>
+          )}
 
           {/* Notes stay shut until asked for — no excerpt, so the list reads as
               a schedule and a note is never half-read over someone's shoulder.

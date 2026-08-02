@@ -2,15 +2,26 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 /**
- * Tests for the main process only. The renderer is verified by driving the real
- * app over CDP, which exercises Mantine, the router and the bridge together;
- * what needs unit tests is the half that writes to disk, where a bug is
- * measured in lost work rather than in a misplaced button.
+ * The main process, plus the renderer's pure lib.
  *
- * The alias is the whole trick: `electron` resolves to a stub that lets a test
- * say where the app's folders are (see src/test/electron.ts). Without it every
- * import under src/main fails at load, because the real module is a native
- * binding that only exists inside an Electron process.
+ * Renderer *components* are still verified by driving the real app over CDP,
+ * which exercises Mantine, the router and the bridge together — a unit test of
+ * a button is a test of a mock. But `src/renderer/lib` is arithmetic over
+ * plain objects: aggregation, the search query language, CSV formatting. Its
+ * bugs are wrong numbers in a printed report rather than a misplaced control,
+ * and they are invisible on screen, which is exactly the kind CDP cannot see.
+ *
+ * `environment: "node"` is enough for that lib because nothing in it touches
+ * the DOM on import. The one exception is `noteExcerpt`, which parses HTML with
+ * DOMParser — so `buildIndex` is not directly testable here, and search tests
+ * build their IndexedEntry fixtures by hand instead. That is the better seam
+ * anyway; no jsdom dependency has to exist to get at it.
+ *
+ * The alias is the whole trick for the main process: `electron` resolves to a
+ * stub that lets a test say where the app's folders are (see
+ * src/test/electron.ts). Without it every import under src/main fails at load,
+ * because the real module is a native binding that only exists inside an
+ * Electron process.
  */
 export default defineConfig({
   resolve: {

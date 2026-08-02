@@ -12,6 +12,32 @@ semver as RELEASING.md defines it.
 
 ## [Unreleased]
 
+### Added
+
+- **Log work that isn't about one student.** A crisis-team meeting, an SEL
+  lesson, staff PD, schedule building, a duty period — a School-level switch
+  above the student picker records time with nobody's name on it. It counts
+  toward your day, your weekly hours and your category totals, and toward no
+  student's record. Until now the only way to log any of it was to invent a
+  student, which quietly spoiled headcounts and per-student averages.
+- **A School-level tile** on the Dashboard, once there is any, opening that
+  time on the Timeline.
+- **`is:school` and `is:student`** in Timeline search, alongside `is:group`.
+
+### Changed
+
+- **The weekly summary CSV has a new "Scope" column** between Student and IEP,
+  reading `Student` or `School-level`, and a school-level row per week that has
+  any. The file now adds back up to your real clock time; before this it
+  silently left out any work with no student on it.
+- **The Dashboard's IEP tile** now says "share of student time" rather than
+  "share of tracked time". The number has not changed — it was always measured
+  against student work, and that only became a distinction worth drawing once
+  school-level time existed.
+- **The printed report** notes how many hours of school-level work sit outside
+  its per-student table, so the table and the total no longer appear to
+  disagree.
+
 ## [0.2.0] — 2026-07-31
 
 Two large pieces: a backup and recovery net under the data, and a local
