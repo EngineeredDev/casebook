@@ -30,9 +30,17 @@ export function parseRoute(pathname: string): Route {
   const [head, second] = pathname.split("/").filter(Boolean);
   if (!head) return { page: "log" };
   if (head === "students") {
-    return second
-      ? { page: "student", studentId: decodeURIComponent(second) }
-      : { page: "students" };
+    if (!second) return { page: "students" };
+    // decodeURIComponent throws on a half-written escape like %E0. Casebook is
+    // one window with no address bar, so getting one here takes a bad link
+    // built somewhere in the app rather than anything a person can type — but
+    // this runs during render, and a throw during render is a blank window
+    // instead of a page that says the address matched nothing.
+    try {
+      return { page: "student", studentId: decodeURIComponent(second) };
+    } catch {
+      return { page: "notFound" };
+    }
   }
   if (
     head === "log" ||

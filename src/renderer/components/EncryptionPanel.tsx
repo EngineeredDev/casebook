@@ -56,22 +56,37 @@ export function EncryptionPanel() {
 
   const disable = useCallback(async () => {
     setDisabling(false);
-    const result = await api().disableEncryption();
-    if ("error" in result) {
+    try {
+      const result = await api().disableEncryption();
+      if ("error" in result) {
+        notifications.show({
+          color: "red",
+          title: "The passphrase is still on",
+          message: result.error,
+          autoClose: false,
+        });
+        return;
+      }
+      refresh();
+      notifications.show({
+        color: "teal",
+        title: "Passphrase removed",
+        message: "Your records are back to plain files in the data folder.",
+      });
+    } catch (error) {
+      // A returned `{ error }` is the main process saying no; a rejection is it
+      // failing to answer at all, and the two arrive by different routes. The
+      // dialog has already closed by the time either lands, so an unhandled
+      // rejection here reads as "Turn it off" doing nothing whatsoever — while
+      // the passphrase is in fact still on, which is the half of it she cannot
+      // see and would have no reason to check.
       notifications.show({
         color: "red",
         title: "The passphrase is still on",
-        message: result.error,
+        message: bridgeMessage(error),
         autoClose: false,
       });
-      return;
     }
-    refresh();
-    notifications.show({
-      color: "teal",
-      title: "Passphrase removed",
-      message: "Your records are back to plain files in the data folder.",
-    });
   }, [refresh]);
 
   const setAutoLock = useCallback((value: string | null) => {

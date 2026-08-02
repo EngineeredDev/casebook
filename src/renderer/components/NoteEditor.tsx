@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActionIcon, Box, Button, Flex, Group, Modal, Stack, Text, Tooltip } from "@mantine/core";
+import {
+  ActionIcon,
+  Box,
+  Button,
+  Flex,
+  Group,
+  Modal,
+  Stack,
+  Text,
+  Tooltip,
+  UnstyledButton,
+} from "@mantine/core";
 import { RichTextEditor } from "@mantine/tiptap";
 import { useEditor } from "@tiptap/react";
 import { IconArrowsDiagonal, IconArrowsDiagonalMinimize2 } from "@tabler/icons-react";
@@ -74,27 +85,32 @@ function PastNotes({
             py="xs"
             style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
           >
-            <Group
-              gap="xs"
-              wrap="nowrap"
-              align="baseline"
-              style={{ cursor: "pointer" }}
+            {/* A real button rather than a div that listens for clicks: these
+                rows are the only way to read an earlier note, and a plain
+                Group is unreachable without a mouse — no focus, no Enter, and
+                nothing announced. The elements inside are spans because a
+                button may only contain phrasing content. */}
+            <UnstyledButton
+              w="100%"
+              aria-expanded={open}
               onClick={() => setOpenId(open ? null : e.id)}
             >
-              <Text size="xs" c="dimmed" w={52} style={{ flex: "none" }}>
-                {fmtDayLabel(e.date)}
-              </Text>
-              <Box style={{ flex: 1, minWidth: 0 }}>
-                <Text size="xs" c="dimmed">
-                  {categoryName(doc, e.categoryId)}
+              <Group gap="xs" wrap="nowrap" align="baseline">
+                <Text span size="xs" c="dimmed" w={52} style={{ flex: "none" }}>
+                  {fmtDayLabel(e.date)}
                 </Text>
-                {!open && (
-                  <Text size="sm" truncate>
-                    {noteExcerpt(e.note)}
+                <Box component="span" style={{ flex: 1, minWidth: 0, display: "block" }}>
+                  <Text span display="block" size="xs" c="dimmed">
+                    {categoryName(doc, e.categoryId)}
                   </Text>
-                )}
-              </Box>
-            </Group>
+                  {!open && (
+                    <Text span display="block" size="sm" truncate>
+                      {noteExcerpt(e.note)}
+                    </Text>
+                  )}
+                </Box>
+              </Group>
+            </UnstyledButton>
             {open && (
               <Box mt={4} pl={60} className="note-body">
                 <ReadOnlyNote html={e.note!} />
@@ -144,6 +160,11 @@ export function NoteEditor({
   const editor = useEditor({
     extensions: [...noteExtensions, SubmitShortcut.configure({ onSubmit: submitAndCollapse })],
     content: value,
+    // The "Note" label below is a <label> with nothing to point at — ProseMirror
+    // builds the editable node itself, and it has no id to borrow — so without
+    // this the writing surface is an anonymous text box, and it is also the only
+    // control in the expanded view a screen reader cannot name.
+    editorProps: { attributes: { "aria-label": "Note" } },
     onUpdate: ({ editor: ed }) => onChange(ed.isEmpty ? "" : ed.getHTML()),
   });
 

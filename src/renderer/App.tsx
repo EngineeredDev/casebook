@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
 import {
   ActionIcon,
   Alert,
@@ -7,6 +7,7 @@ import {
   Burger,
   Button,
   Card,
+  Center,
   Code,
   Group,
   Loader,
@@ -483,13 +484,101 @@ function Shell() {
   );
 }
 
+/**
+ * The render-error sibling of RecoveryScreen, and the reason it exists is that
+ * there is nowhere else for one to go.
+ *
+ * A browser tab that white-screens still has devtools, a reload button and an
+ * address bar. This window has none of them: a single uncaught error anywhere
+ * in the tree unmounts everything and leaves a grey rectangle with no way to
+ * find out what happened and no way to get back in — on a school-managed Mac,
+ * to someone whose next move would otherwise be deciding the app has eaten a
+ * year of work. Her data is untouched by any of this; it is on disk, and the
+ * folder button proves it by opening the folder it is sitting in.
+ *
+ * Deliberately a class with nothing in it. componentDidCatch is the only way
+ * React offers to catch this at all, and everything else here — no store, no
+ * bridge call on mount, no hooks — is because whatever broke the app is
+ * upstream of this component and must not be able to break it too.
+ */
+export class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  override state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  override componentDidCatch(error: Error, info: ErrorInfo) {
+    // The main process pipes this to the terminal in a dev build, and it is the
+    // only trace that survives — nobody is going to read a stack trace off this
+    // screen, and asking her to open devtools to fetch one is not a plan.
+    console.error("Casebook stopped rendering:", error, info.componentStack);
+  }
+
+  override render() {
+    const { error } = this.state;
+    if (!error) return this.props.children;
+
+    return (
+      <Center h="100vh" p="md">
+        <Card maw={560} w="100%" withBorder>
+          <Stack gap="md">
+            <Group gap="xs" wrap="nowrap">
+              <IconAlertTriangle size={20} color="var(--mantine-color-red-6)" />
+              <Text fw={600}>Casebook hit a problem and stopped</Text>
+            </Group>
+
+            <Text size="sm" c="dimmed">
+              Something went wrong while drawing this screen. Nothing has been deleted — your
+              records are in their file on this Mac, exactly as they were at the last save.
+              Reloading starts the window again and usually clears it.
+            </Text>
+
+            <Code block>{error.message || String(error)}</Code>
+
+            <Text size="xs" c="dimmed">
+              If it keeps happening on the same page, the data folder holds your records and your
+              backups; a backup can be restored from Settings once Casebook opens again.
+            </Text>
+
+            <Group gap="xs">
+              <Button onClick={() => window.location.reload()}>Reload Casebook</Button>
+              <Button
+                variant="subtle"
+                onClick={() => {
+                  // The bridge is one of the things that can be broken by the
+                  // time we are here, and `api()` throws when it is missing —
+                  // which would take down the last screen still standing.
+                  try {
+                    void api().revealDataFolder();
+                  } catch {
+                    /* Then there is nothing this button can do, and saying so
+                       is not worth a second failure state on this screen. */
+                  }
+                }}
+              >
+                Show data folder in Finder
+              </Button>
+            </Group>
+          </Stack>
+        </Card>
+      </Center>
+    );
+  }
+}
+
 export function App() {
   return (
     <MantineProvider theme={theme} defaultColorScheme="auto">
       <Notifications position="top-right" />
-      <StoreProvider>
-        <Shell />
-      </StoreProvider>
+      {/* Inside the provider so the screen above can be built out of the same
+          components as every other screen, and outside the store so it still
+          appears when what threw was the store, a page, or the shell. */}
+      <ErrorBoundary>
+        <StoreProvider>
+          <Shell />
+        </StoreProvider>
+      </ErrorBoundary>
     </MantineProvider>
   );
 }
