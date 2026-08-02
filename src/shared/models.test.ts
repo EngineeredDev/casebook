@@ -31,6 +31,25 @@ describe("the model catalogue", () => {
     expect(isKnownModelId(DEFAULT_MODEL_ID)).toBe(true);
   });
 
+  it("pins every entry to a commit and a checksum, in the right shape", () => {
+    // Neither value is verifiable without the network, but their *shape* is —
+    // and a mistyped one is invisible until a several-gigabyte download ends in
+    // "the download didn't arrive intact", which reads like a network problem
+    // and is not one. A truncated sha256 or a branch name left in `revision`
+    // both fail here instead.
+    for (const model of MODELS) {
+      expect(model.revision, `${model.id} revision`).toMatch(/^[0-9a-f]{40}$/);
+      expect(model.sha256, `${model.id} sha256`).toMatch(/^[0-9a-f]{64}$/);
+    }
+  });
+
+  it("gives each distinct file its own checksum", () => {
+    // Copy-paste is how a catalogue entry gets its neighbour's digest, and the
+    // symptom is that one model can never finish downloading.
+    const digests = MODELS.map((m) => m.sha256);
+    expect(new Set(digests).size).toBe(digests.length);
+  });
+
   it("offers exactly one model that has actually been measured", () => {
     // The "Measured here" badge is a claim about scripts/llm-eval having been
     // run. Adding a second one without running it is the easy way to turn an

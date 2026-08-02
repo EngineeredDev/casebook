@@ -18,8 +18,18 @@
  * too. Everything here is about one Mac's copy of it.
  */
 
-import { createWriteStream, existsSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
+import {
+  createReadStream,
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  renameSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+} from "node:fs";
 import { readdir, unlink } from "node:fs/promises";
+import { createHash, type Hash } from "node:crypto";
 import { totalmem } from "node:os";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -183,7 +193,15 @@ export async function downloadModel(id: string, onProgress: (state: AiState) => 
   lastError.delete(id);
 
   try {
-    const url = `https://huggingface.co/${choice.repo}/resolve/main/${choice.file}?download=true`;
+    /**
+     * Pinned to a commit, never `main`. A branch moves, and a repo owner
+     * replacing a quantisation in place would change what Casebook installs
+     * with nothing in this repository recording it — and would corrupt every
+     * resume in flight, because a resume appends to a partial of the file that
+     * no longer exists upstream. The bytes are then a splice of two models
+     * that loads far enough to answer badly.
+     */
+    const url = `https://huggingface.co/${choice.repo}/resolve/${choice.revision}/${choice.file}?download=true`;
     const response = await fetch(url, {
       signal: abort.signal,
       headers: already > 0 ? { Range: `bytes=${already}-` } : {},
@@ -205,10 +223,19 @@ export async function downloadModel(id: string, onProgress: (state: AiState) => 
     downloading.total = length > 0 ? from + length : null;
     downloading.received = from;
 
+    /**
+     * The digest covers the whole file, so a resume has to be seeded with what
+     * is already on disk before the new bytes arrive. That costs one read of
+     * the partial — paid only when resuming, which is already the slow path.
+     */
+    const hash = createHash("sha256");
+    if (resumed) await feed(hash, partialPath(choice));
+
     let lastReport = 0;
     const sink = createWriteStream(partialPath(choice), { flags: resumed ? "a" : "w" });
     const body = Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]);
     body.on("data", (piece: Buffer) => {
+      hash.update(piece);
       if (!downloading) return;
       downloading.received += piece.length;
       // Once a second is plenty for a progress bar and keeps the IPC quiet.
@@ -219,6 +246,12 @@ export async function downloadModel(id: string, onProgress: (state: AiState) => 
       }
     });
     await pipeline(body, sink);
+
+    // Before the rename, so nothing that failed either check can ever be
+    // loaded. A stream that ends early is indistinguishable from one that
+    // finished, and a GGUF missing its tail fails much later, at load, looking
+    // like a broken model rather than a broken download.
+    verify(choice, hash);
 
     // Only now is it the model. Renaming last means a crash mid-download can
     // never leave a truncated file sitting under the name the loader trusts.
@@ -235,6 +268,50 @@ export async function downloadModel(id: string, onProgress: (state: AiState) => 
     lastError.set(id, (error as Error).message);
     onProgress(aiState());
   }
+}
+
+/** Pour a file that is already on disk into a running digest. */
+function feed(hash: Hash, path: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const stream = createReadStream(path);
+    stream.on("data", (piece) => hash.update(piece));
+    stream.on("end", resolve);
+    stream.on("error", reject);
+  });
+}
+
+/**
+ * Refuse to install anything that isn't byte-for-byte what the catalogue says.
+ *
+ * The size is the cheap check and catches the common failure — a stream that
+ * ended early looks exactly like one that finished. The digest is the one that
+ * catches everything else: a proxy that served a cached older file, a resume
+ * that spliced two revisions together, a disk that dropped a block.
+ *
+ * The partial is deleted on failure rather than kept. Everywhere else in this
+ * module a partial is precious, because it is minutes of somebody's download —
+ * but a partial that failed verification is bytes nothing will ever accept, and
+ * keeping it means the next attempt resumes onto poison and fails identically,
+ * forever.
+ */
+function verify(choice: ModelChoice, hash: Hash): void {
+  const path = partialPath(choice);
+  const bytes = sizeOf(path);
+  const digest = hash.digest("hex");
+  const wrong =
+    bytes !== choice.downloadBytes
+      ? `it is ${bytes} bytes and should be ${choice.downloadBytes}`
+      : digest !== choice.sha256
+        ? `its contents don't match the published checksum`
+        : null;
+  if (!wrong) return;
+
+  try {
+    unlinkSync(path);
+  } catch {
+    // The message below is the one worth reporting.
+  }
+  throw new Error(`The download didn't arrive intact — ${wrong}. Try again.`);
 }
 
 export function pauseDownload(): void {
