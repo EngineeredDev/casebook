@@ -14,5 +14,9 @@
     "src/test",
     "electron.vite.config.ts",
     "vitest.config.ts"
-  ]
+  ],
+  // The jsdom suite's setup file lives beside the node one but belongs to the
+  // other world: it is all `window`, `Element` and `Crypto`, none of which this
+  // project has a `lib` for. tsconfig.web.json picks it up instead.
+  "exclude": ["src/test/dom.ts"]
 }
