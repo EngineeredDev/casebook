@@ -70,6 +70,7 @@ import {
   changePassphrase,
   disable as disableEncryption,
   enable as enableEncryption,
+  EnableFailed,
   isEnabled,
   isUnlocked,
   unlock,
@@ -376,7 +377,15 @@ export function registerIpc(broadcast: Broadcast): void {
       mirrorSoon();
       return { ok: true, recoveryKey };
     } catch (error) {
-      return { error: `Casebook couldn't turn on the passphrase — ${describe(error)}` };
+      // The state is not necessarily unchanged, so the cached document and the
+      // menu are rebuilt on the way out of a failure too.
+      doc = null;
+      buildMenu();
+      const failed = `Casebook couldn't turn on the passphrase — ${describe(error)}`;
+      // Only ever set when encryption was left on and the sheet is still the
+      // one copy of the way back in. See EnableFailed.
+      const stranded = error instanceof EnableFailed ? error.recoveryKey : null;
+      return stranded ? { error: failed, recoveryKey: stranded } : { error: failed };
     }
   });
 

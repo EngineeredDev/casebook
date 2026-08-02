@@ -290,6 +290,27 @@ function writeDocument(path: string, serialized: string): void {
   writeFileAtomic(path, codec.encode(serialized));
 }
 
+/**
+ * Write a document to the live path, in whatever era the folder is currently in.
+ *
+ * For the one caller that has a document as text rather than as a `DataDoc` and
+ * must not go through the snapshot tiers: the legacy import, which is copying
+ * another install's file in wholesale. It used to assemble `data.json` itself
+ * and write it plain, which with encryption on produced a folder where
+ * `data.json.enc` still won every read — so the import reported success with
+ * entry counts, the app stayed empty, and a full plaintext copy of her records
+ * sat in a folder she had put a passphrase on.
+ *
+ * Returns the path it actually wrote, because with encryption on that is not
+ * the path the caller would have guessed.
+ */
+export function writeLiveDocument(serialized: string): string {
+  mkdirSync(dataDir(), { recursive: true });
+  const path = dataFile() + codec.suffix;
+  writeDocument(path, serialized);
+  return path;
+}
+
 export function saveDoc(next: DataDoc, previous?: DataDoc | null): void {
   // The data folder is created on demand rather than at first run, so the very
   // first save is also the one that has to make it.
@@ -609,6 +630,12 @@ export function mirrorSources(): MirrorSource[] {
  * folders can hold a `data-2026-03-14.json` from different installs, and the
  * one already in the destination is the one this app has been keeping.
  *
+ * Snapshots arriving from a plaintext install land encrypted when the
+ * destination folder is encrypted. Byte-copying them instead would leave a
+ * year of somebody's clinical notes readable inside a folder she has put a
+ * passphrase on — every one of them a file `convert()` would only ever touch
+ * again if she happened to toggle encryption a second time.
+ *
  * Returns the names it actually wrote — which is what lets a caller that fails
  * partway through take back exactly what it put there and nothing else.
  */
@@ -624,12 +651,41 @@ export function copyMissingBackups(from: string, to: string): string[] {
   mkdirSync(to, { recursive: true });
   const copied: string[] = [];
   for (const name of wanted) {
-    const dest = join(to, name);
-    if (existsSync(dest)) continue;
-    copyFileSync(join(from, name), dest);
-    copied.push(name);
+    const written = carryOver(join(from, name), to, name);
+    if (written) copied.push(written);
   }
   return copied;
+}
+
+/**
+ * Bring one snapshot across, in the destination folder's era. Returns the name
+ * written, or null when there was already one of that name there.
+ */
+function carryOver(source: string, to: string, name: string): string | null {
+  const wantEncrypted = isEncrypting() && !name.endsWith(".enc");
+  const destName = wantEncrypted ? `${name}${codec.suffix}` : name;
+  // Both spellings, so a folder holding data-2026-03-14.json.enc does not
+  // acquire a plaintext twin of the same day under the other name.
+  if (existsSync(join(to, name)) || existsSync(join(to, destName))) return null;
+
+  if (wantEncrypted) {
+    const blob = readFileSync(source);
+    try {
+      // Parsed, not merely decoded — the same rule convertFile follows. A
+      // damaged snapshot re-encoded is a well-formed encryption of rubbish,
+      // which looks fine until the day it is the file she needs.
+      const json = blob.toString("utf8");
+      JSON.parse(json);
+      writeDocument(join(to, destName), json);
+      return destName;
+    } catch {
+      // Not a document this can re-encode. Copied as-is, staying recognisably
+      // what it is rather than becoming plausibly something else.
+    }
+  }
+
+  copyFileSync(source, join(to, name));
+  return name;
 }
 
 /** Forget what this process was holding. Only for tests and for locking. */

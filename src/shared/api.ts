@@ -142,7 +142,19 @@ export type UnlockResult = { ok: true } | { error: string; kind: EncryptionFailu
  * and stored nowhere, so if it is not written down at this moment it cannot be
  * produced again — which is why enabling is gated on saying it was.
  */
-export type EnableEncryptionResult = { ok: true; recoveryKey: string } | { error: string };
+export type EnableEncryptionResult =
+  | { ok: true; recoveryKey: string }
+  /**
+   * `recoveryKey` is present only in the one case where the news is bad *and*
+   * the key still matters: the conversion failed and could not be undone, so
+   * encryption is on and partially applied. Her passphrase works; the recovery
+   * key is still the only copy that will ever exist, and swallowing it because
+   * the operation failed would throw away the way back into her own data.
+   *
+   * When the failure was rolled back cleanly there is no key here, because
+   * there is no encryption either — nothing changed.
+   */
+  | { error: string; recoveryKey?: string };
 
 export type EncryptionResult = { ok: true } | { error: string; kind: EncryptionFailure };
 

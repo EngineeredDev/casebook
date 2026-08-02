@@ -141,6 +141,64 @@ describe("relocateData", () => {
     expect(existsSync(target)).toBe(false);
   });
 
+  it("refuses while the passphrase is on rather than moving a folder it can't read", async () => {
+    const app = tempApp({ packaged: true });
+    // What the folder looks like once encryption is fully on: no data.json
+    // anywhere, a keyfile beside the live file, and every snapshot in the other
+    // era. Everything below this function knows about is `data.json`, which is
+    // exactly the file that isn't here.
+    writeFileSync(`${app.dataFile}.enc`, "CASEBOOKencrypted");
+    writeFileSync(join(app.dataDir, "keyfile.json"), '{"casebook":"keyfile"}');
+    mkdirSync(app.backupDir, { recursive: true });
+    writeFileSync(join(app.backupDir, "data-2026-01-01.json.enc"), "CASEBOOKencrypted");
+    const target = join(app.root, "Moved");
+    const { relocateData } = await import("./datafolder.ts");
+
+    // The old answer here was "there's no data.json in ... to move", which is
+    // true and useless: it names a file she has never heard of and says nothing
+    // she can act on. The way out has to travel with the refusal.
+    expect(relocateData(target)).toEqual({
+      error:
+        "Moving the data folder isn't supported while the passphrase is on. " +
+        "Turn it off in Settings, move the folder, then turn it back on.",
+    });
+
+    const { readConfig } = await import("./config.ts");
+    expect(readConfig()).toEqual({ dataDir: app.dataDir });
+    // Refused before anything was written, so there is nothing at the target to
+    // trip the "already has a data.json in it" guard on the way back in.
+    expect(existsSync(target)).toBe(false);
+  });
+
+  it("refuses in the half-converted state, where moving used to lose everything", async () => {
+    const { app, contents } = populated();
+    /**
+     * An enable that was interrupted: the live file has been encrypted, the
+     * stale plaintext one it was made from is still there, and the keyfile is
+     * on disk. This is the dangerous shape rather than the merely confusing
+     * one — the move copied the *stale plaintext* data.json, skipped both the
+     * keyfile and the encrypted live file, and repointed the config at the
+     * result. Silently discarded work and silently disabled encryption, in one
+     * operation, reported as a success.
+     */
+    writeFileSync(`${app.dataFile}.enc`, "CASEBOOKthe file that is actually live");
+    writeFileSync(join(app.dataDir, "keyfile.json"), '{"casebook":"keyfile"}');
+    const target = join(app.root, "Moved");
+    const { relocateData } = await import("./datafolder.ts");
+
+    expect(relocateData(target)).toEqual({
+      error: expect.stringContaining("while the passphrase is on"),
+    });
+
+    // The assertion that matters: the app is still reading the folder that
+    // holds the whole of her data, not the one holding a partial copy of it.
+    const { readConfig } = await import("./config.ts");
+    expect(readConfig()).toEqual({ dataDir: app.dataDir });
+    expect(existsSync(target)).toBe(false);
+    expect(readFileSync(app.dataFile, "utf8")).toBe(contents);
+    expect(existsSync(`${app.dataFile}.enc`)).toBe(true);
+  });
+
   it("takes back everything it wrote when the copy fails partway", async () => {
     const { app, contents } = populated();
     const target = join(app.root, "Moved");

@@ -19,6 +19,7 @@ import { isAbsolute, join, sep } from "node:path";
 import type { RelocateResult } from "../shared/api.ts";
 import { writeFileAtomic } from "./atomic.ts";
 import { readConfig, writeConfig } from "./config.ts";
+import { isEnabled } from "./encryption.ts";
 import { backupDir, dataDir, dataFile } from "./paths.ts";
 import { copyMissingBackups } from "./storage.ts";
 
@@ -29,6 +30,30 @@ function isInside(candidate: string, parent: string): boolean {
 export function relocateData(target: string): RelocateResult {
   if (typeof target !== "string" || !isAbsolute(target)) {
     return { error: "That isn't a folder Casebook can use." };
+  }
+
+  /**
+   * Everything below knows about exactly one file, `data.json`, and that is not
+   * what an encrypted folder is made of.
+   *
+   * With encryption fully on there is no `data.json`, so this used to fail with
+   * "there's no data.json to move" — misleading, but harmless. The dangerous
+   * shape needs an interrupted enable, where both files exist: the move then
+   * copied the *stale plaintext* one, skipped the keyfile and the encrypted
+   * live file, and repointed the config at the result. Silent data loss and
+   * silently-disabled encryption, in one operation, reported as a success.
+   *
+   * So: refuse while a keyfile exists, which covers both states. Teaching this
+   * function the whole bundle — live file, both `.prev` variants, the keyfile,
+   * the backups folder, with the same copy/verify/undo discipline — is the
+   * follow-up, and it is a bigger job than a guard.
+   */
+  if (isEnabled()) {
+    return {
+      error:
+        "Moving the data folder isn't supported while the passphrase is on. " +
+        "Turn it off in Settings, move the folder, then turn it back on.",
+    };
   }
 
   const source = dataDir();

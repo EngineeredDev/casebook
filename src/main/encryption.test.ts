@@ -6,6 +6,14 @@
  * every file the user has, so what is checked here is mostly the same question
  * asked from different directions: after each of these operations, is every
  * piece of her work still readable?
+ *
+ * The last group is the exception, and it needs a failing disk rather than a
+ * real one. Only `renameSync` is ever intercepted, only when a test asks, and
+ * only for the one path that test names — everything else in `node:fs`, here
+ * and in the helpers, is the real thing. Rename is the interception point
+ * because it is the last step of every atomic write and the only one that knows
+ * which file was being written, so a fault can be aimed at a single file in the
+ * middle of a conversion instead of at whichever write happens to come first.
  */
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -16,6 +24,7 @@ import {
   changePassphrase,
   disable,
   enable,
+  EnableFailed,
   isEnabled,
   isUnlocked,
   keyfilePath,
@@ -35,6 +44,26 @@ import { doc, tempApp, type TempApp } from "../test/helpers.ts";
 
 const PASSPHRASE = "the one she actually uses";
 
+/**
+ * Where the fault-injection tests hand in their misbehaviour: called with the
+ * final path of every atomic write, free to throw. Hoisted because `vi.mock`'s
+ * factory is, and cleared after every test so an escaped fault cannot quietly
+ * break the rest of the file.
+ */
+const fault = vi.hoisted(() => ({ onRename: null as null | ((to: string) => void) }));
+
+vi.mock("node:fs", async (importOriginal) => {
+  const real = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...real,
+    default: real,
+    renameSync: (from: string, to: string) => {
+      fault.onRename?.(to);
+      return real.renameSync(from, to);
+    },
+  };
+});
+
 let app: TempApp;
 
 beforeEach(() => {
@@ -48,6 +77,7 @@ beforeEach(() => {
 afterEach(() => {
   // Module state outlives a test in this file — the data key most of all.
   lock();
+  fault.onRename = null;
   vi.useRealTimers();
 });
 
@@ -63,6 +93,17 @@ function aFolderWithHistory() {
   const later = doc({ students: 5, entries: 26 });
   saveDoc(later, monday);
   return { monday, later };
+}
+
+/** The EnableFailed a failed `enable` threw, or a failure to have thrown one. */
+async function enableFailure(): Promise<EnableFailed> {
+  try {
+    await enable(PASSPHRASE);
+  } catch (error) {
+    if (error instanceof EnableFailed) return error;
+    throw error;
+  }
+  throw new Error("Expected turning it on to fail, and it didn't.");
 }
 
 async function failureKind(run: () => Promise<unknown>): Promise<string> {
@@ -325,5 +366,76 @@ describe("turning it off", () => {
       expect.arrayContaining(snapshotsBefore),
     );
     expect(listSnapshots().every((s) => s.readable && !s.encrypted)).toBe(true);
+  });
+});
+
+/**
+ * A conversion that throws partway leaves encryption *on* — the keyfile landed
+ * first, deliberately — and the folder in two eras at once. Reporting only the
+ * failure would be a lie in the most expensive direction: the UI says nothing
+ * happened, the passphrase is required from the next launch onward regardless,
+ * and the recovery key that was in `enable`'s hand at that moment is gone.
+ */
+describe("when the conversion fails partway", () => {
+  it("undoes it, and says so with no key on the error", async () => {
+    const { later } = aFolderWithHistory();
+    const before = names();
+    // The day's snapshot, and nothing else. convert() does the live file first,
+    // so by the time it reaches backups/ something has already been rewritten —
+    // which is the failure worth undoing, rather than one at the very start
+    // where there is nothing to undo.
+    fault.onRename = (to) => {
+      if (to.endsWith("data-2026-07-31.json.enc")) throw new Error("EIO: the disk gave up");
+    };
+
+    const failure = await enableFailure();
+
+    // No key on the error, because there is no encryption for it to open. A
+    // recovery key for nothing is a sheet of paper with a secret on it.
+    expect(failure.recoveryKey).toBeNull();
+    expect(failure.message).toMatch(/Nothing was changed/);
+
+    expect(isEnabled()).toBe(false);
+    expect(existsSync(keyfilePath())).toBe(false);
+    // Locked as well as disabled: a session still holding the data key would
+    // keep writing `.enc` files into a folder that has no keyfile to open them.
+    expect(isUnlocked()).toBe(false);
+
+    expect(existsSync(`${app.dataFile}.enc`)).toBe(false);
+    expect(loadDoc()).toEqual(later);
+    expect(names().every((name) => name.endsWith(".json"))).toBe(true);
+    expect(names()).toEqual(expect.arrayContaining(before));
+  });
+
+  it("hands back the recovery key when it cannot undo itself", async () => {
+    const { later } = aFolderWithHistory();
+    // A disk that stops accepting writes partway through and does not start
+    // again — which is what puts the rollback in the same position as the
+    // conversion it was meant to reverse.
+    let broken = false;
+    fault.onRename = (to) => {
+      if (to.endsWith("data-2026-07-31.json.enc")) broken = true;
+      if (broken) throw new Error("EIO: the disk is going");
+    };
+
+    const failure = await enableFailure();
+    fault.onRename = null;
+
+    // Encryption is on, some of her files are encrypted, and this string is the
+    // only copy of a way in that does not depend on remembering a passphrase
+    // typed a minute ago. It is derived from nothing and stored nowhere, so
+    // swallowing it because the operation failed would be destroying it.
+    expect(failure.message).toMatch(/Write the recovery key down now/);
+    expect(failure.recoveryKey).toMatch(/^[0-9ABCDEFGHJKMNPQRSTVWXYZ-]+$/);
+    expect(failure.recoveryKey?.replace(/-/g, "")).toHaveLength(26);
+    expect(isEnabled()).toBe(true);
+    expect(existsSync(keyfilePath())).toBe(true);
+
+    // And it is the real key rather than a plausible-looking string: it opens
+    // the files that did get encrypted, which is the only claim worth making
+    // about it on the screen this error reaches.
+    lock();
+    await unlockWithRecovery(failure.recoveryKey!, "a passphrase she'll remember");
+    expect(loadDoc()).toEqual(later);
   });
 });

@@ -31,6 +31,7 @@ import {
   saveDoc,
   setCodec,
   snapshotOnQuit,
+  type DocumentCodec,
 } from "./storage.ts";
 
 function writeJson(path: string, value: unknown): void {
@@ -666,5 +667,98 @@ describe("copyMissingBackups", () => {
 
     expect(copyMissingBackups(from, to)).toEqual([]);
     expect(existsSync(to)).toBe(false);
+  });
+});
+
+/**
+ * The other half of the same function, reached when the folder the snapshots are
+ * arriving in has a passphrase on it — a legacy import, or a move between two
+ * installs in different eras.
+ */
+describe("copyMissingBackups into an encrypted folder", () => {
+  /**
+   * What encryption.ts installs, reduced to the two things this file cares
+   * about: the suffix, and a mark that says the bytes went through `encode`
+   * rather than being copied past it. A real keyfile here would be testing
+   * crypto.ts a second time and would hide every assertion behind a decrypt.
+   */
+  const SEALING: DocumentCodec = {
+    suffix: ".enc",
+    encode: (json) => Buffer.from(`sealed:${json}`, "utf8"),
+    decode: (blob) => blob.toString("utf8").replace(/^sealed:/, ""),
+  };
+
+  /** A plaintext install's backups folder, and where its snapshots are headed. */
+  function crossing(): { from: string; to: string } {
+    const app = tempApp();
+    const from = join(app.root, "source-backups");
+    mkdirSync(from, { recursive: true });
+    return { from, to: join(app.root, "target-backups") };
+  }
+
+  it("re-encodes a plaintext snapshot instead of laying it down readable", () => {
+    const { from, to } = crossing();
+    writeFileSync(join(from, "data-2026-03-14.json"), '{"day":1}');
+    setCodec(SEALING);
+
+    expect(copyMissingBackups(from, to)).toEqual(["data-2026-03-14.json.enc"]);
+
+    // A byte copy would leave a year of somebody's clinical notes sitting
+    // readable inside the folder she put a passphrase on — and every one of
+    // them a file `convert()` would only ever touch again if she happened to
+    // toggle encryption a second time.
+    expect(readdirSync(to)).toEqual(["data-2026-03-14.json.enc"]);
+    expect(readFileSync(join(to, "data-2026-03-14.json.enc"), "utf8")).toBe('sealed:{"day":1}');
+    // The install being imported from is not this function's to rewrite.
+    expect(readFileSync(join(from, "data-2026-03-14.json"), "utf8")).toBe('{"day":1}');
+  });
+
+  it("carries a snapshot that is already encrypted across untouched", () => {
+    const { from, to } = crossing();
+    writeFileSync(join(from, "data-2026-03-14.json.enc"), 'sealed:{"day":1}');
+    setCodec(SEALING);
+
+    expect(copyMissingBackups(from, to)).toEqual(["data-2026-03-14.json.enc"]);
+    // Sealed twice it would still be a file, and still unreadable by everything
+    // that opens it — including the restore panel, on the morning it matters.
+    expect(readFileSync(join(to, "data-2026-03-14.json.enc"), "utf8")).toBe('sealed:{"day":1}');
+  });
+
+  it("byte-copies a snapshot it cannot parse rather than sealing rubbish", () => {
+    const { from, to } = crossing();
+    writeFileSync(join(from, "data-2026-03-14.json"), "{ truncated");
+    setCodec(SEALING);
+
+    // Parsed, not merely read — the same rule the conversion follows. A damaged
+    // snapshot re-encoded is a well-formed encryption of rubbish, which turns a
+    // recognisably broken file into one that looks fine until it is needed.
+    expect(copyMissingBackups(from, to)).toEqual(["data-2026-03-14.json"]);
+    expect(readFileSync(join(to, "data-2026-03-14.json"), "utf8")).toBe("{ truncated");
+    expect(existsSync(join(to, "data-2026-03-14.json.enc"))).toBe(false);
+  });
+
+  it("leaves a name the destination already has, under either spelling", () => {
+    const { from, to } = crossing();
+    mkdirSync(to, { recursive: true });
+    writeFileSync(join(from, "data-2026-03-14.json"), '{"from":"source"}');
+    writeFileSync(join(to, "data-2026-03-14.json.enc"), 'sealed:{"from":"destination"}');
+    writeFileSync(join(from, "data-2026-03-15.json"), '{"from":"source"}');
+    writeFileSync(join(to, "data-2026-03-15.json"), '{"from":"destination"}');
+    writeFileSync(join(from, "data-2026-03-16.json"), '{"from":"source"}');
+    setCodec(SEALING);
+
+    // Both spellings, or a folder already holding the 14th encrypted acquires a
+    // plaintext twin of the same day under the other name — two files claiming
+    // to be one snapshot, one of them readable to anybody.
+    expect(copyMissingBackups(from, to)).toEqual(["data-2026-03-16.json.enc"]);
+    expect(readdirSync(to).toSorted()).toEqual([
+      "data-2026-03-14.json.enc",
+      "data-2026-03-15.json",
+      "data-2026-03-16.json.enc",
+    ]);
+    expect(readFileSync(join(to, "data-2026-03-14.json.enc"), "utf8")).toBe(
+      'sealed:{"from":"destination"}',
+    );
+    expect(readFileSync(join(to, "data-2026-03-15.json"), "utf8")).toBe('{"from":"destination"}');
   });
 });

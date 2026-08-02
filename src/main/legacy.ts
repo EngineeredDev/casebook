@@ -22,9 +22,9 @@ import {
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import type { ImportResult, LegacyInstall, RetireResult } from "../shared/api.ts";
-import { writeFileAtomic } from "./atomic.ts";
-import { backupDir, dataDir, dataFile } from "./paths.ts";
-import { copyMissingBackups, dayStamp } from "./storage.ts";
+import { isEnabled, isUnlocked } from "./encryption.ts";
+import { backupDir, dataDir } from "./paths.ts";
+import { copyMissingBackups, dayStamp, liveDataFile, writeLiveDocument } from "./storage.ts";
 
 const LAUNCH_AGENT_LABEL = "com.casebook.server";
 /**
@@ -158,24 +158,51 @@ export function importInstall(dir: string): ImportResult {
   const found = describeInstall(dir);
   if (!found) return { error: `There's no Casebook data in ${dir}.` };
   if (dir === dataDir()) return { error: "That's the folder Casebook is already using." };
+  /**
+   * Locked means there is no codec, so the import would write plaintext into an
+   * encrypted folder and the app would go on reading `data.json.enc` — success
+   * reported, nothing imported, a readable copy of her records left behind.
+   * Refusing is the honest answer, and unlocking is a thing she can do.
+   */
+  if (isEnabled() && !isUnlocked()) {
+    return { error: "Casebook is locked. Unlock it with your passphrase, then import." };
+  }
 
   try {
-    // Order matters. data.json is written last, and everything that can fail —
-    // reading the source, making the folder, snapshotting what is here,
+    // Order matters. The live document is written last, and everything that can
+    // fail — reading the source, making the folder, snapshotting what is here,
     // carrying the old backups across — happens before it. A failure halfway
     // through then means the current data file was never touched, rather than
     // leaving the disk holding an imported document this process has not read
     // and would overwrite on the next save.
     const contents = readFileSync(join(dir, "data.json"), "utf8");
-    const destination = dataFile();
     mkdirSync(dataDir(), { recursive: true });
-    if (existsSync(destination)) {
+    const existing = liveDataFile();
+    if (existing) {
       const backups = backupDir();
       mkdirSync(backups, { recursive: true });
-      copyFileSync(destination, join(backups, `data-pre-import-${dayStamp()}.json`));
+      // Named for the era it is in, not the era the folder is in: this is a
+      // byte copy of whatever is live, so an encrypted original stays encrypted
+      // and keeps the suffix that says so.
+      const suffix = existing.endsWith(".enc") ? ".enc" : "";
+      copyFileSync(existing, join(backups, `data-pre-import-${dayStamp()}.json${suffix}`));
     }
     copyMissingBackups(join(dir, "backups"), backupDir());
-    writeFileAtomic(destination, contents);
+    /**
+     * Through the codec, so with a passphrase on this writes `data.json.enc` —
+     * the file `liveDataFile` will actually read back. Writing `data.json`
+     * directly was the bug: the encrypted file kept winning every read, so the
+     * import reported success with entry counts, the app stayed empty, and a
+     * full plaintext copy of her records sat in the folder she had put a
+     * passphrase on.
+     *
+     * A stale plaintext `data.json` left by an *interrupted* enable is not
+     * removed here. It is somebody else's mess to clean up — deleting a file
+     * this function has not snapshotted, on a path where the folder is already
+     * in a state it should not be in, is exactly the move the rest of this
+     * codebase refuses to make.
+     */
+    writeLiveDocument(contents);
   } catch (error) {
     return { error: `Couldn't bring the data over — ${(error as Error).message}` };
   }

@@ -146,6 +146,25 @@ export async function changePassphrase(current: string, next: string): Promise<v
 /* ---------- switching it on and off ---------- */
 
 /**
+ * A failed `enable` that could not be undone.
+ *
+ * Carries the recovery key, because that is the whole problem: the key is
+ * derived from nothing and stored nowhere, encryption is now on, and reporting
+ * only the failure would throw away the one copy that will ever exist. When
+ * the rollback *did* work there is no key on the error — there is no
+ * encryption either, and a recovery key for nothing is just a scrap of paper.
+ */
+export class EnableFailed extends Error {
+  constructor(
+    message: string,
+    readonly recoveryKey: string | null,
+  ) {
+    super(message);
+    this.name = "EnableFailed";
+  }
+}
+
+/**
  * Encrypt the data folder, and hand back the recovery key exactly once.
  *
  * The returned key exists nowhere else and is derived from nothing; if it is
@@ -167,8 +186,43 @@ export async function enable(passphrase: string): Promise<string> {
   writeFileAtomic(keyfilePath(), JSON.stringify(file, null, 2));
   hold(key, file);
 
-  convert("encrypt", key);
+  try {
+    convert("encrypt", key);
+  } catch (error) {
+    /**
+     * A conversion that threw leaves encryption *on* — the keyfile is already
+     * there — and the folder half-converted. Reporting only the failure would
+     * be a lie in the most expensive direction: the UI says nothing happened,
+     * the passphrase is nonetheless required from the next launch onward, and
+     * the recovery key that was in this function's hand is gone.
+     *
+     * So the failure is undone rather than described. Decrypt back first,
+     * remove the keyfile second — the same ordering `disable` uses, for the
+     * same reason: while any encrypted file remains, the key that opens it has
+     * to still be on disk.
+     */
+    try {
+      convert("decrypt", key);
+      unlinkSync(keyfilePath());
+      lock();
+    } catch (rollbackError) {
+      throw new EnableFailed(
+        `${sentence(error)} Undoing it didn't work either (${sentence(rollbackError)}), so the ` +
+          `passphrase is on and some files are encrypted. Your passphrase opens them. ` +
+          `Write the recovery key down now — it will not be shown again.`,
+        recoveryKey,
+      );
+    }
+    throw new EnableFailed(`${sentence(error)} Nothing was changed.`, null);
+  }
+
   return recoveryKey;
+}
+
+/** An error's text, punctuated, so it can be joined onto another sentence. */
+function sentence(error: unknown): string {
+  const text = error instanceof Error ? error.message : String(error);
+  return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
 /** Decrypt everything back to plain files and remove the keyfile. */

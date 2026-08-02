@@ -251,6 +251,14 @@ function EnableDialog({
       const result = await api().enableEncryption(passphrase);
       if ("error" in result) {
         setFailure(result.error);
+        /**
+         * A recovery key on a failure means the worst case: the conversion
+         * broke and could not be undone, so the passphrase is on, some files
+         * are encrypted, and this is still the only moment the key will ever
+         * exist. Show the sheet anyway — the operation failed, but the way
+         * back into her data is real and is about to be lost forever.
+         */
+        if (result.recoveryKey) onEnabled(result.recoveryKey);
         return;
       }
       setPassphrase("");
