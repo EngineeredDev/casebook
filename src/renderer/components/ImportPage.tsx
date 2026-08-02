@@ -59,20 +59,13 @@ import type { Category, ImportMappings } from "../../shared/types.ts";
 import type { ParsedEntry } from "../../shared/import/types.ts";
 import { parseImport } from "../../shared/import/parse.ts";
 import { normalizePhrase, resolvePhrase } from "../../shared/import/phrases.ts";
+import { effectiveRows } from "../../shared/import/rows.ts";
+import type { EffectiveRow, RowEdit, RowStatus } from "../../shared/import/rows.ts";
 import { isBlankNote, noteExtensions } from "../lib/notes.ts";
 import { api, bridgeMessage } from "../lib/api.ts";
 import { fmtDuration, fmtFullDate } from "../lib/time.ts";
 import { navigate } from "../lib/router.tsx";
 import { ReadOnlyNote } from "./NoteView.tsx";
-
-/** What a person changed about one row. Absent keys mean "as parsed". */
-interface RowEdit {
-  date?: string;
-  startTime?: string;
-  minutes?: number;
-  categoryId?: string;
-  note?: string;
-}
 
 /**
  * Edits and confirmations are keyed by the chunk's **first line number**, not
@@ -84,8 +77,6 @@ interface RowEdit {
  * only honest key here.
  */
 type ByLine<T> = Record<number, T>;
-
-type RowStatus = "ready" | "check" | "incomplete";
 
 export function ImportPage() {
   const { doc, addEntries, setImportMappings } = useStore();
@@ -159,118 +150,36 @@ export function ImportPage() {
     setJustCommitted(null);
   };
 
-  /** The category a row lands in: her override, else the mapping table. */
-  const categoryFor = useCallback(
-    (entry: ParsedEntry, edit: RowEdit, line: number): Category | null => {
-      const byId = (id: string) => categories.find((c) => c.id === id) ?? null;
-      if (edit.categoryId) return byId(edit.categoryId);
-      if (entry.typePhrase) {
-        // Spread order is the policy: a decision she made overrides a
-        // suggestion for the same phrase, always.
-        const hit = resolvePhrase(entry.typePhrase, { ...aiMappings, ...mappings }, categories);
-        return hit ? byId(hit.categoryId) : null;
-      }
-      const guessed = aiRows[line];
-      return guessed ? byId(guessed) : null;
-    },
-    [categories, mappings, aiMappings, aiRows],
+  /**
+   * What every row actually means, resolved once. The grid renders these and
+   * `commit` writes these — see src/shared/import/rows.ts for why deriving a
+   * committed value anywhere else is the bug this shape exists to prevent.
+   */
+  const rows = useMemo(
+    () =>
+      parsed
+        ? effectiveRows(parsed.entries, edits, {
+            categories,
+            mappings,
+            aiMappings,
+            aiRows,
+            phraseMinutes,
+            studentId,
+            existing: doc.entries,
+          })
+        : [],
+    [
+      parsed,
+      edits,
+      categories,
+      mappings,
+      aiMappings,
+      aiRows,
+      phraseMinutes,
+      studentId,
+      doc.entries,
+    ],
   );
-
-  const minutesFor = useCallback(
-    (entry: ParsedEntry, edit: RowEdit, category: Category | null): number => {
-      // An untimed category stores zero however long the header said it was.
-      // Consistent with the log form, and the reason a wrong duration on a
-      // no-show costs nothing.
-      if (category?.untimed) return 0;
-      if (edit.minutes !== undefined) return edit.minutes;
-      if (entry.flags.includes("assumed-duration") && entry.typePhrase) {
-        const preset = phraseMinutes[normalizePhrase(entry.typePhrase)];
-        if (preset) return preset;
-      }
-      return entry.minutes;
-    },
-    [phraseMinutes],
-  );
-
-  const rows = useMemo(() => {
-    if (!parsed) return [];
-    return parsed.entries.map((entry) => {
-      const line = entry.chunk.startLine;
-      const edit = edits[line] ?? {};
-      const category = categoryFor(entry, edit, line);
-      const minutes = minutesFor(entry, edit, category);
-      const date = edit.date ?? entry.date;
-      const note = edit.note ?? entry.note;
-
-      /**
-       * A flag stops mattering once she has answered the question it was
-       * asking. Leaving them all lit would mean a row she has fully corrected
-       * still nags, and a grid where everything is flagged is a grid where
-       * nothing is.
-       */
-      const unresolved = entry.flags.filter((flag) => {
-        if (flag === "no-type-phrase") return edit.categoryId === undefined;
-        if (flag === "assumed-duration" || flag === "no-time" || flag === "implausible-range") {
-          return edit.minutes === undefined && !(category?.untimed ?? false);
-        }
-        return true;
-      });
-
-      /**
-       * Whether this row's category is still the model's opinion. Such a row is
-       * never "ready", however complete it looks — the eval put per-entry
-       * classification at 81%, and a row nobody has agreed with yet has not
-       * been reviewed just because every field is filled in.
-       */
-      const key = entry.typePhrase ? normalizePhrase(entry.typePhrase) : null;
-      const fromAi =
-        edit.categoryId === undefined &&
-        !!category &&
-        (key
-          ? aiMappings[key] !== undefined && mappings[key] === undefined
-          : aiRows[line] !== undefined);
-
-      const status: RowStatus =
-        !date || !category || (!category.untimed && minutes <= 0)
-          ? "incomplete"
-          : unresolved.length > 0 || fromAi
-            ? "check"
-            : "ready";
-
-      const duplicate =
-        !!studentId &&
-        !!date &&
-        !!category &&
-        doc.entries.some(
-          (e) =>
-            e.date === date && e.categoryId === category.id && e.studentIds.includes(studentId),
-        );
-
-      return {
-        entry,
-        line,
-        edit,
-        category,
-        minutes,
-        date,
-        note,
-        unresolved,
-        status,
-        duplicate,
-        fromAi,
-      };
-    });
-  }, [
-    parsed,
-    edits,
-    categoryFor,
-    minutesFor,
-    studentId,
-    doc.entries,
-    aiMappings,
-    aiRows,
-    mappings,
-  ]);
 
   const ready = rows.filter((r) => confirmed[r.line] && r.status !== "incomplete");
 
@@ -376,7 +285,7 @@ export function ImportPage() {
         minutes: r.minutes,
         categoryId: r.category!.id,
         studentIds: [studentId],
-        startTime: r.entry.startTime ?? null,
+        startTime: r.startTime || null,
         // "<p></p>" is a non-empty string but an empty note.
         note: isBlankNote(r.note) ? undefined : r.note,
       })),
@@ -819,21 +728,6 @@ const STATUS_COLOR: Record<RowStatus, string> = {
   incomplete: "gray",
 };
 
-interface Row {
-  entry: ParsedEntry;
-  line: number;
-  edit: RowEdit;
-  category: Category | null;
-  minutes: number;
-  date: string | null;
-  note: string;
-  unresolved: string[];
-  status: RowStatus;
-  duplicate: boolean;
-  /** The category is still the model's opinion — nobody has agreed with it yet. */
-  fromAi: boolean;
-}
-
 function ReviewRow({
   row,
   first,
@@ -845,7 +739,7 @@ function ReviewRow({
   onMerge,
   onSplit,
 }: {
-  row: Row;
+  row: EffectiveRow;
   first: boolean;
   categories: Category[];
   confirmed: boolean;
@@ -855,7 +749,7 @@ function ReviewRow({
   onMerge: () => void;
   onSplit: (absoluteLine: number) => void;
 }) {
-  const { entry, category, minutes, date, note, status, duplicate } = row;
+  const { entry, category, minutes, date, startTime, note, status, duplicate } = row;
   const border = { borderTop: "1px solid var(--mantine-color-default-border)" };
 
   if (confirmed) {
@@ -981,7 +875,7 @@ function ReviewRow({
               size="xs"
               label="Time"
               leftSection={<IconClock size={13} />}
-              value={row.edit.startTime ?? entry.startTime ?? ""}
+              value={startTime}
               onChange={(e) => onPatch({ startTime: e.currentTarget.value })}
               w={110}
               style={{ flex: "none" }}
